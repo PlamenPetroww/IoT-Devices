@@ -2,14 +2,14 @@
 <html lang="bg">
 <head>
     <meta charset="UTF-8" />
-    <title>Табло – Aura Home Systems</title>
+    <title>Табло – Auro HomeSystems</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="stylesheet" href="auth.css" />
 </head>
 <body class="dashboard-page">
     <div class="dashboard-header">
         <div>
-            <h1>Aura Home Systems</h1>
+            <h1>Auro HomeSystems</h1>
             <p class="user-email" id="userEmail"></p>
         </div>
         <a href="#" id="logoutBtn" class="logout-btn">Изход</a>
@@ -35,6 +35,20 @@
         </div>
     </div>
 
+    <div class="history-card">
+        <h2>История</h2>
+        <p class="history-desc">Последни промени отворено/затворено по сензорите. Записват се само докато таблото е отворено в браузъра.</p>
+        <div class="history-controls">
+            <span>Покажи:</span>
+            <button type="button" class="history-limit-btn active" data-limit="3">3</button>
+            <button type="button" class="history-limit-btn" data-limit="10">10</button>
+            <button type="button" class="history-limit-btn" data-limit="50">50</button>
+        </div>
+        <ul id="historyList" class="history-list">
+            <li class="history-empty">Няма записи в историята.</li>
+        </ul>
+    </div>
+
     <p style="text-align: center;">
         <a href="index.html" class="back-home">← Обратно към сайта</a>
     </p>
@@ -49,7 +63,7 @@
 
         function getSafeEmail(email) {
             if (!email) return "";
-            return email.trim().replace(/\./g, "-");
+            return email.trim().toLowerCase().replace(/\./g, "-").replace(/@/g, "_at_");
         }
 
         // Проверка за логнат потребител
@@ -99,18 +113,40 @@
 
             // Списък с устройства
             const devicesList = document.getElementById("devicesList");
+            let previousDevices = {};
+            const historyRef = db.ref(userPath + "/history");
+
+            function pushHistoryEntry(deviceId, deviceName, status) {
+                historyRef.push({
+                    deviceId: deviceId,
+                    deviceName: deviceName || deviceId,
+                    status: status,
+                    timestamp: Date.now()
+                });
+            }
+
             db.ref(userPath + "/devices").on("value", (snap) => {
                 const data = snap.val();
                 if (!data || typeof data !== "object") {
                     devicesList.innerHTML = '<p class="devices-empty">Все още няма регистрирани сензори. Включи режим „Навън“ и след малко тук ще се появят устройствата от Arduino.</p>';
+                    previousDevices = {};
                     return;
                 }
                 const devices = Object.entries(data).map(([id, d]) => ({
                     id,
                     name: (d && d.deviceName) || id,
-                    status: (d && d.status) === true ? "open" : "closed",
+                    status: (d && d.status) === true ? "closed" : "open",
                     lastSeen: d && d.lastSeen
                 }));
+
+                // При промяна на статус записваме в история
+                devices.forEach(function(dev) {
+                    const prev = previousDevices[dev.id];
+                    if (prev !== undefined && prev.status !== dev.status) {
+                        pushHistoryEntry(dev.id, dev.name, dev.status);
+                    }
+                    previousDevices[dev.id] = { status: dev.status };
+                });
 
                 // Проверка за еднакви имена – показваме предупреждение
                 const nameCount = {};
@@ -133,6 +169,51 @@
                         <span class="status ${dev.status}">${dev.status === "open" ? "Отворено" : "Затворено"}</span>
                     </div>
                 `).join("");
+            });
+
+            // История – четене и показване
+            let historyLimit = 3;
+            let historyData = [];
+
+            historyRef.orderByChild("timestamp").limitToLast(50).on("value", (snap) => {
+                const val = snap.val();
+                if (!val || typeof val !== "object") {
+                    historyData = [];
+                } else {
+                    historyData = Object.entries(val).map(([key, entry]) => ({
+                        key,
+                        deviceId: entry.deviceId,
+                        deviceName: entry.deviceName || entry.deviceId,
+                        status: entry.status === "open" ? "open" : "closed",
+                        timestamp: entry.timestamp || 0
+                    })).sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+                }
+                renderHistory();
+            });
+
+            function renderHistory() {
+                const listEl = document.getElementById("historyList");
+                const limit = historyLimit;
+                const slice = historyData.slice(-limit).reverse();
+                if (slice.length === 0) {
+                    listEl.innerHTML = '<li class="history-empty">Няма записи в историята.</li>';
+                    return;
+                }
+                listEl.innerHTML = slice.map((entry) => {
+                    const date = new Date(entry.timestamp);
+                    const timeStr = date.toLocaleString("bg-BG", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" });
+                    const label = entry.status === "open" ? "Отворено" : "Затворено";
+                    return `<li class="history-item ${entry.status}"><span class="history-name">${escapeHtml(entry.deviceName)}</span> <span class="history-status">${label}</span> <time class="history-time">${timeStr}</time></li>`;
+                }).join("");
+            }
+
+            document.querySelectorAll(".history-limit-btn").forEach((btn) => {
+                btn.addEventListener("click", function() {
+                    document.querySelectorAll(".history-limit-btn").forEach((b) => b.classList.remove("active"));
+                    this.classList.add("active");
+                    historyLimit = parseInt(this.getAttribute("data-limit"), 10);
+                    renderHistory();
+                });
             });
         });
 

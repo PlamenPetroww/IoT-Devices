@@ -4,7 +4,7 @@
 
 2. Натисни "New Form" и задай:
    - Email: solutions.petrov@gmail.com
-   - Име на формуляра: напр. "Aura Home контакт"
+   - Име на формуляра: напр. "Auro HomeSystems контакт"
 
 3. След създаване ще видиш "Form Endpoint" – нещо като:
    https://formspree.io/f/xjvqjwqw

@@ -10,7 +10,7 @@ const resend = new Resend(process.env.RESEND_API_KEY || "");
 
 const OWNER_EMAIL = "solutions.petrov@gmail.com";
 const FROM_EMAIL = "onboarding@resend.dev";
-const SITE_NAME = "Aura Home Systems";
+const SITE_NAME = "Auro HomeSystems";
 const PENDING_PATH = "pendingInquiries";
 
 function randomToken() {
@@ -35,7 +35,7 @@ function confirmHtml(success, message, baseUrl) {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>${title} – Aura Home Systems</title>
+  <title>${title} – Auro HomeSystems</title>
   <style>
     body { font-family: system-ui, sans-serif; background: #020617; color: #e5e7eb; min-height: 100vh; display: flex; align-items: center; justify-content: center; margin: 0; padding: 20px; }
     .box { max-width: 420px; padding: 32px; background: rgba(15,23,42,0.98); border-radius: 16px; border: 1px solid rgba(148,163,184,0.35); text-align: center; }

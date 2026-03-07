@@ -3,9 +3,9 @@ const translations = {
         nav: { problem: "Проблем", solution: "Решение", product: "Продукт", stats: "Резултати", cta: "Започни", login: "Вход" },
         hero: {
             eyebrow: "Когато никой не е у дома...",
-            title: "Aura Home Systems пази дома ти, когато е празен.",
+            title: "Auro HomeSystems пази дома ти, когато е празен.",
             subtitle: "Най-честите кражби стават през прозорците и входната врата. Ние комбинираме умни безжични сензори за прозорци и врати с мобилно приложение, което изпраща мигновени сигнали до телефона ти при всяко нежелано отваряне.",
-            cta: "Започни с Aura",
+            cta: "Започни с Auro",
             ctaNote: "Виж как работи системата и как можеш да я инсталираш у дома си"
         },
         scene: { notifOpen: "Прозорецът е отворен", notifSafe: "Входната врата е защитена" },
@@ -26,7 +26,7 @@ const translations = {
         },
         product: {
             title: "Какво точно получаваш",
-            subtitle: "Aura Home Systems е завършено решение – от сензора на прозореца до известието на телефона.",
+            subtitle: "Auro HomeSystems е завършено решение – от сензора на прозореца до известието на телефона.",
             windowTitle: "Сензори за прозорци",
             windowDesc: "Компактни безжични сензори, които засичат отваряне и оставане отворено. Идеални за тераси, детски стаи и леснодостъпни прозорци.",
             doorTitle: "Сензори за входни врати",
@@ -35,7 +35,7 @@ const translations = {
             appDesc: "Виждаш в реално време статуса на всеки сензор, получаваш известия и история на събитията – директно на телефона си."
         },
         cases: {
-            title: "Как изглежда Aura у дома",
+            title: "Как изглежда Auro у дома",
             subtitle: "Няколко реални сценария, в които системата работи за теб – дори когато ти не мислиш за нея.",
             terraceLabel: "Хол с тераса",
             terraceTitle: "Хол с тераса",
@@ -59,11 +59,11 @@ const translations = {
         },
         testimonials: {
             title: "Какво казват клиентите ни",
-            subtitle: "Доволни собственици на Aura Home Systems споделят как приложението и сензорите им промениха спокойствието у дома.",
+            subtitle: "Доволни собственици на Auro HomeSystems споделят как приложението и сензорите им промениха спокойствието у дома.",
             t1: "„Приложението е изключително лесно – виждам веднага кой прозорец или врата е отворена. През зимата веднъж забравихме да затворим терасата и известието дойде мигновено. Наистина спокойствие за цялото семейство.“",
             t1Name: "Мария К.",
             t1Meta: "София, инсталация от 6 месеца",
-            t2: "„Работя често на командировки и преди се притенявах за дома. Сега с Aura виждам статуса на всички входове в реално време. Приложението работи стабилно и известията са ясни – препоръчвам го с две ръце.“",
+            t2: "„Работя често на командировки и преди се притенявах за дома. Сега с Auro виждам статуса на всички входове в реално време. Приложението работи стабилно и известията са ясни – препоръчвам го с две ръце.“",
             t2Name: "Иван П.",
             t2Meta: "Пловдив, клиент от 1 година",
             t3: "„Инсталирахме сензори на детската и на входната врата. Приложението е много интуитивно – дори бабата си проверява дали всичко е затворено преди лягане. Добре дошли в 21 век, без да е сложно.“",
@@ -95,9 +95,9 @@ const translations = {
         nav: { problem: "Problem", solution: "Solution", product: "Product", stats: "Results", cta: "Get started", login: "Login" },
         hero: {
             eyebrow: "When nobody's home...",
-            title: "Aura Home Systems keeps your home safe when it's empty.",
+            title: "Auro HomeSystems keeps your home safe when it's empty.",
             subtitle: "Most break-ins happen through windows and the front door. We combine smart wireless sensors for windows and doors with a mobile app that sends instant alerts to your phone whenever something opens.",
-            cta: "Get started with Aura",
+            cta: "Get started with Auro",
             ctaNote: "See how the system works and how you can install it at home"
         },
         scene: { notifOpen: "Window is open", notifSafe: "Front door is secure" },
@@ -118,7 +118,7 @@ const translations = {
         },
         product: {
             title: "What you get",
-            subtitle: "Aura Home Systems is a complete solution – from the window sensor to the notification on your phone.",
+            subtitle: "Auro HomeSystems is a complete solution – from the window sensor to the notification on your phone.",
             windowTitle: "Window sensors",
             windowDesc: "Compact wireless sensors that detect opening and staying open. Ideal for terraces, kids' rooms, and easily accessible windows.",
             doorTitle: "Entrance door sensors",
@@ -127,7 +127,7 @@ const translations = {
             appDesc: "See each sensor's status in real time, get notifications and event history – right on your phone."
         },
         cases: {
-            title: "What Aura looks like at home",
+            title: "What Auro looks like at home",
             subtitle: "A few real scenarios where the system works for you – even when you're not thinking about it.",
             terraceLabel: "Living room with terrace",
             terraceTitle: "Living room with terrace",
@@ -151,11 +151,11 @@ const translations = {
         },
         testimonials: {
             title: "What our clients say",
-            subtitle: "Happy Aura Home Systems owners share how the app and sensors changed their peace of mind at home.",
+            subtitle: "Happy Auro HomeSystems owners share how the app and sensors changed their peace of mind at home.",
             t1: "\"The app is incredibly easy – I see right away which window or door is open. Once in winter we forgot to close the terrace and the alert came instantly. Real peace of mind for the whole family.\"",
             t1Name: "Maria K.",
             t1Meta: "Sofia, installation 6 months ago",
-            t2: "\"I often travel for work and used to worry about the house. With Aura I see the status of all entry points in real time. The app is stable and the notifications are clear – I recommend it wholeheartedly.\"",
+            t2: "\"I often travel for work and used to worry about the house. With Auro I see the status of all entry points in real time. The app is stable and the notifications are clear – I recommend it wholeheartedly.\"",
             t2Name: "Ivan P.",
             t2Meta: "Plovdiv, client for 1 year",
             t3: "\"We installed sensors in the kids' room and on the front door. The app is very intuitive – even grandma checks that everything is closed before bed. Welcome to the 21st century without the hassle.\"",
@@ -187,9 +187,9 @@ const translations = {
         nav: { problem: "Problem", solution: "Lösung", product: "Produkt", stats: "Ergebnisse", cta: "Loslegen", login: "Anmelden" },
         hero: {
             eyebrow: "Wenn niemand zu Hause ist...",
-            title: "Aura Home Systems schützt Ihr Zuhause, wenn es leer steht.",
+            title: "Auro HomeSystems schützt Ihr Zuhause, wenn es leer steht.",
             subtitle: "Die meisten Einbrüche passieren über Fenster und Haustür. Wir kombinieren smarte funkbasierte Sensoren für Fenster und Türen mit einer App, die Ihnen sofort eine Nachricht aufs Handy schickt, sobald etwas geöffnet wird.",
-            cta: "Mit Aura starten",
+            cta: "Mit Auro starten",
             ctaNote: "Erfahren Sie, wie das System funktioniert und wie Sie es bei sich einbauen können"
         },
         scene: { notifOpen: "Fenster ist offen", notifSafe: "Haustür ist gesichert" },
@@ -210,7 +210,7 @@ const translations = {
         },
         product: {
             title: "Was Sie bekommen",
-            subtitle: "Aura Home Systems ist eine Komplettlösung – vom Fenstersensor bis zur Benachrichtigung auf dem Handy.",
+            subtitle: "Auro HomeSystems ist eine Komplettlösung – vom Fenstersensor bis zur Benachrichtigung auf dem Handy.",
             windowTitle: "Fenstersensoren",
             windowDesc: "Kompakte funkbasierte Sensoren, die Öffnen und Offenbleiben erfassen. Ideal für Terrassen, Kinderzimmer und gut erreichbare Fenster.",
             doorTitle: "Eingangstür-Sensoren",
@@ -219,7 +219,7 @@ const translations = {
             appDesc: "Sie sehen in Echtzeit den Status jedes Sensors, bekommen Benachrichtigungen und Verlauf – direkt auf dem Handy."
         },
         cases: {
-            title: "So sieht Aura bei Ihnen aus",
+            title: "So sieht Auro bei Ihnen aus",
             subtitle: "Einige reale Szenarien, in denen das System für Sie arbeitet – auch wenn Sie nicht dran denken.",
             terraceLabel: "Wohnzimmer mit Terrasse",
             terraceTitle: "Wohnzimmer mit Terrasse",
@@ -243,11 +243,11 @@ const translations = {
         },
         testimonials: {
             title: "Was unsere Kunden sagen",
-            subtitle: "Zufriedene Aura-Hausbesitzer berichten, wie App und Sensoren ihre Ruhe zu Hause verändert haben.",
+            subtitle: "Zufriedene Auro-Hausbesitzer berichten, wie App und Sensoren ihre Ruhe zu Hause verändert haben.",
             t1: "„Die App ist extrem einfach – ich sehe sofort, welches Fenster oder welche Tür offen ist. Im Winter haben wir einmal die Terrasse nicht geschlossen, die Meldung kam sofort. Wirklich Ruhe für die ganze Familie.“",
             t1Name: "Maria K.",
             t1Meta: "Sofia, Installation vor 6 Monaten",
-            t2: "„Ich bin oft geschäftlich unterwegs und habe mich früher ums Haus gesorgt. Mit Aura sehe ich den Status aller Zugänge in Echtzeit. Die App läuft stabil, die Meldungen sind klar – ich empfehle sie von Herzen.“",
+            t2: "„Ich bin oft geschäftlich unterwegs und habe mich früher ums Haus gesorgt. Mit Auro sehe ich den Status aller Zugänge in Echtzeit. Die App läuft stabil, die Meldungen sind klar – ich empfehle sie von Herzen.“",
             t2Name: "Ivan P.",
             t2Meta: "Plowdiw, Kunde seit 1 Jahr",
             t3: "„Wir haben Sensoren im Kinderzimmer und an der Haustür. Die App ist sehr intuitiv – sogar Oma prüft vor dem Schlafen, ob alles zu ist. Willkommen im 21. Jahrhundert, ohne Stress.“",

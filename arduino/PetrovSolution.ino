@@ -5,7 +5,7 @@
 #include <ArduinoJson.h>
 
 // --- КОНФИГУРАЦИЯ FIREBASE ---
-#define FIREBASE_HOST "cleverhaus-petrov-default-rtdb.europe-west1.firebasedatabase.app"
+#define FIREBASE_HOST "https://cleverhaus-petrov-default-rtdb.europe-west1.firebasedatabase.app"
 #define FIREBASE_AUTH "5h8JwKgmM9yFZuzBlCYSQ9mPEjdWPq552l7U9irF"
 
 FirebaseData fbdo;
@@ -118,7 +118,7 @@ String transliterateToLatin(String s) {
     return out;
 }
 
-// Името на сензора -> ключ за Firebase: латиница + долни черти (без объркани символи)
+// Името на сензора -> ключ за Firebase: само a-z, A-Z, 0-9, _ (без кирилица/кодировки)
 String getDeviceIdFromName(char* device_name_ptr) {
     String id = String(device_name_ptr);
     id.trim();
@@ -130,12 +130,29 @@ String getDeviceIdFromName(char* device_name_ptr) {
     id = transliterateToLatin(id);
     id.replace(" ", "_");
     id.replace(".", "_");
+    id.replace("@", "_at_");
     id.replace("$", "_");
     id.replace("#", "_");
     id.replace("[", "_");
     id.replace("]", "_");
     id.replace("/", "_");
-    return id;
+    id.replace("-", "_");
+    // Само безопасни символи за Firebase ключ – премахни всичко извън a-zA-Z0-9_
+    String safe = "";
+    for (unsigned int i = 0; i < id.length(); i++) {
+        char c = id.charAt(i);
+        if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_') {
+            safe += c;
+        } else if (safe.length() > 0 && safe.charAt(safe.length() - 1) != '_') {
+            safe += '_';
+        }
+    }
+    safe.trim();
+    if (safe.length() == 0) {
+        safe = WiFi.macAddress();
+        safe.replace(":", "");
+    }
+    return safe;
 }
 
 void setup() {
@@ -176,6 +193,10 @@ void setup() {
     strcpy(device_name, custom_name.getValue());
 
     if (shouldSaveConfig) {
+        String em = String(user_email);
+        em.trim();
+        em.toLowerCase();
+        em.toCharArray(user_email, 50);
         StaticJsonDocument<256> doc;
         doc["email"] = user_email;
         doc["name"] = device_name;
@@ -196,7 +217,9 @@ void setup() {
 void loop() {
     String safeEmail = String(user_email);
     safeEmail.trim();
+    safeEmail.toLowerCase();
     safeEmail.replace(".", "-");
+    safeEmail.replace("@", "_at_");
 
     String deviceID = getDeviceIdFromName(device_name);
     String userPath = "/users/" + safeEmail;
@@ -207,12 +230,6 @@ void loop() {
         if (fbdo.dataType() == "boolean") {
             systemEnabled = fbdo.boolData();
         }
-    }
-
-    if (!systemEnabled) {
-        Serial.println("Rejim DOM: Senzorat ne prashta danni. Vklychi Navun ot tabloto.");
-        delay(5000);
-        return;
     }
 
     static bool lastStatus = (bool)-1;
@@ -230,19 +247,21 @@ void loop() {
         json.set("lastSeen", millis());
         json.set("battery", 100);
 
-        if (Firebase.RTDB.updateNode(&fbdo, devicePath, &json)) {
+        if (Firebase.RTDB.setJSON(&fbdo, devicePath, &json)) {
             Serial.println("Firebase obnoven!");
-            // Ново поле в user профила: име_на_сензора = true/false (при промяна на магнита)
-            String profileFieldPath = userPath + "/" + deviceID;
-            if (Firebase.RTDB.setBool(&fbdo, profileFieldPath, currentStatus)) {
-                Serial.println("Profil pole obnoveno: " + deviceID + " = " + (currentStatus ? "true" : "false"));
-            }
         } else {
             Serial.print("Greshka: ");
             Serial.println(fbdo.errorReason());
+            Serial.print("Put: ");
+            Serial.println(devicePath);
         }
 
         lastStatus = currentStatus;
+    }
+
+    if (!systemEnabled) {
+        delay(5000);
+        return;
     }
 
     delay(2000);

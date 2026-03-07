@@ -1,0 +1,25 @@
+# Правила за Realtime Database – pendingInquiries
+
+Запитванията с потвърждение се пазят в Realtime Database под ключ **pendingInquiries** (Cloud Functions пишат/четат чрез Admin SDK). Клиентът не трябва да има достъп до този путь.
+
+В Firebase Console → **Realtime Database** → **Regeln** (Rules) добави блок за `pendingInquiries`. Пример за цялостни правила (ако вече имаш `users`, просто добави `pendingInquiries`):
+
+```json
+{
+  "rules": {
+    "users": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "pendingInquiries": {
+      ".read": false,
+      ".write": false
+    }
+  }
+}
+```
+
+- `users` – за таблото и сензорите (логнати потребители четат/пишат).
+- `pendingInquiries` – само Cloud Functions (с Admin SDK) пишат и четат; клиентският достъп е изключен (`.read` и `.write` са `false`).
+
+След промяна натисни **Veröffentlichen** (Publish).

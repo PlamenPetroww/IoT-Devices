@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+    <meta charset="UTF-8" />
+    <title>Табло – Aura Home Systems</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="auth.css" />
+</head>
+<body class="dashboard-page">
+    <div class="dashboard-header">
+        <div>
+            <h1>Aura Home Systems</h1>
+            <p class="user-email" id="userEmail"></p>
+        </div>
+        <a href="#" id="logoutBtn" class="logout-btn">Изход</a>
+    </div>
+
+    <div class="mode-card">
+        <h2>Режим на системата</h2>
+        <p>Когато системата е „Навън“, сензорите се следят и получавате известия. В „У дома“ системата е изключена.</p>
+        <div class="mode-buttons">
+            <button type="button" id="modeHome" class="mode-btn active">🏠 У дома</button>
+            <button type="button" id="modeAway" class="mode-btn danger">🛡️ Навън</button>
+        </div>
+        <div id="sensorStatusMsg" class="sensor-status-msg home">
+            🏠 Сензорите са изключени (режим „У дома“).
+        </div>
+    </div>
+
+    <div class="devices-card">
+        <h2>Вашите сензори</h2>
+        <div id="duplicateNamesWarning" class="duplicate-names-warning" style="display: none;" role="alert"></div>
+        <div id="devicesList">
+            <p class="devices-empty">Зареждане...</p>
+        </div>
+    </div>
+
+    <p style="text-align: center;">
+        <a href="index.html" class="back-home">← Обратно към сайта</a>
+    </p>
+
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script>
+        const auth = firebase.auth();
+        const db = firebase.database();
+
+        function getSafeEmail(email) {
+            if (!email) return "";
+            return email.trim().replace(/\./g, "-");
+        }
+
+        // Проверка за логнат потребител
+        auth.onAuthStateChanged((user) => {
+            if (!user) {
+                window.location.href = "login.html";
+                return;
+            }
+            document.getElementById("userEmail").textContent = user.email;
+            const safeEmail = getSafeEmail(user.email);
+            if (!safeEmail) return;
+
+            const userPath = "users/" + safeEmail;
+
+            // Изход
+            document.getElementById("logoutBtn").addEventListener("click", (e) => {
+                e.preventDefault();
+                auth.signOut().then(() => { window.location.href = "login.html"; });
+            });
+
+            // Режим У дома / Навън
+            const modeHome = document.getElementById("modeHome");
+            const modeAway = document.getElementById("modeAway");
+            const statusMsg = document.getElementById("sensorStatusMsg");
+
+            function setModeUI(enabled) {
+                const isAway = !!enabled;
+                modeHome.classList.toggle("active", !isAway);
+                modeAway.classList.toggle("active", isAway);
+                statusMsg.className = "sensor-status-msg " + (isAway ? "away" : "home");
+                statusMsg.textContent = isAway
+                    ? "🛡️ Сензорите са активирани. Получавате известия при отваряне."
+                    : "🏠 Сензорите са изключени (режим „У дома“).";
+            }
+
+            db.ref(userPath + "/systemEnabled").on("value", (snap) => {
+                const val = snap.val();
+                setModeUI(val === true);
+            });
+
+            modeHome.addEventListener("click", () => {
+                db.ref(userPath).update({ systemEnabled: false });
+            });
+            modeAway.addEventListener("click", () => {
+                db.ref(userPath).update({ systemEnabled: true });
+            });
+
+            // Списък с устройства
+            const devicesList = document.getElementById("devicesList");
+            db.ref(userPath + "/devices").on("value", (snap) => {
+                const data = snap.val();
+                if (!data || typeof data !== "object") {
+                    devicesList.innerHTML = '<p class="devices-empty">Все още няма регистрирани сензори. Включи режим „Навън“ и след малко тук ще се появят устройствата от Arduino.</p>';
+                    return;
+                }
+                const devices = Object.entries(data).map(([id, d]) => ({
+                    id,
+                    name: (d && d.deviceName) || id,
+                    status: (d && d.status) === true ? "open" : "closed",
+                    lastSeen: d && d.lastSeen
+                }));
+
+                // Проверка за еднакви имена – показваме предупреждение
+                const nameCount = {};
+                devices.forEach(function(dev) {
+                    var n = (dev.name || "").trim();
+                    if (n) nameCount[n] = (nameCount[n] || 0) + 1;
+                });
+                const duplicateNames = Object.keys(nameCount).filter(function(n) { return nameCount[n] > 1; });
+                const warningEl = document.getElementById("duplicateNamesWarning");
+                if (duplicateNames.length > 0) {
+                    warningEl.innerHTML = "⚠️ Два или повече сензора имат еднакви имена (\"" + escapeHtml(duplicateNames.join("\", \"")) + "\"). Сменете името при конфигурацията на всяко устройство (WiFi Manager на ESP), за да не се презаписват данните във Firebase.";
+                    warningEl.style.display = "block";
+                } else {
+                    warningEl.style.display = "none";
+                }
+
+                devicesList.innerHTML = devices.map((dev) => `
+                    <div class="device-item">
+                        <span class="name">${escapeHtml(dev.name)}</span>
+                        <span class="status ${dev.status}">${dev.status === "open" ? "Отворено" : "Затворено"}</span>
+                    </div>
+                `).join("");
+            });
+        });
+
+        function escapeHtml(text) {
+            const div = document.createElement("div");
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>

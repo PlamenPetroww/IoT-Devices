@@ -1,0 +1,60 @@
+Потвърждение на запитване по имейл – настройка
+
+Как работи:
+1. Потребителят изпраща формата → получава имейл с линк за потвърждение.
+2. При клик на линка запитването се маркира като потвърдено и ти получаваш имейл на solutions.petrov@gmail.com.
+3. Ако не е зададен INQUIRY_FUNCTIONS_BASE_URL, формата работи както преди (директно Formspree, без потвърждение).
+
+Стъпки за включване на потвърждението:
+
+--- 1. Firebase проект ---
+- Използвай същия проект (напр. cleverhaus-petrov).
+- Всички данни са в Realtime Database (няма нужда от Firestore). Запитванията за потвърждение се пазят под pendingInquiries в Realtime Database.
+- В Realtime Database → Regeln добави правила за pendingInquiries (виж rtdb-rules-pendingInquiries.txt).
+
+--- 2. Resend (за изпращане на имейли) ---
+- Регистрирай се на https://resend.com (безплатен план: 100 имейла/ден).
+- В API Keys създай ключ и копирай го.
+- По подразбиране изпращаш от onboarding@resend.dev; за production можеш да верифицираш свой домейн.
+
+--- 3. Deploy на Cloud Functions ---
+В папката на проекта (IoT-Devices):
+
+  cd functions
+  npm install
+  cd ..
+  firebase use cleverhaus-petrov
+  firebase functions:config:set resend.api_key="RE_xxxxxxxx"
+  firebase deploy --only functions
+
+След deploy виж в конзолата URL на функциите, напр.:
+  https://us-central1-cleverhaus-petrov.cloudfunctions.net/submitInquiry
+  https://us-central1-cleverhaus-petrov.cloudfunctions.net/confirmInquiry
+
+ВАЖНО: При Firebase Functions v2 секретите се задават с Secret Manager, не с functions:config.
+  firebase functions:secrets:set RESEND_API_KEY
+  (въведи ключа от Resend при поискване)
+
+В functions/index.js използваме process.env.RESEND_API_KEY. За да го подадеш при deploy:
+  В Firebase Console → Functions → избери функция → Secrets → добави RESEND_API_KEY.
+  Или в index.js при дефиниция на функцията:
+  defineString("RESEND_API_KEY").default("")
+  и четене в кода. По-прост вариант: задай директно в кода за тест (не го комитвай в git).
+
+--- 4. inquiry-config.js ---
+В корена на сайта отвори inquiry-config.js и задай базовия URL на функциите:
+
+  window.INQUIRY_FUNCTIONS_BASE_URL = "https://us-central1-cleverhaus-petrov.cloudfunctions.net";
+
+Качи confirm-inquiry.html на същия домейн като главната страница, защото линкът в имейла ще е:
+  https://ТВОЯТ_САЙТ/confirm-inquiry.html?t=TOKEN
+
+--- 5. Проверка ---
+- Изпрати тестово запитване от формата.
+- Провери пощата на въведения имейл – трябва да има писмо от Resend с линк.
+- Кликни на линка – трябва да се отвори страница „Потвърдено“ и на solutions.petrov@gmail.com да пристигне имейл с съдържанието на запитването.
+
+Файлове:
+- functions/index.js – използва Realtime Database (pendingInquiries), не Firestore. submitInquiry записва и изпраща имейл за потвърждение; confirmInquiry маркира и изпраща към теб.
+- confirm-inquiry.html – страницата, която се отваря при клик на линка; вика confirmInquiry и показва резултата.
+- inquiry-config.js – тук задаваш INQUIRY_FUNCTIONS_BASE_URL.

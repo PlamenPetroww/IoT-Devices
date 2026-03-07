@@ -1,0 +1,19 @@
+Как да получаваш запитванията директно на solutions.petrov@gmail.com (без Outlook)
+
+1. Отвори https://formspree.io и регистрирай се (безплатно).
+
+2. Натисни "New Form" и задай:
+   - Email: solutions.petrov@gmail.com
+   - Име на формуляра: напр. "Aura Home контакт"
+
+3. След създаване ще видиш "Form Endpoint" – нещо като:
+   https://formspree.io/f/xjvqjwqw
+   Копирай само ID-то след /f/ (напр. xjvqjwqw).
+
+4. В проекта отвори app.js и намери реда:
+   const FORMSPREE_FORM_ID = "YOUR_FORMSPREE_FORM_ID";
+   Замени YOUR_FORMSPREE_FORM_ID с твоето ID (напр. xjvqjwqw).
+
+5. Запази и презареди сайта. При "Изпрати запитване" данните се изпращат към Formspree и ти получаваш имейл на solutions.petrov@gmail.com – без да се отваря Outlook.
+
+Безплатният план позволява до 50 изпращания месечно.

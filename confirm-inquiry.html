@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Потвърждение – Aura Home Systems</title>
+    <style>
+        body { font-family: system-ui, sans-serif; background: #020617; color: #e5e7eb; min-height: 100vh; display: flex; align-items: center; justify-content: center; margin: 0; padding: 20px; }
+        .loading { color: #9ca3af; }
+        .error { color: #f97373; }
+    </style>
+</head>
+<body>
+    <p class="loading" id="msg">Обработка на потвърждението...</p>
+    <script src="inquiry-config.js"></script>
+    <script>
+        (function() {
+            var params = new URLSearchParams(window.location.search);
+            var token = params.get("t") || params.get("token");
+            var msg = document.getElementById("msg");
+            if (!token) {
+                msg.className = "error";
+                msg.textContent = "Липсва код за потвърждение.";
+                return;
+            }
+            var base = window.INQUIRY_FUNCTIONS_BASE_URL || "";
+            if (!base) {
+                msg.className = "error";
+                msg.textContent = "Не е зададен адрес за потвърждение. Свържете се с администратора.";
+                return;
+            }
+            var confirmUrl = base.replace(/\/$/, "") + "/confirmInquiry?t=" + encodeURIComponent(token);
+            fetch(confirmUrl, { method: "GET", mode: "cors" })
+                .then(function(r) { return r.text(); })
+                .then(function(html) {
+                    document.open();
+                    document.write(html);
+                    document.close();
+                })
+                .catch(function() {
+                    msg.className = "error";
+                    msg.textContent = "Възникна грешка при потвърждението. Опитайте отново или свържете се с нас.";
+                });
+        })();
+    </script>
+</body>
+</html>

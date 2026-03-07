@@ -1,0 +1,10 @@
+# Статичен сайт – командата трябва да е валидна (не буквално "No build")
+[build]
+  command = "echo Static site"
+  publish = "."
+
+# Опционално: пренасочване за SPA (ако ползваш router)
+# [[redirects]]
+#   from = "/*"
+#   to = "/index.html"
+#   status = 200

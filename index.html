@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+    <meta charset="UTF-8" />
+    <title>SafeHome IoT</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+    <div class="page">
+        <header class="site-header">
+            <div class="logo">
+                Aura<span>Home</span> Systems
+            </div>
+            <nav class="nav">
+                <a href="#problem" data-i18n="nav.problem">Проблем</a>
+                <a href="#solution" data-i18n="nav.solution">Решение</a>
+                <a href="#product" data-i18n="nav.product">Продукт</a>
+                <a href="#stats" data-i18n="nav.stats">Резултати</a>
+                <a href="#cta" data-i18n="nav.cta">Започни</a>
+                <a href="login.html" data-i18n="nav.login">Вход</a>
+                <div class="lang-dropdown">
+                    <button type="button" class="lang-dropdown-trigger" aria-haspopup="true" aria-expanded="false" id="langDropdownTrigger">
+                        <span class="lang-flag-icon lang-flag-bg" id="langTriggerFlag" aria-hidden="true"></span>
+                        <span class="lang-code" id="langTriggerCode">BG</span>
+                        <span class="lang-chevron" aria-hidden="true">▼</span>
+                    </button>
+                    <div class="lang-dropdown-menu" id="langDropdownMenu" role="menu" aria-label="Избор на език">
+                        <button type="button" class="lang-option" role="menuitem" data-lang="bg"><span class="lang-flag-icon lang-flag-bg"></span> BG</button>
+                        <button type="button" class="lang-option" role="menuitem" data-lang="en"><span class="lang-flag-icon lang-flag-en"></span> EN</button>
+                        <button type="button" class="lang-option" role="menuitem" data-lang="de"><span class="lang-flag-icon lang-flag-de"></span> DE</button>
+                    </div>
+                </div>
+            </nav>
+        </header>
+
+        <main>
+            <section id="hero" class="hero">
+                <div class="hero-text">
+                    <p class="eyebrow" data-i18n="hero.eyebrow">Когато никой не е у дома...</p>
+                    <h1 data-i18n="hero.title">Aura Home Systems пази дома ти, когато е празен.</h1>
+                    <p class="hero-subtitle" data-i18n="hero.subtitle">
+                        Най-честите кражби стават през прозорците и входната врата.
+                        Ние комбинираме умни безжични сензори за прозорци и врати с мобилно приложение,
+                        което изпраща мигновени сигнали до телефона ти при всяко нежелано отваряне.
+                    </p>
+                    <div class="hero-cta">
+                        <button class="primary-cta" type="button" data-i18n="hero.cta">Започни с Aura</button>
+                        <span class="cta-note" data-i18n="hero.ctaNote">Виж как работи системата и как можеш да я инсталираш у дома си</span>
+                    </div>
+                </div>
+
+                <div class="hero-visual">
+                    <div class="scene">
+                        <div class="scene-background-glow"></div>
+
+                        <div class="house">
+                            <div class="roof"></div>
+                            <div class="body">
+                                <div class="window window-left">
+                                    <div class="sensor-dot"></div>
+                                    <div class="window-glass"></div>
+                                </div>
+                                <div class="door">
+                                    <div class="door-inner"></div>
+                                    <div class="sensor-dot sensor-door"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="burglar">
+                            <div class="burglar-body"></div>
+                            <div class="burglar-mask"></div>
+                        </div>
+
+                        <div class="alert-badge">
+                            <span class="alert-icon">!</span>
+                        </div>
+
+                        <div class="phone-panel">
+                            <div class="phone">
+                                <div class="phone-screen">
+                                    <div class="notif notif-danger">
+                                        <span class="notif-dot"></span>
+                                        <span class="notif-text" data-i18n="scene.notifOpen">Прозорецът е отворен</span>
+                                    </div>
+                                    <div class="notif notif-safe">
+                                        <span class="notif-dot"></span>
+                                        <span class="notif-text" data-i18n="scene.notifSafe">Входната врата е защитена</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="signal-wave signal-wave-1"></div>
+                            <div class="signal-wave signal-wave-2"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="problem" class="section section-split">
+                <div class="section-content">
+                    <h2 data-i18n="problem.title">Проблемът: домът остава без надзор</h2>
+                    <p data-i18n-html="problem.p1">
+                        Когато семейството е на работа, на почивка или просто извън града,
+                        домът остава уязвим и най-често напълно „невидим“ за собствениците.
+                        Най-честите кражби се случват през
+                        <strong>прозорците</strong> и <strong>входната врата</strong> – точно когато няма
+                        кой да реагира навреме и няма реална информация какво се случва вътре.
+                    </p>
+                    <ul class="bullets">
+                        <li data-i18n="problem.li1">Никой не вижда опита за взлом в реално време.</li>
+                        <li data-i18n="problem.li2">Реакцията идва късно – след като щетите вече са нанесени.</li>
+                        <li data-i18n="problem.li3">Стандартните аларми често остават без връзка със собственика и звучат „в празно пространство“.</li>
+                        <li data-i18n="problem.li4">Не знаеш дали прозорците и вратите са затворени, когато бързаш за работа или пътуване.</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section class="aura-3d-container">
+                <div class="aura-3d-text">
+                    Aura <span>Home</span> Systems
+                </div>
+            </section>
+
+            <section id="solution" class="section section-split section-alt">
+                <div class="section-content">
+                    <h2 data-i18n="solution.title">Нашето решение: умни сензори с реални сигнали</h2>
+                    <p data-i18n-html="solution.p1">
+                        Инсталираме интелигентни сензори на критичните точки – прозорци и входни
+                        врати. Те следят статуса им в реално време и при всяка промяна изпращат
+                        <strong>незабавно известие до телефона ти</strong>. Получаваш не просто аларма,
+                        а ясен сигнал кой отвор е засегнат, кога се е случило и колко дълго е останал отворен.
+                    </p>
+                    <ul class="bullets">
+                        <li data-i18n="solution.li1">Следиш в реално време дали е отворено или затворено.</li>
+                        <li data-i18n="solution.li2">Получаваш ясни известия при всяко съмнително движение.</li>
+                        <li data-i18n="solution.li3">Можеш да реагираш веднага – независимо къде се намираш.</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section id="product" class="section section-product">
+                <div class="section-content">
+                    <h2 data-i18n="product.title">Какво точно получаваш</h2>
+                    <p class="section-subtitle" data-i18n="product.subtitle">
+                        Aura Home Systems е завършено решение – от сензора на прозореца до известието на телефона.
+                    </p>
+
+                    <div class="product-grid">
+                        <article class="product-card">
+                            <div class="product-icon product-icon-window"></div>
+                            <h3 data-i18n="product.windowTitle">Сензори за прозорци</h3>
+                            <p data-i18n="product.windowDesc">
+                                Компактни безжични сензори, които засичат отваряне и оставане отворено.
+                                Идеални за тераси, детски стаи и леснодостъпни прозорци.
+                            </p>
+                        </article>
+
+                        <article class="product-card">
+                            <div class="product-icon product-icon-door"></div>
+                            <h3 data-i18n="product.doorTitle">Сензори за входни врати</h3>
+                            <p data-i18n="product.doorDesc">
+                                Устойчиви сензори за входни и гаражни врати, които предупреждават
+                                при всяко неочаквано отключване или отваряне.
+                            </p>
+                        </article>
+
+                        <article class="product-card">
+                            <div class="product-icon product-icon-app"></div>
+                            <h3 data-i18n="product.appTitle">Мобилно приложение</h3>
+                            <p data-i18n="product.appDesc">
+                                Виждаш в реално време статуса на всеки сензор, получаваш известия
+                                и история на събитията – директно на телефона си.
+                            </p>
+                        </article>
+                    </div>
+                </div>
+            </section>
+
+            <section id="cases" class="section section-usecases">
+                <div class="section-content">
+                    <h2 data-i18n="cases.title">Как изглежда Aura у дома</h2>
+                    <p class="section-subtitle" data-i18n="cases.subtitle">
+                        Няколко реални сценария, в които системата работи за теб – дори когато ти не мислиш за нея.
+                    </p>
+
+                    <div class="usecase-grid">
+                        <article class="usecase-card">
+                            <div class="usecase-image">
+                                <img src="assets/terrace-unified.png.png" alt="Хол с тераса" data-i18n-alt="cases.terraceLabel" />
+                                <div class="usecase-label" data-i18n="cases.terraceLabel">Хол с тераса</div>
+                            </div>
+                            <div class="usecase-copy">
+                                <h3 data-i18n="cases.terraceTitle">Хол с тераса</h3>
+                                <p data-i18n="cases.terraceDesc">
+                                    Сензор на плъзгащата врата към терасата те предупреждава, ако остане
+                                    отворена след вечеря или ако някой я отвори през нощта, докато семейството спи.
+                                </p>
+                            </div>
+                        </article>
+
+                        <article class="usecase-card">
+                            <div class="usecase-image">
+                                <img src="assets/entrance-unified.png.png" alt="Основен вход" data-i18n-alt="cases.entranceLabel" />
+                                <div class="usecase-label" data-i18n="cases.entranceLabel">Основен вход</div>
+                            </div>
+                            <div class="usecase-copy">
+                                <h3 data-i18n="cases.entranceTitle">Основен вход</h3>
+                                <p data-i18n="cases.entranceDesc">
+                                    Сензор на входната врата отчита всяко отваряне, докато си на работа.
+                                    При неочаквано отключване получаваш моментално известие на телефона си.
+                                </p>
+                            </div>
+                        </article>
+
+                        <article class="usecase-card">
+                            <div class="usecase-image">
+                                <img src="assets/kidsroom-unified.png.png" alt="Детска стая" data-i18n-alt="cases.kidsLabel" />
+                                <div class="usecase-label" data-i18n="cases.kidsLabel">Детска стая</div>
+                            </div>
+                            <div class="usecase-copy">
+                                <h3 data-i18n="cases.kidsTitle">Детска стая</h3>
+                                <p data-i18n="cases.kidsDesc">
+                                    Сензор на прозореца в детската стая ти дава спокойствие, че прозорецът не остава
+                                    отворен, когато децата играят вътре или когато навън е студено.
+                                </p>
+                            </div>
+                        </article>
+                    </div>
+                </div>
+            </section>
+
+            <section id="stats" class="section section-stats">
+                <div class="section-content">
+                    <h2 data-i18n="stats.title">Довериха ни се десетки домакинства</h2>
+                    <p class="section-subtitle" data-i18n="stats.subtitle">
+                        Нашите решения вече работят в реални домове и обекти. Бавно, но сигурно,
+                        разширяваме мрежата си и пазим все повече хора.
+                    </p>
+
+                    <div class="stats-grid">
+                        <article class="stat-card">
+                            <span class="stat-number" data-target="5">0</span>
+                            <span class="stat-label" data-i18n="stats.cities">града</span>
+                            <span class="stat-help" data-i18n="stats.citiesHelp">В които вече сме инсталирали системи</span>
+                        </article>
+                        <article class="stat-card">
+                            <span class="stat-number" data-target="34">0</span>
+                            <span class="stat-label" data-i18n="stats.projects">успешни проекта</span>
+                            <span class="stat-help" data-i18n="stats.projectsHelp">Завършени решения „до ключ“</span>
+                        </article>
+                        <article class="stat-card">
+                            <span class="stat-number" data-target="46">0</span>
+                            <span class="stat-label" data-i18n="stats.clients">доволни клиенти</span>
+                            <span class="stat-help" data-i18n="stats.clientsHelp">С по-спокоен сън и защитен дом</span>
+                        </article>
+                    </div>
+                </div>
+            </section>
+
+            <section id="testimonials" class="section section-testimonials">
+                <div class="section-content">
+                    <h2 data-i18n="testimonials.title">Какво казват клиентите ни</h2>
+                    <p class="section-subtitle" data-i18n="testimonials.subtitle">
+                        Доволни собственици на Aura Home Systems споделят как приложението и сензорите им промениха спокойствието у дома.
+                    </p>
+
+                    <div class="testimonials-grid">
+                        <blockquote class="testimonial-card">
+                            <p class="testimonial-text" data-i18n="testimonials.t1">
+                                „Приложението е изключително лесно – виждам веднага кой прозорец или врата е отворена. През зимата веднъж забравихме да затворим терасата и известието дойде мигновено. Наистина спокойствие за цялото семейство.“
+                            </p>
+                            <footer class="testimonial-author">
+                                <span class="testimonial-name" data-i18n="testimonials.t1Name">Мария К.</span>
+                                <span class="testimonial-meta" data-i18n="testimonials.t1Meta">София, инсталация от 6 месеца</span>
+                            </footer>
+                        </blockquote>
+
+                        <blockquote class="testimonial-card">
+                            <p class="testimonial-text" data-i18n="testimonials.t2">
+                                „Работя често на командировки и преди се притенявах за дома. Сега с Aura виждам статуса на всички входове в реално време. Приложението работи стабилно и известията са ясни – препоръчвам го с две ръце.“
+                            </p>
+                            <footer class="testimonial-author">
+                                <span class="testimonial-name" data-i18n="testimonials.t2Name">Иван П.</span>
+                                <span class="testimonial-meta" data-i18n="testimonials.t2Meta">Пловдив, клиент от 1 година</span>
+                            </footer>
+                        </blockquote>
+
+                        <blockquote class="testimonial-card">
+                            <p class="testimonial-text" data-i18n="testimonials.t3">
+                                „Инсталирахме сензори на детската и на входната врата. Приложението е много интуитивно – дори бабата си проверява дали всичко е затворено преди лягане. Добре дошли в 21 век, без да е сложно.“
+                            </p>
+                            <footer class="testimonial-author">
+                                <span class="testimonial-name" data-i18n="testimonials.t3Name">Елена и Димитър Т.</span>
+                                <span class="testimonial-meta" data-i18n="testimonials.t3Meta">Варна, доволни клиенти</span>
+                            </footer>
+                        </blockquote>
+                    </div>
+                </div>
+            </section>
+
+            <section id="cta" class="section section-cta">
+                <div class="section-content">
+                    <h2 data-i18n="cta.title">Готов ли си да защитиш дома си?</h2>
+                    <p class="section-subtitle" data-i18n="cta.subtitle">
+                        Разкажи ни с какво жилище разполагаш и ще ти предложим конкретна конфигурация
+                        от сензори за врати и прозорци.
+                    </p>
+                    <ol class="cta-steps">
+                        <li data-i18n="cta.step1">Споделяш ни колко стаи, прозорци и входни врати имаш.</li>
+                        <li data-i18n="cta.step2">Предлагаме ти примерен пакет сензори и ориентировъчна цена.</li>
+                        <li data-i18n="cta.step3">Планираме инсталация и те превеждаме през приложението стъпка по стъпка.</li>
+                    </ol>
+                    <form id="contactForm" class="contact-form" action="#" method="post">
+                        <label class="form-label">
+                            <span class="form-label-text" data-i18n="form.title">Заглавие</span>
+                            <input type="text" name="_subject" class="form-input" required maxlength="120" placeholder="напр. Запитване за сензори" data-i18n-placeholder="form.titlePlaceholder" />
+                        </label>
+                        <label class="form-label">
+                            <span class="form-label-text" data-i18n="form.message">Съобщение</span>
+                            <textarea name="message" class="form-input form-textarea" required rows="4" placeholder="Напишете вашето съобщение..." data-i18n-placeholder="form.messagePlaceholder"></textarea>
+                        </label>
+                        <label class="form-label">
+                            <span class="form-label-text" data-i18n="form.phone">Телефон</span>
+                            <input type="tel" name="phone" class="form-input" placeholder="+359 888 123 456" data-i18n-placeholder="form.phonePlaceholder" />
+                        </label>
+                        <label class="form-label">
+                            <span class="form-label-text" data-i18n="form.email">Имейл</span>
+                            <input type="email" name="_replyto" class="form-input" required placeholder="your@email.com" data-i18n-placeholder="form.emailPlaceholder" />
+                        </label>
+                        <p id="formStatus" class="form-status" aria-live="polite"></p>
+                        <button type="submit" class="cta-primary-link cta-submit" id="formSubmitBtn" data-i18n="form.submit">Изпрати запитване</button>
+                    </form>
+                </div>
+            </section>
+        </main>
+
+        <footer class="site-footer">
+            <p>SafeHome IoT &copy; <span id="footerYear"></span> – <span data-i18n="footer.text">Умни сензори за по-спокоен дом.</span></p>
+        </footer>
+    </div>
+
+    <script src="translations.js"></script>
+    <script src="inquiry-config.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,41 @@
+Настройка за Вход / Регистрация / Табло (Firebase)
+
+1. Firebase Console
+   - Отвори https://console.firebase.google.com и избери проекта cleverhaus-petrov (или създай такъв).
+
+2. Authentication
+   - В менюто: Build → Authentication → Get started.
+   - В таб "Sign-in method" включи "Email/Password" (Enable).
+
+3. Конфигурация за уеб приложението
+   - Project settings (иконката зъб) → General → Your apps.
+   - Ако нямаш уеб ап, натисни "</>" и регистрирай нов. Копирай firebaseConfig обекта.
+   - В проекта отвори firebase-config.js и замени стойностите с тези от конзолата:
+     - apiKey
+     - authDomain (напр. cleverhaus-petrov.firebaseapp.com)
+     - projectId, storageBucket, messagingSenderId, appId
+     - databaseURL трябва да е: https://cleverhaus-petrov-default-rtdb.europe-west1.firebasedatabase.app
+
+4. Realtime Database – правила
+   - Build → Realtime Database → Rules.
+   - За да могат логнатите потребители да четат/пишат под /users/{email}/, използвай например:
+     {
+       "rules": {
+         "users": {
+           ".read": "auth != null",
+           ".write": "auth != null"
+         }
+       }
+     }
+   - Публикувай правилата (Publish).
+
+5. Съвместимост с Arduino
+   - Arduino използва имейла с точките заменени с тире (safeEmail) като път: /users/safeEmail/devices/...
+   - Уеб приложението използва същия път според имейла на логнатия потребител. Така сензорите и таблото са за един и същ акаунт.
+
+Страници:
+- login.html   – Вход (имейл + парола)
+- register.html – Регистрация (създаване на профил)
+- dashboard.html – Табло след вход: режим У дома / Навън и списък сензори. Бутон „Изход“.
+
+От главната страница (index.html) връзката „Вход“ в навигацията води до login.html.

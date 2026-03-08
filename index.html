@@ -18,22 +18,27 @@
                 <span class="menu-toggle-bar"></span>
             </button>
             <nav class="nav" id="mainNav">
-                <a href="#problem" data-i18n="nav.problem">Проблем</a>
-                <a href="#solution" data-i18n="nav.solution">Решение</a>
-                <a href="#product" data-i18n="nav.product">Продукт</a>
-                <a href="#stats" data-i18n="nav.stats">Резултати</a>
-                <a href="#cta" data-i18n="nav.cta">Започни</a>
-                <a href="login.html" data-i18n="nav.login">Вход</a>
-                <div class="lang-dropdown">
-                    <button type="button" class="lang-dropdown-trigger" aria-haspopup="true" aria-expanded="false" id="langDropdownTrigger">
-                        <span class="lang-flag-icon lang-flag-bg" id="langTriggerFlag" aria-hidden="true"></span>
-                        <span class="lang-code" id="langTriggerCode">BG</span>
-                        <span class="lang-chevron" aria-hidden="true">▼</span>
-                    </button>
-                    <div class="lang-dropdown-menu" id="langDropdownMenu" role="menu" aria-label="Избор на език">
-                        <button type="button" class="lang-option" role="menuitem" data-lang="bg"><span class="lang-flag-icon lang-flag-bg"></span> BG</button>
-                        <button type="button" class="lang-option" role="menuitem" data-lang="en"><span class="lang-flag-icon lang-flag-en"></span> EN</button>
-                        <button type="button" class="lang-option" role="menuitem" data-lang="de"><span class="lang-flag-icon lang-flag-de"></span> DE</button>
+                <div class="nav-links">
+                    <a href="#problem" data-i18n="nav.problem">Проблем</a>
+                    <a href="#solution" data-i18n="nav.solution">Решение</a>
+                    <a href="#product" data-i18n="nav.product">Продукт</a>
+                    <a href="#stats" data-i18n="nav.stats">Резултати</a>
+                    <a href="#cta" data-i18n="nav.cta">Започни</a>
+                </div>
+                <div class="nav-actions">
+                    <a href="login.html" data-i18n="nav.login">Вход</a>
+                    <a href="register.html" data-i18n="nav.register">Регистрация</a>
+                    <div class="lang-dropdown">
+                        <button type="button" class="lang-dropdown-trigger" aria-haspopup="true" aria-expanded="false" id="langDropdownTrigger">
+                            <span class="lang-flag-icon lang-flag-bg" id="langTriggerFlag" aria-hidden="true"></span>
+                            <span class="lang-code" id="langTriggerCode">BG</span>
+                            <span class="lang-chevron" aria-hidden="true">▼</span>
+                        </button>
+                        <div class="lang-dropdown-menu" id="langDropdownMenu" role="menu" aria-label="Избор на език">
+                            <button type="button" class="lang-option" role="menuitem" data-lang="bg"><span class="lang-flag-icon lang-flag-bg"></span> BG</button>
+                            <button type="button" class="lang-option" role="menuitem" data-lang="en"><span class="lang-flag-icon lang-flag-en"></span> EN</button>
+                            <button type="button" class="lang-option" role="menuitem" data-lang="de"><span class="lang-flag-icon lang-flag-de"></span> DE</button>
+                        </div>
                     </div>
                 </div>
             </nav>
@@ -46,8 +51,7 @@
                     <h1 data-i18n="hero.title">Aura HomeSystems пази дома ти, когато е празен.</h1>
                     <p class="hero-subtitle" data-i18n="hero.subtitle">
                         Най-честите кражби стават през прозорците и входната врата.
-                        Ние комбинираме умни безжични сензори за прозорци и врати с мобилно приложение,
-                        което изпраща мигновени сигнали до телефона ти при всяко нежелано отваряне.
+                        Сензорите ни са изключително лесно за инсталиране и настройка, а приложението е изключително удобно – получаваш мигновени сигнали на телефона при всяко нежелано отваряне.
                     </p>
                     <div class="hero-cta">
                         <button class="primary-cta" type="button" data-i18n="hero.cta">Започни с Aura</button>
@@ -56,6 +60,8 @@
                 </div>
 
                 <div class="hero-visual">
+                    <div class="scene-wrap">
+                        <p class="scene-caption" data-i18n="scene.caption">Статус в приложението в реално време</p>
                     <div class="scene">
                         <div class="scene-background-glow"></div>
 
@@ -99,6 +105,7 @@
                             <div class="signal-wave signal-wave-2"></div>
                         </div>
                     </div>
+                    </div>
                 </div>
             </section>
 
@@ -131,10 +138,7 @@
                 <div class="section-content">
                     <h2 data-i18n="solution.title">Нашето решение: умни сензори с реални сигнали</h2>
                     <p data-i18n-html="solution.p1">
-                        Инсталираме интелигентни сензори на критичните точки – прозорци и входни
-                        врати. Те следят статуса им в реално време и при всяка промяна изпращат
-                        <strong>незабавно известие до телефона ти</strong>. Получаваш не просто аларма,
-                        а ясен сигнал кой отвор е засегнат, кога се е случило и колко дълго е останал отворен.
+                        Сензорите са супер лесно за инсталиране и настройка – закачаш ги на прозорците и входните врати, свързват се с приложението и веднага следят статуса в реално време. При всяка промяна получаваш <strong>незабавно известие на телефона</strong>. Нашето приложение е изключително удобно: ясен сигнал кой отвор е засегнат, кога се е случило и колко дълго е останал отворен.
                     </p>
                     <ul class="bullets">
                         <li data-i18n="solution.li1">Следиш в реално време дали е отворено или затворено.</li>
@@ -148,7 +152,7 @@
                 <div class="section-content">
                     <h2 data-i18n="product.title">Какво точно получаваш</h2>
                     <p class="section-subtitle" data-i18n="product.subtitle">
-                        Aura HomeSystems е завършено решение – от сензора на прозореца до известието на телефона.
+                        Aura HomeSystems е завършено решение – сензорите се инсталират и настройват изключително лесно, а приложението е изключително удобно: от сензора на прозореца до известието на телефона.
                     </p>
 
                     <div class="product-grid">
@@ -317,7 +321,7 @@
                     <ol class="cta-steps">
                         <li data-i18n="cta.step1">Споделяш ни колко стаи, прозорци и входни врати имаш.</li>
                         <li data-i18n="cta.step2">Предлагаме ти примерен пакет сензори и ориентировъчна цена.</li>
-                        <li data-i18n="cta.step3">Планираме инсталация и те превеждаме през приложението стъпка по стъпка.</li>
+                        <li data-i18n="cta.step3">Сензорите се инсталират и настройват супер лесно сами – приложението те води стъпка по стъпка.</li>
                     </ol>
                     <form id="contactForm" class="contact-form" action="#" method="post">
                         <label class="form-label">

@@ -1,14 +1,14 @@
 const translations = {
     bg: {
-        nav: { problem: "Проблем", solution: "Решение", product: "Продукт", stats: "Резултати", cta: "Започни", login: "Вход" },
+        nav: { problem: "Проблем", solution: "Решение", product: "Продукт", stats: "Резултати", cta: "Започни", login: "Вход", register: "Регистрация" },
         hero: {
             eyebrow: "Когато никой не е у дома...",
             title: "Aura HomeSystems пази дома ти, когато е празен.",
-            subtitle: "Най-честите кражби стават през прозорците и входната врата. Ние комбинираме умни безжични сензори за прозорци и врати с мобилно приложение, което изпраща мигновени сигнали до телефона ти при всяко нежелано отваряне.",
+            subtitle: "Най-честите кражби стават през прозорците и входната врата. Сензорите ни са изключително лесно за инсталиране и настройка, а приложението е изключително удобно – получаваш мигновени сигнали на телефона при всяко нежелано отваряне.",
             cta: "Започни с Aura",
             ctaNote: "Виж как работи системата и как можеш да я инсталираш у дома си"
         },
-        scene: { notifOpen: "Прозорецът е отворен", notifSafe: "Входната врата е защитена" },
+        scene: { caption: "Статус в приложението в реално време", notifOpen: "Прозорецът е отворен", notifSafe: "Входната врата е защитена" },
         problem: {
             title: "Проблемът: домът остава без надзор",
             p1: "Когато семейството е на работа, на почивка или просто извън града, домът остава уязвим и най-често напълно „невидим“ за собствениците. Най-честите кражби се случват през <strong>прозорците</strong> и <strong>входната врата</strong> – точно когато няма кой да реагира навреме и няма реална информация какво се случва вътре.",
@@ -19,20 +19,20 @@ const translations = {
         },
         solution: {
             title: "Нашето решение: умни сензори с реални сигнали",
-            p1: "Инсталираме интелигентни сензори на критичните точки – прозорци и входни врати. Те следят статуса им в реално време и при всяка промяна изпращат <strong>незабавно известие до телефона ти</strong>. Получаваш не просто аларма, а ясен сигнал кой отвор е засегнат, кога се е случило и колко дълго е останал отворен.",
+            p1: "Сензорите са супер лесно за инсталиране и настройка – закачаш ги на прозорците и входните врати, свързват се с приложението и веднага следят статуса в реално време. При всяка промяна получаваш <strong>незабавно известие на телефона</strong>. Нашето приложение е изключително удобно: ясен сигнал кой отвор е засегнат, кога се е случило и колко дълго е останал отворен.",
             li1: "Следиш в реално време дали е отворено или затворено.",
             li2: "Получаваш ясни известия при всяко съмнително движение.",
             li3: "Можеш да реагираш веднага – независимо къде се намираш."
         },
         product: {
             title: "Какво точно получаваш",
-            subtitle: "Aura HomeSystems е завършено решение – от сензора на прозореца до известието на телефона.",
+            subtitle: "Aura HomeSystems е завършено решение – сензорите се инсталират и настройват изключително лесно, а приложението е изключително удобно: от сензора на прозореца до известието на телефона.",
             windowTitle: "Сензори за прозорци",
             windowDesc: "Компактни безжични сензори, които засичат отваряне и оставане отворено. Идеални за тераси, детски стаи и леснодостъпни прозорци.",
             doorTitle: "Сензори за входни врати",
             doorDesc: "Устойчиви сензори за входни и гаражни врати, които предупреждават при всяко неочаквано отключване или отваряне.",
             appTitle: "Мобилно приложение",
-            appDesc: "Виждаш в реално време статуса на всеки сензор, получаваш известия и история на събитията – директно на телефона си.",
+            appDesc: "Изключително удобно приложение: виждаш в реално време статуса на всеки сензор, получаваш известия и история на събитията – директно на телефона си.",
             wifiNote: "За да използваш сензорите ни, в дома ти трябва да има стабилна WiFi връзка – сензорите се свързват с нея и изпращат данните до приложението."
         },
         cases: {
@@ -52,7 +52,7 @@ const translations = {
             title: "Довериха ни се десетки домакинства",
             subtitle: "Нашите решения вече работят в реални домове и обекти. Бавно, но сигурно, разширяваме мрежата си и пазим все повече хора.",
             cities: "града",
-            citiesHelp: "В които вече сме инсталирали системи",
+            citiesHelp: "Клиенти са инсталирали и настроили системите си сами",
             projects: "успешни проекта",
             projectsHelp: "Завършени решения „до ключ“",
             clients: "доволни клиенти",
@@ -76,7 +76,7 @@ const translations = {
             subtitle: "Разкажи ни с какво жилище разполагаш и ще ти предложим конкретна конфигурация от сензори за врати и прозорци.",
             step1: "Споделяш ни колко стаи, прозорци и входни врати имаш.",
             step2: "Предлагаме ти примерен пакет сензори и ориентировъчна цена.",
-            step3: "Планираме инсталация и те превеждаме през приложението стъпка по стъпка.",
+            step3: "Сензорите се инсталират и настройват супер лесно сами – приложението те води стъпка по стъпка.",
             link: "Заяви безплатна консултация по имейл"
         },
         form: {
@@ -90,18 +90,34 @@ const translations = {
             phonePlaceholder: "+359 888 123 456",
             emailPlaceholder: "your@email.com"
         },
-        footer: { text: "Умни сензори за по-спокоен дом.", wifiNote: "За да използваш нашите сензори, необходима е стабилна WiFi връзка у дома.", impressum: "Импресум" }
+        footer: { text: "Умни сензори за по-спокоен дом.", wifiNote: "За да използваш нашите сензори, необходима е стабилна WiFi връзка у дома.", impressum: "Импресум" },
+        impressum: {
+            pageTitle: "Импресум – Aura HomeSystems",
+            title: "Импресум (Правна информация)",
+            intro: "На тази страница са обобщени данните за доставчика на услугата и отговорностите по закона.",
+            section1Title: "1. Предоставящ услугата / Издател",
+            section2Title: "2. Контакт",
+            emailLabel: "Имейл:",
+            phoneLabel: "Телефон:",
+            section3Title: "3. Отговорност за съдържание",
+            section3Content: "Съдържанието на този сайт е съставено с внимание. Не поемаме обаче отговорност за пълнота, актуалност и безпроблемност на информацията. Като доставчик на услуга сме отговорни за собственото си съдържание на тези страници съгласно общите закони. Не сме обаче длъжни да следим предаваната или съхраняваната от трети страни информация или да разследваме обстоятелства, указващи на незаконна дейност.",
+            section4Title: "4. Отговорност за връзки",
+            section4Content: "Сайтът може да съдържа връзки към външни страници. За съдържанието на тези външни страници носи отговорност съответният доставчик. При поставяне на връзките съдържанието на целевите страници е било проверено за възможни нарушения. Постоянен контрол без конкретни указания за нарушение не е осъществим. При известни нарушения съответните връзки ще бъдат премахнати незабавно.",
+            section5Title: "5. Авторски права",
+            section5Content: "Съдържанието и творбите, създадени от нас на тези страници, са предмет на авторско право. Възпроизвеждането, обработката, разпространението и всякакъв вид използване извън границите на авторското право изискват писменото съгласие на съответния автор или създател.",
+            backLink: "← Обратно към началната страница"
+        }
     },
     en: {
-        nav: { problem: "Problem", solution: "Solution", product: "Product", stats: "Results", cta: "Get started", login: "Login" },
+        nav: { problem: "Problem", solution: "Solution", product: "Product", stats: "Results", cta: "Get started", login: "Login", register: "Register" },
         hero: {
             eyebrow: "When nobody's home...",
             title: "Aura HomeSystems keeps your home safe when it's empty.",
-            subtitle: "Most break-ins happen through windows and the front door. We combine smart wireless sensors for windows and doors with a mobile app that sends instant alerts to your phone whenever something opens.",
+            subtitle: "Most break-ins happen through windows and the front door. Our sensors are super easy to install and set up, and our app is extremely user-friendly – you get instant alerts on your phone whenever something opens.",
             cta: "Get started with Aura",
             ctaNote: "See how the system works and how you can install it at home"
         },
-        scene: { notifOpen: "Window is open", notifSafe: "Front door is secure" },
+        scene: { caption: "Live status in the app", notifOpen: "Window is open", notifSafe: "Front door is secure" },
         problem: {
             title: "The problem: your home is left unwatched",
             p1: "When the family is at work, on holiday or simply away, the home is vulnerable and often completely \"invisible\" to the owners. Most break-ins happen through <strong>windows</strong> and the <strong>front door</strong> – exactly when there's no one to react in time and no real information about what's going on inside.",
@@ -112,20 +128,20 @@ const translations = {
         },
         solution: {
             title: "Our solution: smart sensors with real alerts",
-            p1: "We install intelligent sensors at critical points – windows and entrance doors. They monitor their status in real time and send <strong>instant notifications to your phone</strong> on any change. You get more than an alarm: a clear signal of which opening was affected, when it happened, and how long it stayed open.",
+            p1: "The sensors are super easy to install and configure – you mount them on windows and entrance doors, they connect to the app and instantly monitor status in real time. On any change you get <strong>instant notifications on your phone</strong>. Our app is extremely user-friendly: a clear signal of which opening was affected, when it happened, and how long it stayed open.",
             li1: "You see in real time whether each point is open or closed.",
             li2: "You get clear notifications for any suspicious activity.",
             li3: "You can react immediately – wherever you are."
         },
         product: {
             title: "What you get",
-            subtitle: "Aura HomeSystems is a complete solution – from the window sensor to the notification on your phone.",
+            subtitle: "Aura HomeSystems is a complete solution – the sensors are extremely easy to install and set up, and the app is extremely user-friendly: from the window sensor to the notification on your phone.",
             windowTitle: "Window sensors",
             windowDesc: "Compact wireless sensors that detect opening and staying open. Ideal for terraces, kids' rooms, and easily accessible windows.",
             doorTitle: "Entrance door sensors",
             doorDesc: "Robust sensors for entrance and garage doors that alert you to any unexpected unlock or opening.",
             appTitle: "Mobile app",
-            appDesc: "See each sensor's status in real time, get notifications and event history – right on your phone.",
+            appDesc: "An extremely user-friendly app: see each sensor's status in real time, get notifications and event history – right on your phone.",
             wifiNote: "To use our sensors, you need a stable WiFi connection at home – the sensors connect to it and send data to the app."
         },
         cases: {
@@ -145,7 +161,7 @@ const translations = {
             title: "Dozens of households trust us",
             subtitle: "Our solutions already run in real homes and sites. Slowly but surely we're expanding and protecting more people.",
             cities: "cities",
-            citiesHelp: "Where we've already installed systems",
+            citiesHelp: "Where customers have installed and set up their systems themselves",
             projects: "successful projects",
             projectsHelp: "Turnkey solutions completed",
             clients: "happy clients",
@@ -169,7 +185,7 @@ const translations = {
             subtitle: "Tell us about your home and we'll suggest a concrete sensor setup for doors and windows.",
             step1: "You tell us how many rooms, windows and entrance doors you have.",
             step2: "We propose a sample sensor package and indicative price.",
-            step3: "We plan the installation and guide you through the app step by step.",
+            step3: "The sensors are super easy to install and set up yourself – the app guides you step by step.",
             link: "Request a free consultation by email"
         },
         form: {
@@ -183,18 +199,34 @@ const translations = {
             phonePlaceholder: "+1 234 567 890",
             emailPlaceholder: "your@email.com"
         },
-        footer: { text: "Smart sensors for a calmer home.", wifiNote: "A stable WiFi connection at home is required to use our sensors.", impressum: "Impressum" }
+        footer: { text: "Smart sensors for a calmer home.", wifiNote: "A stable WiFi connection at home is required to use our sensors.", impressum: "Impressum" },
+        impressum: {
+            pageTitle: "Impressum – Aura HomeSystems",
+            title: "Impressum (Legal information)",
+            intro: "This page summarizes the service provider details and legal responsibilities.",
+            section1Title: "1. Service provider / Publisher",
+            section2Title: "2. Contact",
+            emailLabel: "Email:",
+            phoneLabel: "Phone:",
+            section3Title: "3. Content responsibility",
+            section3Content: "The content of this site has been compiled with care. We do not, however, assume responsibility for the completeness, accuracy, or reliability of the information. As the service provider we are responsible for our own content on these pages in accordance with applicable law. We are not obliged to monitor third-party information transmitted or stored or to investigate circumstances indicating illegal activity.",
+            section4Title: "4. Responsibility for links",
+            section4Content: "This site may contain links to external sites. The respective provider is responsible for the content of those external sites. When the links were created, the target pages were checked for possible violations. Ongoing monitoring without specific evidence of a violation is not feasible. If we become aware of any violations, the relevant links will be removed immediately.",
+            section5Title: "5. Copyright",
+            section5Content: "The content and works created by us on these pages are subject to copyright. Reproduction, processing, distribution, and any use outside the limits of copyright require the written consent of the respective author or creator.",
+            backLink: "← Back to home page"
+        }
     },
     de: {
-        nav: { problem: "Problem", solution: "Lösung", product: "Produkt", stats: "Ergebnisse", cta: "Loslegen", login: "Anmelden" },
+        nav: { problem: "Problem", solution: "Lösung", product: "Produkt", stats: "Ergebnisse", cta: "Loslegen", login: "Anmelden", register: "Registrieren" },
         hero: {
             eyebrow: "Wenn niemand zu Hause ist...",
             title: "Aura HomeSystems schützt Ihr Zuhause, wenn es leer steht.",
-            subtitle: "Die meisten Einbrüche passieren über Fenster und Haustür. Wir kombinieren smarte funkbasierte Sensoren für Fenster und Türen mit einer App, die Ihnen sofort eine Nachricht aufs Handy schickt, sobald etwas geöffnet wird.",
+            subtitle: "Die meisten Einbrüche passieren über Fenster und Haustür. Unsere Sensoren sind extrem einfach zu installieren und einzurichten, und unsere App ist besonders benutzerfreundlich – Sie erhalten sofort eine Nachricht aufs Handy, sobald etwas geöffnet wird.",
             cta: "Mit Aura starten",
             ctaNote: "Erfahren Sie, wie das System funktioniert und wie Sie es bei sich einbauen können"
         },
-        scene: { notifOpen: "Fenster ist offen", notifSafe: "Haustür ist gesichert" },
+        scene: { caption: "Live-Status in der App", notifOpen: "Fenster ist offen", notifSafe: "Haustür ist gesichert" },
         problem: {
             title: "Das Problem: Das Zuhause bleibt unbeaufsichtigt",
             p1: "Wenn die Familie arbeitet, im Urlaub oder einfach unterwegs ist, ist das Zuhause gefährdet und oft völlig „unsichtbar“ für die Besitzer. Die meisten Einbrüche geschehen über <strong>Fenster</strong> und <strong>Haustür</strong> – genau wenn niemand rechtzeitig reagieren kann und keine echten Infos da sind, was drinnen passiert.",
@@ -205,20 +237,20 @@ const translations = {
         },
         solution: {
             title: "Unsere Lösung: smarte Sensoren mit echten Signalen",
-            p1: "Wir installieren intelligente Sensoren an kritischen Stellen – Fenster und Eingangstüren. Sie überwachen den Status in Echtzeit und schicken bei jeder Änderung <strong>sofort eine Benachrichtigung auf Ihr Handy</strong>. Sie bekommen nicht nur Alarm, sondern ein klares Signal: welcher Öffner betroffen ist, wann es passiert ist und wie lange es offen war.",
+            p1: "Die Sensoren sind super einfach zu installieren und einzurichten – Sie bringen sie an Fenstern und Eingangstüren an, sie verbinden sich mit der App und überwachen sofort den Status in Echtzeit. Bei jeder Änderung erhalten Sie <strong>sofort eine Benachrichtigung auf Ihr Handy</strong>. Unsere App ist besonders benutzerfreundlich: klares Signal, welcher Öffner betroffen ist, wann es passiert ist und wie lange er offen war.",
             li1: "Sie sehen in Echtzeit, ob etwas offen oder geschlossen ist.",
             li2: "Sie bekommen klare Benachrichtigungen bei verdächtigen Bewegungen.",
             li3: "Sie können sofort reagieren – egal wo Sie sind."
         },
         product: {
             title: "Was Sie bekommen",
-            subtitle: "Aura HomeSystems ist eine Komplettlösung – vom Fenstersensor bis zur Benachrichtigung auf dem Handy.",
+            subtitle: "Aura HomeSystems ist eine Komplettlösung – die Sensoren sind extrem einfach zu installieren und einzurichten, und die App ist besonders benutzerfreundlich: vom Fenstersensor bis zur Benachrichtigung auf dem Handy.",
             windowTitle: "Fenstersensoren",
             windowDesc: "Kompakte funkbasierte Sensoren, die Öffnen und Offenbleiben erfassen. Ideal für Terrassen, Kinderzimmer und gut erreichbare Fenster.",
             doorTitle: "Eingangstür-Sensoren",
             doorDesc: "Robuste Sensoren für Eingangs- und Garagentüren, die bei unerwartetem Öffnen oder Aufschließen warnen.",
             appTitle: "Mobile App",
-            appDesc: "Sie sehen in Echtzeit den Status jedes Sensors, bekommen Benachrichtigungen und Verlauf – direkt auf dem Handy.",
+            appDesc: "Eine besonders benutzerfreundliche App: Sie sehen in Echtzeit den Status jedes Sensors, bekommen Benachrichtigungen und Verlauf – direkt auf dem Handy.",
             wifiNote: "Für die Nutzung unserer Sensoren ist eine stabile WLAN-Verbindung zu Hause nötig – die Sensoren verbinden sich damit und senden die Daten an die App."
         },
         cases: {
@@ -238,7 +270,7 @@ const translations = {
             title: "Dutzende Haushalte vertrauen uns",
             subtitle: "Unsere Lösungen laufen bereits in echten Wohnungen und Objekten. Langsam aber sicher erweitern wir und schützen mehr Menschen.",
             cities: "Städte",
-            citiesHelp: "In denen wir bereits Anlagen installiert haben",
+            citiesHelp: "Kunden haben ihre Anlagen selbst installiert und eingerichtet",
             projects: "erfolgreiche Projekte",
             projectsHelp: "Abgeschlossene Komplettlösungen",
             clients: "zufriedene Kunden",
@@ -262,7 +294,7 @@ const translations = {
             subtitle: "Erzählen Sie uns von Ihrer Wohnung, wir schlagen eine konkrete Sensor-Ausstattung für Türen und Fenster vor.",
             step1: "Sie sagen uns, wie viele Zimmer, Fenster und Eingangstüren Sie haben.",
             step2: "Wir schlagen ein Beispiel-Paket und einen Richtpreis vor.",
-            step3: "Wir planen die Installation und führen Sie Schritt für Schritt durch die App.",
+            step3: "Die Sensoren sind super einfach selbst zu installieren und einzurichten – die App führt Sie Schritt für Schritt.",
             link: "Kostenlose Beratung per E-Mail anfragen"
         },
         form: {
@@ -276,7 +308,23 @@ const translations = {
             phonePlaceholder: "+49 123 456789",
             emailPlaceholder: "ihre@email.de"
         },
-        footer: { text: "Smarte Sensoren für ein ruhigeres Zuhause.", wifiNote: "Für unsere Sensoren ist eine stabile WLAN-Verbindung zu Hause erforderlich.", impressum: "Impressum" }
+        footer: { text: "Smarte Sensoren für ein ruhigeres Zuhause.", wifiNote: "Für unsere Sensoren ist eine stabile WLAN-Verbindung zu Hause erforderlich.", impressum: "Impressum" },
+        impressum: {
+            pageTitle: "Impressum – Aura HomeSystems",
+            title: "Impressum (Rechtliche Angaben)",
+            intro: "Auf dieser Seite sind die Angaben zum Diensteanbieter und die gesetzlichen Verantwortlichkeiten zusammengefasst.",
+            section1Title: "1. Diensteanbieter / Herausgeber",
+            section2Title: "2. Kontakt",
+            emailLabel: "E-Mail:",
+            phoneLabel: "Telefon:",
+            section3Title: "3. Verantwortung für Inhalte",
+            section3Content: "Die Inhalte dieser Website wurden mit Sorgfalt erstellt. Wir übernehmen jedoch keine Gewähr für die Vollständigkeit, Richtigkeit und Fehlerfreiheit. Als Diensteanbieter sind wir für eigene Inhalte auf diesen Seiten nach den allgemeinen Gesetzen verantwortlich. Wir sind nicht verpflichtet, übermittelte oder gespeicherte fremde Informationen zu überwachen oder Umstände zu erforschen, die auf eine rechtswidrige Tätigkeit hinweisen.",
+            section4Title: "4. Verantwortung für Links",
+            section4Content: "Diese Website kann Links zu externen Seiten enthalten. Für den Inhalt der verlinkten Seiten ist der jeweilige Anbieter verantwortlich. Bei der Verlinkung wurden die Zielseiten auf mögliche Rechtsverstöße geprüft. Eine ständige Kontrolle ohne konkrete Hinweise auf einen Verstoß ist nicht zumutbar. Bei bekannt werdenden Rechtsverstößen werden die betreffenden Links umgehend entfernt.",
+            section5Title: "5. Urheberrecht",
+            section5Content: "Die Inhalte und Werke, die von uns auf diesen Seiten erstellt wurden, unterliegen dem Urheberrecht. Vervielfältigung, Bearbeitung, Verbreitung und jede Art der Verwendung außerhalb der Grenzen des Urheberrechts bedürfen der schriftlichen Zustimmung des jeweiligen Autors oder Erstellers.",
+            backLink: "← Zurück zur Startseite"
+        }
     }
 };
 

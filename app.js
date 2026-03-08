@@ -34,6 +34,10 @@ function applyLanguage(lang) {
     document.querySelectorAll(".lang-option").forEach((opt) => {
         opt.classList.toggle("active", opt.getAttribute("data-lang") === lang);
     });
+    try {
+        const pageTitle = getTranslation(lang, "impressum.pageTitle");
+        if (pageTitle && document.querySelector(".impressum-page")) document.title = pageTitle;
+    } catch (_) {}
     try { localStorage.setItem("aura-lang", lang); } catch (_) {}
 }
 

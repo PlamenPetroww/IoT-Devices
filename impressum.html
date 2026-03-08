@@ -6,6 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="stylesheet" href="style.css" />
     <style>
+        .impressum-header { justify-content: center; }
+        .impressum-header .nav { display: none; }
+        .impressum-header .impressum-logo-wrap { display: flex; justify-content: center; flex: 1; }
+        .impressum-header .lang-dropdown { position: absolute; right: 20px; top: 50%; transform: translateY(-50%); margin-left: 0; }
+        .impressum-header .logo { margin: 0; }
         .impressum-page { max-width: 720px; margin: 0 auto; padding: 24px 20px 48px; }
         .impressum-page h1 { font-size: 1.5rem; color: var(--accent-strong); margin-bottom: 24px; }
         .impressum-page h2 { font-size: 1.1rem; color: var(--text); margin: 24px 0 10px; }
@@ -18,56 +23,67 @@
 </head>
 <body>
     <div class="page">
-        <header class="site-header">
-            <div class="logo">
-                <a href="index.html" style="color: inherit; text-decoration: none;">Aura<span>Home</span>Systems</a>
+        <header class="site-header impressum-header">
+            <div class="impressum-logo-wrap">
+                <div class="logo">
+                    <a href="index.html" style="color: inherit; text-decoration: none;">Aura<span>Home</span>Systems</a>
+                </div>
             </div>
-            <nav class="nav">
-                <a href="index.html#product">Продукт</a>
-                <a href="index.html#cta">Контакт</a>
-                <a href="login.html">Вход</a>
-            </nav>
+            <div class="lang-dropdown">
+                <button type="button" class="lang-dropdown-trigger" aria-haspopup="true" aria-expanded="false" id="langDropdownTrigger">
+                    <span class="lang-flag-icon lang-flag-bg" id="langTriggerFlag" aria-hidden="true"></span>
+                    <span class="lang-code" id="langTriggerCode">BG</span>
+                    <span class="lang-chevron" aria-hidden="true">▼</span>
+                </button>
+                <div class="lang-dropdown-menu" id="langDropdownMenu" role="menu" aria-label="Избор на език">
+                    <button type="button" class="lang-option" role="menuitem" data-lang="bg"><span class="lang-flag-icon lang-flag-bg"></span> BG</button>
+                    <button type="button" class="lang-option" role="menuitem" data-lang="en"><span class="lang-flag-icon lang-flag-en"></span> EN</button>
+                    <button type="button" class="lang-option" role="menuitem" data-lang="de"><span class="lang-flag-icon lang-flag-de"></span> DE</button>
+                </div>
+            </div>
         </header>
 
         <main class="impressum-page">
-            <h1>Импресум (Правна информация)</h1>
-            <p>На тази страница са обобщени данните за доставчика на услугата и отговорностите по закона.</p>
+            <h1 data-i18n="impressum.title">Импресум (Правна информация)</h1>
+            <p data-i18n="impressum.intro">На тази страница са обобщени данните за доставчика на услугата и отговорностите по закона.</p>
 
-            <h2>1. Предоставящ услугата / Издател</h2>
+            <h2 data-i18n="impressum.section1Title">1. Предоставящ услугата / Издател</h2>
             <p>
-                <span class="impressum-placeholder">[Име на фирмата или лице – напр. ЕООД „Aura HomeSystems“]</span><br />
-                <span class="impressum-placeholder">[Адрес – град, път, пощенски код]</span>
+                Petrov Solutions<br />
+                България, гр. Варна 9000
             </p>
 
-            <h2>2. Контакт</h2>
+            <h2 data-i18n="impressum.section2Title">2. Контакт</h2>
             <p>
-                Имейл: <span class="impressum-placeholder">[your@email.com]</span><br />
-                Телефон: <span class="impressum-placeholder">[+359 …]</span>
+                <span data-i18n="impressum.emailLabel">Имейл:</span> <a href="mailto:solutions.petrov@gmail.com" style="color: var(--accent-strong);">solutions.petrov@gmail.com</a><br />
+                <span data-i18n="impressum.phoneLabel">Телефон:</span> <a href="tel:+359889222344" style="color: var(--accent-strong);">+359 889 222 344</a>
             </p>
 
-            <h2>3. Отговорност за съдържание</h2>
-            <p>
+            <h2 data-i18n="impressum.section3Title">3. Отговорност за съдържание</h2>
+            <p data-i18n="impressum.section3Content">
                 Съдържанието на този сайт е съставено с внимание. Не поемаме обаче отговорност за пълнота, актуалност и безпроблемност на информацията. Като доставчик на услуга сме отговорни за собственото си съдържание на тези страници съгласно общите закони. Не сме обаче длъжни да следим предаваната или съхраняваната от трети страни информация или да разследваме обстоятелства, указващи на незаконна дейност.
             </p>
 
-            <h2>4. Отговорност за връзки</h2>
-            <p>
+            <h2 data-i18n="impressum.section4Title">4. Отговорност за връзки</h2>
+            <p data-i18n="impressum.section4Content">
                 Сайтът може да съдържа връзки към външни страници. За съдържанието на тези външни страници носи отговорност съответният доставчик. При поставяне на връзките съдържанието на целевите страници е било проверено за възможни нарушения. Постоянен контрол без конкретни указания за нарушение не е осъществим. При известни нарушения съответните връзки ще бъдат премахнати незабавно.
             </p>
 
-            <h2>5. Авторски права</h2>
-            <p>
+            <h2 data-i18n="impressum.section5Title">5. Авторски права</h2>
+            <p data-i18n="impressum.section5Content">
                 Съдържанието и творбите, създадени от нас на тези страници, са предмет на авторско право. Възпроизвеждането, обработката, разпространението и всякакъв вид използване извън границите на авторското право изискват писменото съгласие на съответния автор или създател.
             </p>
 
-            <a href="index.html" class="impressum-back">← Обратно към началната страница</a>
+            <a href="index.html" class="impressum-back" data-i18n="impressum.backLink">← Обратно към началната страница</a>
         </main>
 
         <footer class="site-footer">
-            <p>Aura HomeSystems &copy; <span id="footerYear"></span> – Умни сензори за по-спокоен дом.</p>
-            <p><a href="impressum.html" style="color: var(--text-muted);">Импресум</a></p>
+            <p>Aura HomeSystems &copy; <span id="footerYear"></span> – <span data-i18n="footer.text">Умни сензори за по-спокоен дом.</span></p>
+            <p><a href="impressum.html" style="color: var(--text-muted);" data-i18n="footer.impressum">Импресум</a></p>
         </footer>
     </div>
+    <script src="translations.js"></script>
+    <script src="app.js"></script>
     <script>
         if (document.getElementById("footerYear")) document.getElementById("footerYear").textContent = new Date().getFullYear();
     </script>

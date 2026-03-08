@@ -255,6 +255,9 @@ function initContactForm() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+    if (typeof history !== "undefined" && history.scrollRestoration) history.scrollRestoration = "manual";
+    window.scrollTo(0, 0);
+
     initI18n();
     initMobileMenu();
     initStatsCounters();
@@ -267,12 +270,20 @@ function initMobileMenu() {
     const header = document.querySelector(".site-header");
     const toggle = document.getElementById("menuToggle");
     const nav = document.getElementById("mainNav");
+    const backdrop = document.getElementById("menuBackdrop");
     if (!header || !toggle || !nav) return;
 
     toggle.addEventListener("click", () => {
         const isOpen = header.classList.toggle("menu-open");
         toggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
     });
+
+    if (backdrop) {
+        backdrop.addEventListener("click", () => {
+            header.classList.remove("menu-open");
+            toggle.setAttribute("aria-expanded", "false");
+        });
+    }
 
     nav.querySelectorAll("a").forEach((link) => {
         link.addEventListener("click", () => {

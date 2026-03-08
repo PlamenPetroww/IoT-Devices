@@ -30,6 +30,7 @@ body {
     font-family: var(--font-sans);
     background: radial-gradient(circle at top, #1f2937 0, #020617 55%, #000 100%);
     color: var(--text);
+    overflow-x: hidden;
 }
 
 .page {
@@ -37,6 +38,7 @@ body {
     padding: 28px 44px 40px;
     max-width: 1320px;
     margin: 0 auto;
+    overflow-x: hidden;
 }
 
 @media (max-width: 900px) {
@@ -117,6 +119,8 @@ body {
     gap: 16px;
     position: relative;
     z-index: 50;
+    max-width: 100%;
+    min-width: 0;
 }
 
 .logo {
@@ -124,6 +128,7 @@ body {
     letter-spacing: 0.12em;
     text-transform: uppercase;
     font-size: 16px;
+    flex-shrink: 0;
 }
 
 .logo span {
@@ -135,6 +140,7 @@ body {
     align-items: center;
     gap: 18px;
     font-size: 13px;
+    min-width: 0;
 }
 
 .nav a {
@@ -161,6 +167,32 @@ body {
 
 .nav a:hover::after {
     width: 100%;
+}
+
+@media (max-width: 768px) {
+    .site-header {
+        padding: 10px 12px;
+        gap: 10px;
+    }
+    .logo {
+        font-size: 14px;
+    }
+    .nav {
+        flex: 1 1 0;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+        padding-bottom: 2px;
+    }
+    .nav a {
+        flex-shrink: 0;
+        font-size: 12px;
+        letter-spacing: 0.08em;
+    }
+    .lang-dropdown {
+        flex-shrink: 0;
+    }
 }
 
 /* Language dropdown – изцяло вдясно */

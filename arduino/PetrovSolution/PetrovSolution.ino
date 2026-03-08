@@ -5,6 +5,12 @@
 #include <ArduinoJson.h>
 #include <time.h>
 #include "esp_sleep.h"
+#if CONFIG_IDF_TARGET_ESP32
+#include "driver/rtc_io.h"
+extern "C" void esp_sleep_enable_ext0_wakeup(gpio_num_t gpio, int level);
+#elif CONFIG_IDF_TARGET_ESP32C3
+#include "driver/gpio.h"
+#endif
 
 // ========== DEEP SLEEP: 1 = батерия ~6 месеца (будене само при отваряне/затваряне), 0 = без deep sleep
 #define USE_DEEP_SLEEP 1
@@ -313,7 +319,14 @@ void setup() {
 
     // Следващо будене: при противоположно ниво (отворено -> будене при затваряне, затворено -> будене при отваряне)
     nextWakeLevel = currentStatus ? 0 : 1;  // 0 = wake on LOW, 1 = wake on HIGH
+
+#if CONFIG_IDF_TARGET_ESP32
     esp_sleep_enable_ext0_wakeup((gpio_num_t)sensorPin, nextWakeLevel);
+#elif CONFIG_IDF_TARGET_ESP32C3
+    esp_deep_sleep_enable_gpio_wakeup(1ULL << sensorPin, nextWakeLevel ? ESP_GPIO_WAKEUP_GPIO_HIGH : ESP_GPIO_WAKEUP_GPIO_LOW);
+#else
+    esp_sleep_enable_ext0_wakeup((gpio_num_t)sensorPin, nextWakeLevel);
+#endif
     esp_deep_sleep_start();
     return;
 #endif
@@ -410,5 +423,5 @@ void loop() {
     }
 
     delay(2000);
-}
 #endif
+}

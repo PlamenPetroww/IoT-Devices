@@ -136,31 +136,67 @@
 /* Dashboard */
 .dashboard-page {
     min-height: 100vh;
-    padding: 24px;
+    padding: 0;
     background: radial-gradient(circle at top, #1f2937 0, #020617 55%, #000 100%);
     font-family: system-ui, -apple-system, sans-serif;
     color: #e5e7eb;
+    display: flex;
+    flex-direction: column;
 }
 
 .dashboard-header {
-    max-width: 600px;
-    margin: 0 auto 24px;
+    padding: 20px 24px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
     gap: 12px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+    background: rgba(15, 23, 42, 0.5);
 }
 
-.dashboard-header h1 {
+.dashboard-brand h1 {
     margin: 0;
-    font-size: 1.4rem;
+    font-size: 1.35rem;
     color: #4ade80;
 }
 
 .dashboard-header .user-email {
+    margin: 4px 0 0;
     font-size: 0.85rem;
     color: #9ca3af;
+}
+
+.dashboard-layout {
+    flex: 1;
+    display: grid;
+    grid-template-columns: minmax(280px, 380px) 1fr;
+    gap: 24px;
+    padding: 24px;
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+    align-items: start;
+}
+
+.dashboard-left {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.dashboard-right {
+    min-width: 0;
+}
+
+@media (max-width: 768px) {
+    .dashboard-layout {
+        grid-template-columns: 1fr;
+        padding: 16px;
+    }
+    .dashboard-right {
+        order: -1;
+    }
 }
 
 .logout-btn {
@@ -181,8 +217,6 @@
 }
 
 .mode-card {
-    max-width: 500px;
-    margin: 0 auto 24px;
     padding: 24px;
     background: linear-gradient(145deg, rgba(15, 23, 42, 0.98), rgba(2, 6, 23, 0.98));
     border: 1px solid rgba(148, 163, 184, 0.35);
@@ -260,8 +294,6 @@
 }
 
 .devices-card {
-    max-width: 500px;
-    margin: 0 auto;
     padding: 24px;
     background: linear-gradient(145deg, rgba(15, 23, 42, 0.98), rgba(2, 6, 23, 0.98));
     border: 1px solid rgba(148, 163, 184, 0.35);
@@ -289,7 +321,6 @@
 .device-item {
     padding: 12px 16px;
     margin-bottom: 8px;
-    background: rgba(15, 23, 42, 0.6);
     border: 1px solid rgba(148, 163, 184, 0.25);
     border-radius: 10px;
     display: flex;
@@ -299,9 +330,46 @@
     gap: 8px;
 }
 
+.device-item.device-tint-0 {
+    background: rgba(34, 197, 94, 0.12);
+    border-left: 4px solid rgba(34, 197, 94, 0.7);
+}
+.device-item.device-tint-1 {
+    background: rgba(59, 130, 246, 0.12);
+    border-left: 4px solid rgba(59, 130, 246, 0.7);
+}
+.device-item.device-tint-2 {
+    background: rgba(251, 191, 36, 0.12);
+    border-left: 4px solid rgba(251, 191, 36, 0.7);
+}
+.device-item.device-tint-3 {
+    background: rgba(168, 85, 247, 0.12);
+    border-left: 4px solid rgba(168, 85, 247, 0.7);
+}
+
 .device-item .name {
     font-weight: 600;
     color: #e5e7eb;
+}
+
+.device-item .device-name-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.device-item .sensor-icon {
+    font-size: 1.6rem;
+    line-height: 1;
+    min-width: 1.6rem;
+    text-align: center;
+}
+
+.device-item .device-last-seen {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    margin-left: 6px;
+    font-weight: normal;
 }
 
 .device-item .device-right {
@@ -359,8 +427,6 @@
 
 /* История – последни промени отворено/затворено */
 .history-card {
-    max-width: 500px;
-    margin: 24px auto 0;
     padding: 24px;
     background: linear-gradient(145deg, rgba(15, 23, 42, 0.98), rgba(2, 6, 23, 0.98));
     border: 1px solid rgba(148, 163, 184, 0.35);
@@ -437,9 +503,34 @@
     gap: 8px;
 }
 
+.history-item.history-tint-0 {
+    border-left: 4px solid rgba(34, 197, 94, 0.8);
+    background: rgba(34, 197, 94, 0.08);
+}
+.history-item.history-tint-1 {
+    border-left: 4px solid rgba(59, 130, 246, 0.8);
+    background: rgba(59, 130, 246, 0.08);
+}
+.history-item.history-tint-2 {
+    border-left: 4px solid rgba(251, 191, 36, 0.8);
+    background: rgba(251, 191, 36, 0.08);
+}
+.history-item.history-tint-3 {
+    border-left: 4px solid rgba(168, 85, 247, 0.8);
+    background: rgba(168, 85, 247, 0.08);
+}
+
 .history-item .history-name {
     font-weight: 600;
     color: #e5e7eb;
+}
+
+.history-item .sensor-icon {
+    font-size: 1.5rem;
+    line-height: 1;
+    min-width: 1.5rem;
+    text-align: center;
+    flex-shrink: 0;
 }
 
 .history-item .history-status {
@@ -481,5 +572,27 @@
 }
 
 .back-home:hover {
+    text-decoration: underline;
+}
+
+.dashboard-footer {
+    padding: 16px 24px;
+    text-align: center;
+    border-top: 1px solid rgba(148, 163, 184, 0.2);
+    background: rgba(15, 23, 42, 0.4);
+    font-size: 0.9rem;
+}
+
+.dashboard-footer .footer-sep {
+    margin: 0 0.5em;
+    color: #6b7280;
+}
+
+.dashboard-footer a {
+    color: #4ade80;
+    text-decoration: none;
+}
+
+.dashboard-footer a:hover {
     text-decoration: underline;
 }

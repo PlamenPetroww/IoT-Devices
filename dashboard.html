@@ -7,53 +7,59 @@
     <link rel="stylesheet" href="auth.css" />
 </head>
 <body class="dashboard-page">
-    <div class="dashboard-header">
-        <div>
+    <header class="dashboard-header">
+        <div class="dashboard-brand">
             <h1>Aura HomeSystems</h1>
             <p class="user-email" id="userEmail"></p>
         </div>
         <a href="#" id="logoutBtn" class="logout-btn">Изход</a>
-    </div>
+    </header>
 
-    <div class="mode-card">
-        <h2>Режим на системата</h2>
-        <p>Когато системата е „Навън“, сензорите се следят и получавате известия. В „У дома“ системата е изключена.</p>
-        <div class="mode-buttons">
-            <button type="button" id="modeHome" class="mode-btn active">🏠 У дома</button>
-            <button type="button" id="modeAway" class="mode-btn danger">🛡️ Навън</button>
-        </div>
-        <div id="sensorStatusMsg" class="sensor-status-msg home">
-            🏠 Сензорите са изключени (режим „У дома“).
-        </div>
-    </div>
+    <main class="dashboard-layout">
+        <aside class="dashboard-left">
+            <div class="mode-card">
+                <h2>Режим на системата</h2>
+                <p>Когато системата е „Навън“, сензорите се следят и получавате известия. В „У дома“ системата е изключена.</p>
+                <div class="mode-buttons">
+                    <button type="button" id="modeHome" class="mode-btn active">🏠 У дома</button>
+                    <button type="button" id="modeAway" class="mode-btn danger">🛡️ Навън</button>
+                </div>
+                <div id="sensorStatusMsg" class="sensor-status-msg home">
+                    🏠 Сензорите са изключени (режим „У дома“).
+                </div>
+            </div>
 
-    <div class="devices-card">
-        <h2>Вашите сензори</h2>
-        <div id="duplicateNamesWarning" class="duplicate-names-warning" style="display: none;" role="alert"></div>
-        <div id="devicesList">
-            <p class="devices-empty">Зареждане...</p>
-        </div>
-    </div>
+            <div class="history-card">
+                <h2>История</h2>
+                <p class="history-desc">Последни промени отворено/затворено по сензорите.</p>
+                <div class="history-controls">
+                    <span>Покажи:</span>
+                    <button type="button" class="history-limit-btn active" data-limit="3">3</button>
+                    <button type="button" class="history-limit-btn" data-limit="10">10</button>
+                    <button type="button" class="history-limit-btn" data-limit="50">50</button>
+                </div>
+                <ul id="historyList" class="history-list">
+                    <li class="history-empty">Няма записи в историята.</li>
+                </ul>
+            </div>
+        </aside>
 
-    <div class="history-card">
-        <h2>История</h2>
-        <p class="history-desc">Последни промени отворено/затворено по сензорите. Записват се само докато таблото е отворено в браузъра.</p>
-        <div class="history-controls">
-            <span>Покажи:</span>
-            <button type="button" class="history-limit-btn active" data-limit="3">3</button>
-            <button type="button" class="history-limit-btn" data-limit="10">10</button>
-            <button type="button" class="history-limit-btn" data-limit="50">50</button>
-        </div>
-        <ul id="historyList" class="history-list">
-            <li class="history-empty">Няма записи в историята.</li>
-        </ul>
-    </div>
+        <section class="dashboard-right">
+            <div class="devices-card">
+                <h2>Вашите сензори</h2>
+                <div id="duplicateNamesWarning" class="duplicate-names-warning" style="display: none;" role="alert"></div>
+                <div id="devicesList">
+                    <p class="devices-empty">Зареждане...</p>
+                </div>
+            </div>
+        </section>
+    </main>
 
-    <p style="text-align: center;">
+    <footer class="dashboard-footer">
         <a href="index.html" class="back-home">← Обратно към сайта</a>
-        <span style="margin: 0 0.5em;">·</span>
+        <span class="footer-sep">·</span>
         <a href="impressum.html">Импресум</a>
-    </p>
+    </footer>
 
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
@@ -133,7 +139,14 @@
                     powerSource: (d && d.powerSource) || ""
                 }));
 
-                // Няма запис в история от таблото – записва само Arduino
+                function formatLastSeen(ms) {
+                    if (ms == null || typeof ms !== "number") return "";
+                    var sec = Math.floor(ms / 1000);
+                    var min = Math.floor(ms / 60000);
+                    if (ms < 60000) return "millis: " + sec + " s";
+                    if (ms < 3600000) return "millis: " + min + " min";
+                    return "millis: " + Math.floor(ms / 3600000) + " h";
+                }
 
                 // Проверка за еднакви имена – показваме предупреждение
                 const nameCount = {};
@@ -150,7 +163,7 @@
                     warningEl.style.display = "none";
                 }
 
-                devicesList.innerHTML = devices.map((dev) => {
+                devicesList.innerHTML = devices.map((dev, index) => {
                     let powerHtml = "";
                     if (dev.powerSource === "usb") {
                         powerHtml = '<span class="device-power usb">USB</span>';
@@ -159,9 +172,12 @@
                     } else if (dev.battery != null && dev.battery >= 0) {
                         powerHtml = `<span class="device-battery">${dev.battery}%</span>`;
                     }
+                    const tintClass = "device-tint-" + getTintIndexForSensor(dev.name || dev.id);
+                    const icon = getIconForSensor(dev.name || dev.id);
+                    const lastSeenHtml = dev.lastSeen != null ? '<span class="device-last-seen" title="Последна активност (lastSeen)">' + formatLastSeen(dev.lastSeen) + '</span>' : '';
                     return `
-                    <div class="device-item">
-                        <span class="name">${escapeHtml(dev.name)}</span>
+                    <div class="device-item ${tintClass}">
+                        <span class="device-name-wrap"><span class="sensor-icon" aria-hidden="true">${icon}</span><span class="name">${escapeHtml(dev.name)}</span>${lastSeenHtml}</span>
                         <span class="device-right">
                             ${powerHtml}
                             <span class="status ${dev.status}">${dev.status === "open" ? "Отворено" : "Затворено"}</span>
@@ -203,7 +219,9 @@
                     const date = new Date(entry.timestamp);
                     const timeStr = date.toLocaleString("bg-BG", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" });
                     const label = entry.status === "open" ? "Отворено" : "Затворено";
-                    return `<li class="history-item ${entry.status}"><span class="history-name">${escapeHtml(entry.deviceName)}</span> <span class="history-status">${label}</span> <time class="history-time">${timeStr}</time></li>`;
+                    const htint = "history-tint-" + getTintIndexForSensor(entry.deviceName || entry.deviceId);
+                    const icon = getIconForSensor(entry.deviceName || entry.deviceId);
+                    return `<li class="history-item ${entry.status} ${htint}"><span class="sensor-icon" aria-hidden="true">${icon}</span><span class="history-name">${escapeHtml(entry.deviceName)}</span> <span class="history-status">${label}</span> <time class="history-time">${timeStr}</time></li>`;
                 }).join("");
             }
 
@@ -221,6 +239,27 @@
             const div = document.createElement("div");
             div.textContent = text;
             return div.innerHTML;
+        }
+
+        function getTintIndexForSensor(nameOrId) {
+            var s = String(nameOrId || "").trim();
+            var h = 0;
+            for (var i = 0; i < s.length; i++) {
+                h = ((h << 5) - h) + s.charCodeAt(i);
+                h = h & h;
+            }
+            return Math.abs(h) % 4;
+        }
+
+        function getIconForSensor(name) {
+            var n = String(name || "").toLowerCase().trim();
+            // Гараж (BG, EN, DE, …) → кола
+            if (/garaj|garage|гараж|garáž|garaze|garaż/i.test(n)) return "🚗";
+            // Врата / Door (BG, EN, DE, …), включително задна врата
+            if (/vrata|врата|door|tür|tuer|porte|entrance|vhod|вход|dver|dveři|puerta|porta|drzwi|doorway|gate|zadna|back|заден/i.test(n)) return "🚪";
+            // Прозорец / Window (BG, EN, DE, …)
+            if (/prozorec|прозорец|window|fenster|fenêtre|fenetre|finestra|ventana|okno|janela|predna|preden|предна|преден|front/i.test(n)) return "🪟";
+            return "📍";
         }
     </script>
 </body>

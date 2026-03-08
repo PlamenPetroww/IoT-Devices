@@ -252,9 +252,35 @@ function initContactForm() {
 
 document.addEventListener("DOMContentLoaded", () => {
     initI18n();
+    initMobileMenu();
     initStatsCounters();
     initSmoothScroll();
     initFooterYear();
     initContactForm();
 });
+
+function initMobileMenu() {
+    const header = document.querySelector(".site-header");
+    const toggle = document.getElementById("menuToggle");
+    const nav = document.getElementById("mainNav");
+    if (!header || !toggle || !nav) return;
+
+    toggle.addEventListener("click", () => {
+        const isOpen = header.classList.toggle("menu-open");
+        toggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+    });
+
+    nav.querySelectorAll("a").forEach((link) => {
+        link.addEventListener("click", () => {
+            header.classList.remove("menu-open");
+            toggle.setAttribute("aria-expanded", "false");
+        });
+    });
+
+    document.addEventListener("click", (e) => {
+        if (e.target.closest(".site-header")) return;
+        header.classList.remove("menu-open");
+        toggle.setAttribute("aria-expanded", "false");
+    });
+}
 

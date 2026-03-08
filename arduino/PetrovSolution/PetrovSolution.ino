@@ -3,6 +3,12 @@
 #include <Firebase_ESP_Client.h>
 #include <LittleFS.h>
 #include <ArduinoJson.h>
+#include <time.h>
+#include "esp_sleep.h"
+
+// ========== DEEP SLEEP: 1 = батерия ~6 месеца (будене само при отваряне/затваряне), 0 = без deep sleep
+#define USE_DEEP_SLEEP 1
+// HARDWARE (AKY0640 2000mAh): magnet = GPIO4 + GND; battery ADC optional on pin 34; for low current remove LED / unplug USB when on battery.
 
 // --- КОНФИГУРАЦИЯ FIREBASE ---
 #define FIREBASE_HOST "https://cleverhaus-petrov-default-rtdb.europe-west1.firebasedatabase.app"
@@ -12,10 +18,20 @@ FirebaseData fbdo;
 FirebaseAuth auth;
 FirebaseConfig config;
 
-const int sensorPin = 4;
+const int sensorPin = 4;   // Магнит сензор – трябва да е RTC GPIO (4 е подходящ). Другата страна на релето към GND.
+// Батерия: ADC пин (GPIO 34/35/36/39). -1 ако няма.
+#define BATTERY_ADC_PIN 34
+#define BATTERY_ADC_EMPTY 1500
+#define BATTERY_ADC_FULL  2500
+#define USB_DETECT_PIN -1
+#define BATTERY_ADC_NO_CELL 400
+
 char user_email[50] = "";
 char device_name[30] = "";
 bool shouldSaveConfig = false;
+
+// След будене от deep sleep запомняме на какво ниво да събудим следващия път (0=LOW, 1=HIGH).
+RTC_DATA_ATTR int nextWakeLevel = -1;
 
 void saveConfigCallback() {
     shouldSaveConfig = true;
@@ -155,12 +171,55 @@ String getDeviceIdFromName(char* device_name_ptr) {
     return safe;
 }
 
+// Чете напрежението на батерията от ADC и връща проценти 0–100. При пин -1 връща 100.
+// powerSourceOut: "usb" | "battery" | "no_battery"
+int readBatteryPercent(char* powerSourceOut, size_t powerSourceLen) {
+    powerSourceOut[0] = '\0';
+
+    if (USB_DETECT_PIN >= 0 && digitalRead(USB_DETECT_PIN) == HIGH) {
+        strncpy(powerSourceOut, "usb", powerSourceLen - 1);
+        powerSourceOut[powerSourceLen - 1] = '\0';
+        return 100;
+    }
+
+    if (BATTERY_ADC_PIN < 0) {
+        strncpy(powerSourceOut, "usb", powerSourceLen - 1);
+        powerSourceOut[powerSourceLen - 1] = '\0';
+        return 100;
+    }
+
+    long sum = 0;
+    for (int i = 0; i < 5; i++) {
+        sum += analogRead(BATTERY_ADC_PIN);
+        delay(2);
+    }
+    int raw = sum / 5;
+
+    // ADC под прага = захранване от USB/ток (няма батерия в схемата или пин не е свързан)
+    if (raw < BATTERY_ADC_NO_CELL) {
+        strncpy(powerSourceOut, "usb", powerSourceLen - 1);
+        powerSourceOut[powerSourceLen - 1] = '\0';
+        return 100;
+    }
+
+    strncpy(powerSourceOut, "battery", powerSourceLen - 1);
+    powerSourceOut[powerSourceLen - 1] = '\0';
+    if (raw <= BATTERY_ADC_EMPTY) return 0;
+    if (raw >= BATTERY_ADC_FULL) return 100;
+    int pct = map(raw, BATTERY_ADC_EMPTY, BATTERY_ADC_FULL, 0, 100);
+    return (pct < 0) ? 0 : (pct > 100 ? 100 : pct);
+}
+
 void setup() {
+#if !USE_DEEP_SLEEP
     delay(2000);
+#endif
     Serial.begin(115200);
     Serial.println("\n--- PetrovSolution ---");
 
     pinMode(sensorPin, INPUT_PULLUP);
+    if (BATTERY_ADC_PIN >= 0) pinMode(BATTERY_ADC_PIN, INPUT);
+    if (USB_DETECT_PIN >= 0) pinMode(USB_DETECT_PIN, INPUT);
 
     if (LittleFS.begin(true)) {
         if (LittleFS.exists("/config.json")) {
@@ -183,7 +242,7 @@ void setup() {
     wm.addParameter(&custom_email);
     wm.addParameter(&custom_name);
 
-    if (!wm.autoConnect("PetrovSolution_Setup")) {
+    if (!wm.autoConnect("AuraHomeSolutions_Setup")) {
         Serial.println("Neuspeh! Restart...");
         delay(3000);
         ESP.restart();
@@ -211,10 +270,59 @@ void setup() {
     Firebase.begin(&config, &auth);
     Firebase.reconnectWiFi(true);
 
+    configTime(0, 0, "pool.ntp.org", "time.nist.gov");
+
+#if USE_DEEP_SLEEP
+    // Режим батерия: един цикъл – четем сензор, изпращаме, после deep sleep до следваща промяна на магнита
+    String safeEmail = String(user_email);
+    safeEmail.trim();
+    safeEmail.toLowerCase();
+    safeEmail.replace(".", "-");
+    safeEmail.replace("@", "_at_");
+
+    String deviceID = getDeviceIdFromName(device_name);
+    String userPath = "/users/" + safeEmail;
+    String devicePath = userPath + "/devices/" + deviceID;
+
+    bool currentStatus = (digitalRead(sensorPin) == HIGH);  // HIGH = затворено
+
+    char powerSource[16];
+    int batteryPct = readBatteryPercent(powerSource, sizeof(powerSource));
+
+    FirebaseJson json;
+    json.set("status", currentStatus);
+    json.set("deviceName", String(device_name));
+    json.set("lastSeen", millis());
+    json.set("battery", batteryPct);
+    json.set("powerSource", powerSource);
+
+    if (Firebase.RTDB.setJSON(&fbdo, devicePath, &json)) {
+        time_t nowSec;
+        time(&nowSec);
+        unsigned long long tsMs = (unsigned long long)nowSec * 1000;
+        if (tsMs == 0) tsMs = (unsigned long long)millis();
+        String historyKey = String(millis()) + "_" + String((uint32_t)(esp_random() & 0xFFFF));
+        String historyPath = userPath + "/history/" + historyKey;
+        FirebaseJson jsonHist;
+        jsonHist.set("deviceId", deviceID);
+        jsonHist.set("deviceName", String(device_name));
+        jsonHist.set("status", currentStatus ? "closed" : "open");
+        jsonHist.set("timestamp", (int64_t)tsMs);
+        Firebase.RTDB.setJSON(&fbdo, historyPath.c_str(), &jsonHist);
+    }
+
+    // Следващо будене: при противоположно ниво (отворено -> будене при затваряне, затворено -> будене при отваряне)
+    nextWakeLevel = currentStatus ? 0 : 1;  // 0 = wake on LOW, 1 = wake on HIGH
+    esp_sleep_enable_ext0_wakeup((gpio_num_t)sensorPin, nextWakeLevel);
+    esp_deep_sleep_start();
+    return;
+#endif
+
     Serial.println("ONLINE I GOTOVO!");
 }
 
 void loop() {
+#if !USE_DEEP_SLEEP
     String safeEmail = String(user_email);
     safeEmail.trim();
     safeEmail.toLowerCase();
@@ -233,22 +341,59 @@ void loop() {
     }
 
     static bool lastStatus = (bool)-1;
-    bool currentStatus = (digitalRead(sensorPin) == LOW);
+    bool currentStatus = (digitalRead(sensorPin) == HIGH);
+    static int loopCount = 0;
+    const bool statusChanged = (currentStatus != lastStatus);
+    loopCount++;
 
-    if (currentStatus != lastStatus) {
+    bool shouldSend = statusChanged;
+    if (!shouldSend && BATTERY_ADC_PIN >= 0 && loopCount >= 30) {
+        shouldSend = true;
+        loopCount = 0;
+    }
+
+    if (shouldSend) {
         Serial.print("Senzor ");
         Serial.print(device_name);
         Serial.print(" -> ");
         Serial.println(currentStatus ? "ZATVORENO" : "OTVORENO");
 
+        char powerSource[16];
+        int batteryPct = readBatteryPercent(powerSource, sizeof(powerSource));
+
         FirebaseJson json;
         json.set("status", currentStatus);
         json.set("deviceName", String(device_name));
         json.set("lastSeen", millis());
-        json.set("battery", 100);
+        json.set("battery", batteryPct);
+        json.set("powerSource", powerSource);
 
         if (Firebase.RTDB.setJSON(&fbdo, devicePath, &json)) {
             Serial.println("Firebase obnoven!");
+            if (strcmp(powerSource, "usb") == 0) {
+                Serial.println("Zahranvane: USB");
+            } else if (strcmp(powerSource, "no_battery") == 0) {
+                Serial.println("Zahranvane: NQMA BATERIYA!");
+            } else {
+                Serial.print("Bateriya: ");
+                Serial.print(batteryPct);
+                Serial.println("%");
+            }
+            // Zapis v istoriya samo tuk (edinstven zapis – nqma dublirane ot nqkolko taba)
+            time_t nowSec;
+            time(&nowSec);
+            unsigned long long tsMs = (unsigned long long)nowSec * 1000;
+            if (tsMs == 0) tsMs = (unsigned long long)millis();
+            String historyKey = String(millis()) + "_" + String((uint32_t)(esp_random() & 0xFFFF));
+            String historyPath = userPath + "/history/" + historyKey;
+            FirebaseJson jsonHist;
+            jsonHist.set("deviceId", deviceID);
+            jsonHist.set("deviceName", String(device_name));
+            jsonHist.set("status", currentStatus ? "closed" : "open");
+            jsonHist.set("timestamp", (int64_t)tsMs);
+            if (Firebase.RTDB.setJSON(&fbdo, historyPath.c_str(), &jsonHist)) {
+                Serial.println("Istoriya zapisana.");
+            }
         } else {
             Serial.print("Greshka: ");
             Serial.println(fbdo.errorReason());
@@ -256,7 +401,7 @@ void loop() {
             Serial.println(devicePath);
         }
 
-        lastStatus = currentStatus;
+        if (statusChanged) lastStatus = currentStatus;
     }
 
     if (!systemEnabled) {
@@ -266,3 +411,4 @@ void loop() {
 
     delay(2000);
 }
+#endif

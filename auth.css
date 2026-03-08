@@ -118,6 +118,21 @@
     text-decoration: underline;
 }
 
+.auth-footer {
+    margin-top: 16px;
+    text-align: center;
+    font-size: 0.8rem;
+    color: #9ca3af;
+}
+.auth-footer a {
+    color: #9ca3af;
+    text-decoration: none;
+}
+.auth-footer a:hover {
+    text-decoration: underline;
+    color: #d1d5db;
+}
+
 /* Dashboard */
 .dashboard-page {
     min-height: 100vh;
@@ -289,6 +304,38 @@
     color: #e5e7eb;
 }
 
+.device-item .device-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.device-item .device-battery {
+    font-size: 0.8rem;
+    color: #9ca3af;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: rgba(148, 163, 184, 0.2);
+}
+
+.device-item .device-power {
+    font-size: 0.8rem;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-weight: 600;
+}
+
+.device-item .device-power.usb {
+    color: #93c5fd;
+    background: rgba(59, 130, 246, 0.2);
+}
+
+.device-item .device-power.no-battery {
+    color: #fecaca;
+    background: rgba(248, 113, 113, 0.25);
+}
+
 .device-item .status {
     font-size: 0.85rem;
     padding: 4px 10px;
@@ -373,6 +420,8 @@
     list-style: none;
     margin: 0;
     padding: 0;
+    max-height: 480px;
+    overflow-y: auto;
 }
 
 .history-item {

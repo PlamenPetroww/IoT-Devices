@@ -2,14 +2,14 @@
 <html lang="bg">
 <head>
     <meta charset="UTF-8" />
-    <title>Табло – Auro HomeSystems</title>
+    <title>Табло – Aura HomeSystems</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="stylesheet" href="auth.css" />
 </head>
 <body class="dashboard-page">
     <div class="dashboard-header">
         <div>
-            <h1>Auro HomeSystems</h1>
+            <h1>Aura HomeSystems</h1>
             <p class="user-email" id="userEmail"></p>
         </div>
         <a href="#" id="logoutBtn" class="logout-btn">Изход</a>
@@ -51,6 +51,8 @@
 
     <p style="text-align: center;">
         <a href="index.html" class="back-home">← Обратно към сайта</a>
+        <span style="margin: 0 0.5em;">·</span>
+        <a href="impressum.html">Импресум</a>
     </p>
 
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -113,40 +115,25 @@
 
             // Списък с устройства
             const devicesList = document.getElementById("devicesList");
-            let previousDevices = {};
             const historyRef = db.ref(userPath + "/history");
-
-            function pushHistoryEntry(deviceId, deviceName, status) {
-                historyRef.push({
-                    deviceId: deviceId,
-                    deviceName: deviceName || deviceId,
-                    status: status,
-                    timestamp: Date.now()
-                });
-            }
+            // Историята се записва само от Arduino (при промяна на статус), за да няма двойни записи при няколко отворени таба.
 
             db.ref(userPath + "/devices").on("value", (snap) => {
                 const data = snap.val();
                 if (!data || typeof data !== "object") {
                     devicesList.innerHTML = '<p class="devices-empty">Все още няма регистрирани сензори. Включи режим „Навън“ и след малко тук ще се появят устройствата от Arduino.</p>';
-                    previousDevices = {};
                     return;
                 }
                 const devices = Object.entries(data).map(([id, d]) => ({
                     id,
                     name: (d && d.deviceName) || id,
                     status: (d && d.status) === true ? "closed" : "open",
-                    lastSeen: d && d.lastSeen
+                    lastSeen: d && d.lastSeen,
+                    battery: (d && typeof d.battery === "number") ? Math.max(-1, Math.min(100, Math.round(d.battery))) : null,
+                    powerSource: (d && d.powerSource) || ""
                 }));
 
-                // При промяна на статус записваме в история
-                devices.forEach(function(dev) {
-                    const prev = previousDevices[dev.id];
-                    if (prev !== undefined && prev.status !== dev.status) {
-                        pushHistoryEntry(dev.id, dev.name, dev.status);
-                    }
-                    previousDevices[dev.id] = { status: dev.status };
-                });
+                // Няма запис в история от таблото – записва само Arduino
 
                 // Проверка за еднакви имена – показваме предупреждение
                 const nameCount = {};
@@ -163,12 +150,25 @@
                     warningEl.style.display = "none";
                 }
 
-                devicesList.innerHTML = devices.map((dev) => `
+                devicesList.innerHTML = devices.map((dev) => {
+                    let powerHtml = "";
+                    if (dev.powerSource === "usb") {
+                        powerHtml = '<span class="device-power usb">USB</span>';
+                    } else if (dev.powerSource === "no_battery" || dev.battery === -1) {
+                        powerHtml = '<span class="device-power no-battery" title="Няма включена батерия">⚠ Няма батерия</span>';
+                    } else if (dev.battery != null && dev.battery >= 0) {
+                        powerHtml = `<span class="device-battery">${dev.battery}%</span>`;
+                    }
+                    return `
                     <div class="device-item">
                         <span class="name">${escapeHtml(dev.name)}</span>
-                        <span class="status ${dev.status}">${dev.status === "open" ? "Отворено" : "Затворено"}</span>
+                        <span class="device-right">
+                            ${powerHtml}
+                            <span class="status ${dev.status}">${dev.status === "open" ? "Отворено" : "Затворено"}</span>
+                        </span>
                     </div>
-                `).join("");
+                `;
+                }).join("");
             });
 
             // История – четене и показване

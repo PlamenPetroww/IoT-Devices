@@ -3,7 +3,7 @@ const translations = {
         nav: { problem: "Проблем", solution: "Решение", product: "Продукт", stats: "Резултати", cta: "Започни", login: "Вход" },
         hero: {
             eyebrow: "Когато никой не е у дома...",
-            title: "Auro HomeSystems пази дома ти, когато е празен.",
+            title: "Aura HomeSystems пази дома ти, когато е празен.",
             subtitle: "Най-честите кражби стават през прозорците и входната врата. Ние комбинираме умни безжични сензори за прозорци и врати с мобилно приложение, което изпраща мигновени сигнали до телефона ти при всяко нежелано отваряне.",
             cta: "Започни с Auro",
             ctaNote: "Виж как работи системата и как можеш да я инсталираш у дома си"
@@ -26,13 +26,14 @@ const translations = {
         },
         product: {
             title: "Какво точно получаваш",
-            subtitle: "Auro HomeSystems е завършено решение – от сензора на прозореца до известието на телефона.",
+            subtitle: "Aura HomeSystems е завършено решение – от сензора на прозореца до известието на телефона.",
             windowTitle: "Сензори за прозорци",
             windowDesc: "Компактни безжични сензори, които засичат отваряне и оставане отворено. Идеални за тераси, детски стаи и леснодостъпни прозорци.",
             doorTitle: "Сензори за входни врати",
             doorDesc: "Устойчиви сензори за входни и гаражни врати, които предупреждават при всяко неочаквано отключване или отваряне.",
             appTitle: "Мобилно приложение",
-            appDesc: "Виждаш в реално време статуса на всеки сензор, получаваш известия и история на събитията – директно на телефона си."
+            appDesc: "Виждаш в реално време статуса на всеки сензор, получаваш известия и история на събитията – директно на телефона си.",
+            wifiNote: "За да използваш сензорите ни, в дома ти трябва да има стабилна WiFi връзка – сензорите се свързват с нея и изпращат данните до приложението."
         },
         cases: {
             title: "Как изглежда Auro у дома",
@@ -59,7 +60,7 @@ const translations = {
         },
         testimonials: {
             title: "Какво казват клиентите ни",
-            subtitle: "Доволни собственици на Auro HomeSystems споделят как приложението и сензорите им промениха спокойствието у дома.",
+            subtitle: "Доволни собственици на Aura HomeSystems споделят как приложението и сензорите им промениха спокойствието у дома.",
             t1: "„Приложението е изключително лесно – виждам веднага кой прозорец или врата е отворена. През зимата веднъж забравихме да затворим терасата и известието дойде мигновено. Наистина спокойствие за цялото семейство.“",
             t1Name: "Мария К.",
             t1Meta: "София, инсталация от 6 месеца",
@@ -89,13 +90,13 @@ const translations = {
             phonePlaceholder: "+359 888 123 456",
             emailPlaceholder: "your@email.com"
         },
-        footer: { text: "Умни сензори за по-спокоен дом." }
+        footer: { text: "Умни сензори за по-спокоен дом.", wifiNote: "За да използваш нашите сензори, необходима е стабилна WiFi връзка у дома.", impressum: "Импресум" }
     },
     en: {
         nav: { problem: "Problem", solution: "Solution", product: "Product", stats: "Results", cta: "Get started", login: "Login" },
         hero: {
             eyebrow: "When nobody's home...",
-            title: "Auro HomeSystems keeps your home safe when it's empty.",
+            title: "Aura HomeSystems keeps your home safe when it's empty.",
             subtitle: "Most break-ins happen through windows and the front door. We combine smart wireless sensors for windows and doors with a mobile app that sends instant alerts to your phone whenever something opens.",
             cta: "Get started with Auro",
             ctaNote: "See how the system works and how you can install it at home"
@@ -118,13 +119,14 @@ const translations = {
         },
         product: {
             title: "What you get",
-            subtitle: "Auro HomeSystems is a complete solution – from the window sensor to the notification on your phone.",
+            subtitle: "Aura HomeSystems is a complete solution – from the window sensor to the notification on your phone.",
             windowTitle: "Window sensors",
             windowDesc: "Compact wireless sensors that detect opening and staying open. Ideal for terraces, kids' rooms, and easily accessible windows.",
             doorTitle: "Entrance door sensors",
             doorDesc: "Robust sensors for entrance and garage doors that alert you to any unexpected unlock or opening.",
             appTitle: "Mobile app",
-            appDesc: "See each sensor's status in real time, get notifications and event history – right on your phone."
+            appDesc: "See each sensor's status in real time, get notifications and event history – right on your phone.",
+            wifiNote: "To use our sensors, you need a stable WiFi connection at home – the sensors connect to it and send data to the app."
         },
         cases: {
             title: "What Auro looks like at home",
@@ -151,7 +153,7 @@ const translations = {
         },
         testimonials: {
             title: "What our clients say",
-            subtitle: "Happy Auro HomeSystems owners share how the app and sensors changed their peace of mind at home.",
+            subtitle: "Happy Aura HomeSystems owners share how the app and sensors changed their peace of mind at home.",
             t1: "\"The app is incredibly easy – I see right away which window or door is open. Once in winter we forgot to close the terrace and the alert came instantly. Real peace of mind for the whole family.\"",
             t1Name: "Maria K.",
             t1Meta: "Sofia, installation 6 months ago",
@@ -181,13 +183,13 @@ const translations = {
             phonePlaceholder: "+1 234 567 890",
             emailPlaceholder: "your@email.com"
         },
-        footer: { text: "Smart sensors for a calmer home." }
+        footer: { text: "Smart sensors for a calmer home.", wifiNote: "A stable WiFi connection at home is required to use our sensors.", impressum: "Impressum" }
     },
     de: {
         nav: { problem: "Problem", solution: "Lösung", product: "Produkt", stats: "Ergebnisse", cta: "Loslegen", login: "Anmelden" },
         hero: {
             eyebrow: "Wenn niemand zu Hause ist...",
-            title: "Auro HomeSystems schützt Ihr Zuhause, wenn es leer steht.",
+            title: "Aura HomeSystems schützt Ihr Zuhause, wenn es leer steht.",
             subtitle: "Die meisten Einbrüche passieren über Fenster und Haustür. Wir kombinieren smarte funkbasierte Sensoren für Fenster und Türen mit einer App, die Ihnen sofort eine Nachricht aufs Handy schickt, sobald etwas geöffnet wird.",
             cta: "Mit Auro starten",
             ctaNote: "Erfahren Sie, wie das System funktioniert und wie Sie es bei sich einbauen können"
@@ -210,13 +212,14 @@ const translations = {
         },
         product: {
             title: "Was Sie bekommen",
-            subtitle: "Auro HomeSystems ist eine Komplettlösung – vom Fenstersensor bis zur Benachrichtigung auf dem Handy.",
+            subtitle: "Aura HomeSystems ist eine Komplettlösung – vom Fenstersensor bis zur Benachrichtigung auf dem Handy.",
             windowTitle: "Fenstersensoren",
             windowDesc: "Kompakte funkbasierte Sensoren, die Öffnen und Offenbleiben erfassen. Ideal für Terrassen, Kinderzimmer und gut erreichbare Fenster.",
             doorTitle: "Eingangstür-Sensoren",
             doorDesc: "Robuste Sensoren für Eingangs- und Garagentüren, die bei unerwartetem Öffnen oder Aufschließen warnen.",
             appTitle: "Mobile App",
-            appDesc: "Sie sehen in Echtzeit den Status jedes Sensors, bekommen Benachrichtigungen und Verlauf – direkt auf dem Handy."
+            appDesc: "Sie sehen in Echtzeit den Status jedes Sensors, bekommen Benachrichtigungen und Verlauf – direkt auf dem Handy.",
+            wifiNote: "Für die Nutzung unserer Sensoren ist eine stabile WLAN-Verbindung zu Hause nötig – die Sensoren verbinden sich damit und senden die Daten an die App."
         },
         cases: {
             title: "So sieht Auro bei Ihnen aus",
@@ -273,7 +276,7 @@ const translations = {
             phonePlaceholder: "+49 123 456789",
             emailPlaceholder: "ihre@email.de"
         },
-        footer: { text: "Smarte Sensoren für ein ruhigeres Zuhause." }
+        footer: { text: "Smarte Sensoren für ein ruhigeres Zuhause.", wifiNote: "Für unsere Sensoren ist eine stabile WLAN-Verbindung zu Hause erforderlich.", impressum: "Impressum" }
     }
 };
 

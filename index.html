@@ -23,7 +23,9 @@
                     <a href="#solution" data-i18n="nav.solution">Решение</a>
                     <a href="#product" data-i18n="nav.product">Продукт</a>
                     <a href="#advantages" data-i18n="nav.advantages">Предимства</a>
+                    <a href="#compatibility" data-i18n="nav.compatibility">Съвместимост</a>
                     <a href="#pricing" data-i18n="nav.pricing">Цени</a>
+                    <a href="#faq" data-i18n="nav.faq">FAQ</a>
                     <a href="#stats" data-i18n="nav.stats">Резултати</a>
                     <a href="#cta" data-i18n="nav.cta">Започни</a>
                 </div>
@@ -230,6 +232,18 @@
                 </div>
             </section>
 
+            <section id="compatibility" class="section section-compatibility">
+                <div class="section-content">
+                    <h2 data-i18n="compatibility.title">Съвместимост</h2>
+                    <p class="section-subtitle" data-i18n="compatibility.subtitle">Приложението и сензорите работят с обичайните изисквания за устройство и мрежа.</p>
+                    <ul class="compatibility-list">
+                        <li><span class="compatibility-icon" aria-hidden="true">📱</span> <strong data-i18n="compatibility.ios">iOS 14+</strong></li>
+                        <li><span class="compatibility-icon" aria-hidden="true">📱</span> <strong data-i18n="compatibility.android">Android 8+</strong></li>
+                        <li><span class="compatibility-icon" aria-hidden="true">📶</span> <strong data-i18n="compatibility.wifi">WiFi 2.4 GHz</strong></li>
+                    </ul>
+                </div>
+            </section>
+
             <section id="cases" class="section section-usecases">
                 <div class="section-content">
                     <h2 data-i18n="cases.title">Как изглежда Aura у дома</h2>
@@ -367,18 +381,76 @@
                             <span class="pricing-badge" data-i18n="pricing.mostPopular">Най-популярен</span>
                             <h3 class="pricing-card-title" data-i18n="pricing.pack3Title">3 сензора</h3>
                             <p class="pricing-card-price">189&nbsp;€</p>
-                            <p class="pricing-card-desc" data-i18n="pricing.pack3Desc">Покрийте основните входни точки у дома. Спестявате 7 € на сензор.</p>
+                            <p class="pricing-card-desc" data-i18n="pricing.pack3Desc">Покрийте основните входни точки у дома.</p>
                             <button type="button" class="pricing-card-btn cta-primary-link" data-pack="3" data-i18n="pricing.choose">Избери</button>
                         </article>
                         <article class="pricing-card pricing-card-value">
                             <span class="pricing-badge pricing-badge-value" data-i18n="pricing.bestValue">Най-изгоден</span>
                             <h3 class="pricing-card-title" data-i18n="pricing.pack5Title">5 сензора</h3>
                             <p class="pricing-card-price">299&nbsp;€</p>
-                            <p class="pricing-card-desc" data-i18n="pricing.pack5Desc">Пълна защита за дом, офис или Airbnb. Спестявате 25 € общо.</p>
+                            <p class="pricing-card-desc" data-i18n="pricing.pack5Desc">Пълна защита за дом, офис или Airbnb.</p>
                             <button type="button" class="pricing-card-btn cta-primary-link" data-pack="5" data-i18n="pricing.choose">Избери</button>
                         </article>
                     </div>
                     <p class="pricing-note" data-i18n="pricing.deviceNote">* Всеки акаунт може да бъде използван едновременно на до 2 устройства (например телефон и лаптоп).</p>
+                </div>
+            </section>
+
+            <section id="faq" class="section section-faq">
+                <div class="section-content faq-section is-open" id="faqSection">
+                    <button type="button" class="faq-section-trigger" aria-expanded="true" aria-controls="faq-list-wrap" id="faqSectionTrigger">
+                        <span data-i18n="faq.title">Често задавани въпроси</span>
+                        <span class="faq-section-chevron" aria-hidden="true"></span>
+                    </button>
+                    <div class="faq-accordion-wrap is-open" id="faq-list-wrap">
+                    <dl class="faq-list faq-accordion" id="faqList">
+                        <div class="faq-item">
+                            <dt class="faq-q">
+                                <button type="button" class="faq-trigger" aria-expanded="false" aria-controls="faq-a1" id="faq-q1">
+                                    <span data-i18n="faq.q1">Работи ли без WiFi?</span>
+                                    <span class="faq-chevron" aria-hidden="true"></span>
+                                </button>
+                            </dt>
+                            <dd class="faq-a" id="faq-a1" role="region" aria-labelledby="faq-q1" data-i18n="faq.a1">Сензорите се свързват с домашния ви WiFi и изпращат данни до приложението. Без WiFi няма връзка – затова е нужна стабилна мрежа у дома.</dd>
+                        </div>
+                        <div class="faq-item">
+                            <dt class="faq-q">
+                                <button type="button" class="faq-trigger" aria-expanded="false" aria-controls="faq-a2" id="faq-q2">
+                                    <span data-i18n="faq.q2">Колко време издържа батерията?</span>
+                                    <span class="faq-chevron" aria-hidden="true"></span>
+                                </button>
+                            </dt>
+                            <dd class="faq-a" id="faq-a2" role="region" aria-labelledby="faq-q2" data-i18n="faq.a2">При нормална употреба батерията издържа месеци. Точният срок зависи от броя известия и настройките за deep sleep на сензора.</dd>
+                        </div>
+                        <div class="faq-item">
+                            <dt class="faq-q">
+                                <button type="button" class="faq-trigger" aria-expanded="false" aria-controls="faq-a3" id="faq-q3">
+                                    <span data-i18n="faq.q3">Какво става ако интернетът спре?</span>
+                                    <span class="faq-chevron" aria-hidden="true"></span>
+                                </button>
+                            </dt>
+                            <dd class="faq-a" id="faq-a3" role="region" aria-labelledby="faq-q3" data-i18n="faq.a3">Сензорите записват състоянието локално, но известията на телефона идват през интернет. При прекъсване ще получите актуализация след възстановяване на връзката.</dd>
+                        </div>
+                        <div class="faq-item">
+                            <dt class="faq-q">
+                                <button type="button" class="faq-trigger" aria-expanded="false" aria-controls="faq-a4" id="faq-q4">
+                                    <span data-i18n="faq.q4">Мога ли да използвам един акаунт на 2 устройства?</span>
+                                    <span class="faq-chevron" aria-hidden="true"></span>
+                                </button>
+                            </dt>
+                            <dd class="faq-a" id="faq-a4" role="region" aria-labelledby="faq-q4" data-i18n="faq.a4">Да. Всеки акаунт може да бъде отворен едновременно на до 2 устройства (телефон, таблет, лаптоп). При опит за вход от трето устройство ще се покаже съобщение.</dd>
+                        </div>
+                        <div class="faq-item">
+                            <dt class="faq-q">
+                                <button type="button" class="faq-trigger" aria-expanded="false" aria-controls="faq-a5" id="faq-q5">
+                                    <span data-i18n="faq.q5">Има ли абонамент?</span>
+                                    <span class="faq-chevron" aria-hidden="true"></span>
+                                </button>
+                            </dt>
+                            <dd class="faq-a" id="faq-a5" role="region" aria-labelledby="faq-q5" data-i18n="faq.a5">Не. Плащате веднъж за сензорите и приложението – няма месечен абонамент или скрити такси.</dd>
+                        </div>
+                    </dl>
+                    </div>
                 </div>
             </section>
 
@@ -447,11 +519,11 @@
                                 </li>
                                 <li class="buy-summary-row">
                                     <span class="buy-summary-label">Цена за 1 сензор</span>
-                                    <span class="buy-summary-value" id="buySummaryUnitPrice">69 €</span>
+                                    <span class="buy-summary-value buy-summary-value-num" id="buySummaryUnitPrice">69 €</span>
                                 </li>
                                 <li class="buy-summary-row">
                                     <span class="buy-summary-label">Междинна сума</span>
-                                    <span class="buy-summary-value" id="buySummarySubtotal">69 €</span>
+                                    <span class="buy-summary-value buy-summary-value-num" id="buySummarySubtotal">69 €</span>
                                 </li>
                                 <li class="buy-summary-row">
                                     <span class="buy-summary-label">Доставка</span>
@@ -459,7 +531,7 @@
                                 </li>
                                 <li class="buy-summary-row buy-summary-total">
                                     <span class="buy-summary-label">Общо</span>
-                                    <span class="buy-summary-value" id="buySummaryTotal">69 €</span>
+                                    <span class="buy-summary-value buy-summary-value-num" id="buySummaryTotal">69 €</span>
                                 </li>
                             </ul>
                         </div>
@@ -508,7 +580,7 @@
         <footer class="site-footer">
             <p>Aura HomeSystems &copy; <span id="footerYear"></span> – <span data-i18n="footer.text">Умни сензори за по-спокоен дом.</span></p>
             <p class="footer-wifi-note" data-i18n="footer.wifiNote">За да използваш нашите сензори, необходима е стабилна WiFi връзка у дома.</p>
-            <p class="footer-legal"><a href="impressum.html" data-i18n="footer.impressum">Импресум</a></p>
+            <p class="footer-legal"><a href="impressum.html" data-i18n="footer.impressum">Импресум</a> · <a href="privacy.html" data-i18n="footer.privacy">Политика за поверителност</a></p>
         </footer>
     </div>
 

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+    <meta charset="UTF-8" />
+    <title data-i18n="privacy.pageTitle">Политика за поверителност – Aura HomeSystems</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="style.css" />
+    <style>
+        .impressum-header { justify-content: center; }
+        .impressum-header .nav { display: none; }
+        .impressum-header .impressum-logo-wrap { display: flex; justify-content: center; flex: 1; }
+        .impressum-header .lang-dropdown { position: absolute; right: 20px; top: 50%; transform: translateY(-50%); margin-left: 0; }
+        .impressum-header .logo { margin: 0; }
+        .impressum-page { max-width: 720px; margin: 0 auto; padding: 24px 20px 48px; }
+        .impressum-page h1 { font-size: 1.5rem; color: var(--accent-strong); margin-bottom: 24px; }
+        .impressum-page h2 { font-size: 1.1rem; color: var(--text); margin: 24px 0 10px; }
+        .impressum-page h3 { font-size: 1rem; color: var(--text); margin: 16px 0 6px; font-weight: 600; }
+        .impressum-page p, .impressum-page ul { color: var(--text-muted); font-size: 0.95rem; line-height: 1.6; margin: 0 0 12px; }
+        .impressum-page ul { padding-left: 1.25rem; }
+        .impressum-page ul.privacy-list-sm { margin: 4px 0 12px; }
+        .privacy-last-updated { margin: 0 0 20px; font-size: 0.9rem; color: var(--text-muted); }
+        .impressum-back { display: inline-block; margin-top: 32px; color: var(--accent); text-decoration: none; font-weight: 600; }
+        .impressum-back:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <header class="site-header impressum-header">
+            <div class="impressum-logo-wrap">
+                <div class="logo">
+                    <a href="index.html" style="color: inherit; text-decoration: none;">Aura<span>Home</span>Systems</a>
+                </div>
+            </div>
+            <div class="lang-dropdown">
+                <button type="button" class="lang-dropdown-trigger" aria-haspopup="true" aria-expanded="false" id="langDropdownTrigger">
+                    <span class="lang-flag-icon lang-flag-bg" id="langTriggerFlag" aria-hidden="true"></span>
+                    <span class="lang-code" id="langTriggerCode">BG</span>
+                    <span class="lang-chevron" aria-hidden="true">▼</span>
+                </button>
+                <div class="lang-dropdown-menu" id="langDropdownMenu" role="menu" aria-label="Избор на език">
+                    <button type="button" class="lang-option" role="menuitem" data-lang="bg"><span class="lang-flag-icon lang-flag-bg"></span> BG</button>
+                    <button type="button" class="lang-option" role="menuitem" data-lang="en"><span class="lang-flag-icon lang-flag-en"></span> EN</button>
+                    <button type="button" class="lang-option" role="menuitem" data-lang="de"><span class="lang-flag-icon lang-flag-de"></span> DE</button>
+                </div>
+            </div>
+        </header>
+
+        <main class="impressum-page privacy-page">
+            <h1 data-i18n="privacy.title">Политика за поверителност (GDPR)</h1>
+            <p data-i18n="privacy.intro">Настоящата политика описва как Aura HomeSystems (Petrov Solutions) събира, използва и защитава вашите лични данни в съответствие с Регламент (ЕС) 2016/679 (GDPR).</p>
+            <p class="privacy-last-updated"><strong data-i18n="privacy.lastUpdatedLabel">Последна актуализация:</strong> <span data-i18n="privacy.lastUpdated">7 март 2025</span></p>
+
+            <h2 data-i18n="privacy.s1Title">1. Администратор на лични данни</h2>
+            <p>Petrov Solutions, България, гр. Варна 9000</p>
+            <p><span data-i18n="privacy.s1Contact">Имейл за контакт: </span><a href="mailto:solutions.petrov@gmail.com" style="color: var(--accent-strong);">solutions.petrov@gmail.com</a></p>
+
+            <h2 data-i18n="privacy.s2Title">2. Какви данни събираме</h2>
+            <h3 data-i18n="privacy.s2_1Title">2.1. Данни при регистрация и вход</h3>
+            <ul class="privacy-list-sm">
+                <li data-i18n="privacy.s2_1_1">имейл</li>
+                <li data-i18n="privacy.s2_1_2">парола (хеширана, не се съхранява в чист вид)</li>
+            </ul>
+            <h3 data-i18n="privacy.s2_2Title">2.2. Данни при използване на услугата</h3>
+            <ul class="privacy-list-sm">
+                <li data-i18n="privacy.s2_2_1">статус на сензорите (отворено/затворено)</li>
+                <li data-i18n="privacy.s2_2_2">история на събития</li>
+                <li data-i18n="privacy.s2_2_3">настройки на акаунта</li>
+                <li data-i18n="privacy.s2_2_4">информация за устройствата, използвани за вход (за ограничението до 2 устройства)</li>
+            </ul>
+            <h3 data-i18n="privacy.s2_3Title">2.3. Данни при поръчка или запитване</h3>
+            <ul class="privacy-list-sm">
+                <li data-i18n="privacy.s2_3_1">име или псевдоним</li>
+                <li data-i18n="privacy.s2_3_2">имейл</li>
+                <li data-i18n="privacy.s2_3_3">телефон</li>
+                <li data-i18n="privacy.s2_3_4">адрес за доставка</li>
+                <li data-i18n="privacy.s2_3_5">съдържание на съобщението</li>
+            </ul>
+
+            <h2 data-i18n="privacy.s3Title">3. Цели и правно основание</h2>
+            <p data-i18n="privacy.s3Intro">Данните се обработват за:</p>
+            <ul class="privacy-list-sm">
+                <li data-i18n="privacy.s3_1">Предоставяне на услугата (акаунт, табло, push известия). Правно основание: изпълнение на договор (чл. 6, ал. 1, б. „б“ GDPR)</li>
+                <li data-i18n="privacy.s3_push">Push известията са съществена част от услугата; правното основание за изпращането им е изпълнение на договор (чл. 6, ал. 1, б. „б“ GDPR).</li>
+                <li data-i18n="privacy.s3_2">Сигурност на системата и ограничаване на броя устройства. Правно основание: легитимен интерес (чл. 6, ал. 1, б. „е“)</li>
+                <li data-i18n="privacy.s3_3">Обработка на поръчки и доставка. Правно основание: изпълнение на договор</li>
+                <li data-i18n="privacy.s3_4">Отговор на запитвания. Правно основание: съгласие и/или преддоговорни отношения</li>
+            </ul>
+            <p data-i18n="privacy.s3_noProfiling">Не извършваме профилиране или автоматизирано вземане на решения по смисъла на чл. 22 GDPR.</p>
+
+            <h2 data-i18n="privacy.s4Title">4. Съхранение и предаване на данни</h2>
+            <p data-i18n="privacy.s4_1">Данните се съхраняват на сървъри на Google Firebase в ЕС.</p>
+            <p data-i18n="privacy.s4_2">Firebase (Google) действа като обработващ лични данни (processor) по смисъла на чл. 28 GDPR. Google предоставя стандартни договорни клаузи и споразумение за обработка на данни (DPA), които гарантират спазването на GDPR.</p>
+            <p data-i18n="privacy.s4_3">Паролите се съхраняват само като криптографски хеш.</p>
+            <p data-i18n="privacy.s4_4">Данните от формуляри могат да бъдат предавани към доставчици на имейл услуги (Formspree, Resend) единствено за изпращане на съобщения.</p>
+            <p data-i18n="privacy.s4_5">Не продаваме лични данни на трети страни.</p>
+
+            <h2 data-i18n="privacy.s5Title">5. Срокове за съхранение</h2>
+            <p data-i18n="privacy.s5_1">Данните от акаунта се пазят, докато акаунтът е активен.</p>
+            <p data-i18n="privacy.s5_2">След изтриване на акаунт данните се изтриват или анонимизират в сроковете, изисквани от закона.</p>
+            <p data-i18n="privacy.s5_2b">При изтриване на акаунт изтриваме данните от акаунта и от сензорите от нашите системи (вкл. Firebase). Резервни копия могат да съдържат данни за ограничен период до тяхното презаписване. Можете да поискате изтриване („да бъдете забравени“) чрез имейл по-горе.</p>
+            <p data-i18n="privacy.s5_3">Данните от поръчки и счетоводни документи се съхраняват според законовите срокове (напр. 5–10 години).</p>
+
+            <h2 data-i18n="privacy.s6Title">6. Вашите права</h2>
+            <p data-i18n="privacy.s6Intro">Имате право на:</p>
+            <ul class="privacy-list-sm">
+                <li data-i18n="privacy.s6_1">достъп до данните</li>
+                <li data-i18n="privacy.s6_2">корекция</li>
+                <li data-i18n="privacy.s6_3">изтриване („право да бъдете забравени“)</li>
+                <li data-i18n="privacy.s6_4">ограничаване на обработката</li>
+                <li data-i18n="privacy.s6_5">преносимост</li>
+                <li data-i18n="privacy.s6_6">възражение</li>
+                <li data-i18n="privacy.s6_7">оттегляне на съгласие</li>
+            </ul>
+            <p><span data-i18n="privacy.s6Contact">Можете да упражните правата си чрез имейл: </span><a href="mailto:solutions.petrov@gmail.com" style="color: var(--accent-strong);">solutions.petrov@gmail.com</a></p>
+            <p><span data-i18n="privacy.s6Complaint"></span><a href="https://www.cpdp.bg" target="_blank" rel="noopener noreferrer">www.cpdp.bg</a>.</p>
+
+            <h2 data-i18n="privacy.s7Title">7. Бисквитки и локално съхранение</h2>
+            <p data-i18n="privacy.s7Intro">Използваме localStorage за:</p>
+            <ul class="privacy-list-sm">
+                <li data-i18n="privacy.s7_1">избран език</li>
+                <li data-i18n="privacy.s7_2">идентификатор на устройство при вход</li>
+            </ul>
+            <p data-i18n="privacy.s7_necessary">Тези данни са технически необходими за функционирането на услугата и сигурността на акаунта.</p>
+            <p data-i18n="privacy.s7_3">Не използваме рекламни бисквитки или тракери на трети страни.</p>
+
+            <h2 data-i18n="privacy.s8Title">8. Сигурност</h2>
+            <p data-i18n="privacy.s8Intro">Прилагаме технически и организационни мерки за защита на данните, както изисква чл. 32 GDPR. Техническите мерки включват:</p>
+            <ul class="privacy-list-sm">
+                <li data-i18n="privacy.s8_1">криптиране на данните при предаване и при съхранение (където е приложимо)</li>
+                <li data-i18n="privacy.s8_2">защитени връзки (HTTPS) за целия уеб достъп</li>
+                <li data-i18n="privacy.s8_3">съхранение на пароли само като криптографски хеш (не в чист вид)</li>
+                <li data-i18n="privacy.s8_4">ограничен достъп до данните само за упълномощен персонал и системи</li>
+                <li data-i18n="privacy.s8_5">логове за сигурност и мониторинг за неоторизиран достъп</li>
+            </ul>
+            <p data-i18n="privacy.s8_org">Организационните мерки включват сключване на споразумения за обработка с доставчици (напр. Firebase) и вътрешни процедури за достъп и поверителност.</p>
+
+            <h2 data-i18n="privacy.s9Title">9. Промени в политиката</h2>
+            <p data-i18n="privacy.s9_1">Актуализации ще бъдат публикувани на тази страница.</p>
+            <p data-i18n="privacy.s9_2">При съществени промени ще уведомим потребителите, когато е приложимо.</p>
+
+            <p><a href="impressum.html" style="color: var(--text-muted);" data-i18n="footer.impressum">Импресум</a> · <a href="index.html" class="impressum-back" data-i18n="impressum.backLink">← Обратно към началната страница</a></p>
+        </main>
+
+        <footer class="site-footer">
+            <p>Aura HomeSystems &copy; <span id="footerYear"></span> – <span data-i18n="footer.text">Умни сензори за по-спокоен дом.</span></p>
+            <p><a href="impressum.html" style="color: var(--text-muted);" data-i18n="footer.impressum">Импресум</a> · <a href="privacy.html" style="color: var(--text-muted);" data-i18n="footer.privacy">Политика за поверителност</a></p>
+        </footer>
+    </div>
+    <script src="translations.js"></script>
+    <script src="app.js"></script>
+    <script>
+        if (document.getElementById("footerYear")) document.getElementById("footerYear").textContent = new Date().getFullYear();
+    </script>
+</body>
+</html>

@@ -35,8 +35,13 @@ function applyLanguage(lang) {
         opt.classList.toggle("active", opt.getAttribute("data-lang") === lang);
     });
     try {
-        const pageTitle = getTranslation(lang, "impressum.pageTitle");
-        if (pageTitle && document.querySelector(".impressum-page")) document.title = pageTitle;
+        if (document.querySelector(".privacy-page")) {
+            const pageTitle = getTranslation(lang, "privacy.pageTitle");
+            if (pageTitle) document.title = pageTitle;
+        } else if (document.querySelector(".impressum-page")) {
+            const pageTitle = getTranslation(lang, "impressum.pageTitle");
+            if (pageTitle) document.title = pageTitle;
+        }
     } catch (_) {}
     try { localStorage.setItem("aura-lang", lang); } catch (_) {}
 }
@@ -449,6 +454,41 @@ function initBuyPanel() {
     });
 }
 
+function initFaqAccordion() {
+    const sectionTrigger = document.getElementById("faqSectionTrigger");
+    const sectionWrap = document.getElementById("faq-list-wrap");
+    const sectionParent = document.getElementById("faqSection");
+    if (sectionTrigger && sectionWrap && sectionParent) {
+        sectionTrigger.addEventListener("click", () => {
+            const isOpen = sectionWrap.classList.contains("is-open");
+            sectionWrap.classList.toggle("is-open", !isOpen);
+            sectionParent.classList.toggle("is-open", !isOpen);
+            sectionTrigger.setAttribute("aria-expanded", !isOpen ? "true" : "false");
+        });
+    }
+
+    const list = document.querySelector(".faq-accordion");
+    if (!list) return;
+    const triggers = list.querySelectorAll(".faq-trigger");
+    const items = list.querySelectorAll(".faq-item");
+    triggers.forEach((btn, i) => {
+        btn.addEventListener("click", () => {
+            const item = items[i];
+            const isOpen = item.classList.contains("is-open");
+            items.forEach((el) => {
+                el.classList.remove("is-open");
+                const t = el.querySelector(".faq-trigger");
+                if (t) t.setAttribute("aria-expanded", "false");
+            });
+            if (!isOpen) {
+                item.classList.add("is-open");
+                const t = item.querySelector(".faq-trigger");
+                if (t) t.setAttribute("aria-expanded", "true");
+            }
+        });
+    });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
     if (typeof history !== "undefined" && history.scrollRestoration) history.scrollRestoration = "manual";
     window.scrollTo(0, 0);
@@ -460,6 +500,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initFooterYear();
     initContactForm();
     initBuyPanel();
+    initFaqAccordion();
 });
 
 function initMobileMenu() {

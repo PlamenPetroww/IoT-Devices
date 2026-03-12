@@ -9,42 +9,18 @@
 <body class="dashboard-page">
     <header class="dashboard-header">
         <div class="dashboard-brand">
-            <h1>Aura HomeSystems</h1>
+            <a href="index.html" class="dashboard-brand-link" aria-label="Обратно към началната страница">
+                <h1>Aura HomeSystems</h1>
+            </a>
             <p class="user-email" id="userEmail"></p>
+            <button type="button" id="showUidBtn" class="show-uid-btn" aria-label="Покажи UID за Arduino">UID за Arduino</button>
+            <p class="user-uid-hint" id="userUidHint" style="display: none;"><small>UID за Arduino: <code id="userUid"></code></small></p>
         </div>
         <a href="#" id="logoutBtn" class="logout-btn">Изход</a>
     </header>
 
     <main class="dashboard-layout">
-        <aside class="dashboard-left">
-            <div class="mode-card">
-                <h2>Режим на системата</h2>
-                <p>Когато системата е „Навън“, сензорите се следят и получавате известия. В „У дома“ системата е изключена.</p>
-                <div class="mode-buttons">
-                    <button type="button" id="modeHome" class="mode-btn active">🏠 У дома</button>
-                    <button type="button" id="modeAway" class="mode-btn danger">🛡️ Навън</button>
-                </div>
-                <div id="sensorStatusMsg" class="sensor-status-msg home">
-                    🏠 Сензорите са изключени (режим „У дома“).
-                </div>
-            </div>
-
-            <div class="history-card">
-                <h2>История</h2>
-                <p class="history-desc">Последни промени отворено/затворено по сензорите.</p>
-                <div class="history-controls">
-                    <span>Покажи:</span>
-                    <button type="button" class="history-limit-btn active" data-limit="3">3</button>
-                    <button type="button" class="history-limit-btn" data-limit="10">10</button>
-                    <button type="button" class="history-limit-btn" data-limit="50">50</button>
-                </div>
-                <ul id="historyList" class="history-list">
-                    <li class="history-empty">Няма записи в историята.</li>
-                </ul>
-            </div>
-        </aside>
-
-        <section class="dashboard-right">
+        <section class="dashboard-top">
             <div class="devices-card">
                 <h2>Вашите сензори</h2>
                 <div id="duplicateNamesWarning" class="duplicate-names-warning" style="display: none;" role="alert"></div>
@@ -53,6 +29,36 @@
                 </div>
             </div>
         </section>
+        <div class="dashboard-bottom">
+            <aside class="dashboard-history">
+                <div class="history-card">
+                    <h2>История</h2>
+                    <p class="history-desc">Последни промени отворено/затворено по сензорите.</p>
+                    <div class="history-controls">
+                        <span>Покажи:</span>
+                        <button type="button" class="history-limit-btn active" data-limit="3">3</button>
+                        <button type="button" class="history-limit-btn" data-limit="10">10</button>
+                        <button type="button" class="history-limit-btn" data-limit="50">50</button>
+                    </div>
+                    <ul id="historyList" class="history-list">
+                        <li class="history-empty">Няма записи в историята.</li>
+                    </ul>
+                </div>
+            </aside>
+            <aside class="dashboard-mode">
+                <div class="mode-card">
+                    <h2>Режим на системата</h2>
+                    <p>Когато системата е „Навън“, сензорите се следят и получавате известия. В режим „Аз съм у дома“ системата е изключена.</p>
+                    <div class="mode-buttons">
+                        <button type="button" id="modeHome" class="mode-btn active">🏠 У дома</button>
+                        <button type="button" id="modeAway" class="mode-btn danger">🛡️ Навън</button>
+                    </div>
+                    <div id="sensorStatusMsg" class="sensor-status-msg home">
+                        🏠 Сензорите са изключени (режим „Аз съм у дома“).
+                    </div>
+                </div>
+            </aside>
+        </div>
     </main>
 
     <footer class="dashboard-footer">
@@ -81,10 +87,21 @@
                 return;
             }
             document.getElementById("userEmail").textContent = user.email;
-            const safeEmail = getSafeEmail(user.email);
-            if (!safeEmail) return;
-
-            const userPath = "users/" + safeEmail;
+            // Използваме auth.uid за пътя – така Firebase Rules могат да ограничат достъпа само до твоите данни
+            const userPath = "users/" + user.uid;
+            document.getElementById("userUid").textContent = user.uid;
+            document.getElementById("userUidHint").style.display = "none";
+            document.getElementById("showUidBtn").addEventListener("click", function() {
+                var hint = document.getElementById("userUidHint");
+                var btn = document.getElementById("showUidBtn");
+                if (hint.style.display === "none") {
+                    hint.style.display = "block";
+                    btn.textContent = "Скрий UID";
+                } else {
+                    hint.style.display = "none";
+                    btn.textContent = "UID за Arduino";
+                }
+            });
 
             // Изход
             document.getElementById("logoutBtn").addEventListener("click", (e) => {
@@ -104,7 +121,7 @@
                 statusMsg.className = "sensor-status-msg " + (isAway ? "away" : "home");
                 statusMsg.textContent = isAway
                     ? "🛡️ Сензорите са активирани. Получавате известия при отваряне."
-                    : "🏠 Сензорите са изключени (режим „У дома“).";
+                    : "🏠 Сензорите са изключени (режим „Аз съм у дома“).";
             }
 
             db.ref(userPath + "/systemEnabled").on("value", (snap) => {

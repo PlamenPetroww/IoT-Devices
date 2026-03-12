@@ -16,22 +16,27 @@
      - projectId, storageBucket, messagingSenderId, appId
      - databaseURL трябва да е: https://cleverhaus-petrov-default-rtdb.europe-west1.firebasedatabase.app
 
-4. Realtime Database – правила
+4. Realtime Database – правила (сигурни)
    - Build → Realtime Database → Rules.
-   - За да могат логнатите потребители да четат/пишат под /users/{email}/, използвай например:
+   - Копирай съдържанието от firebase-database-rules.json в проекта (или от тук):
      {
        "rules": {
          "users": {
-           ".read": "auth != null",
-           ".write": "auth != null"
+           "$uid": {
+             ".read": "auth != null && auth.uid === $uid",
+             ".write": "auth != null && auth.uid === $uid"
+           }
          }
        }
      }
+   - Така всеки логнат потребител има достъп само до своите данни под users/<неговият-uid>.
    - Публикувай правилата (Publish).
 
 5. Съвместимост с Arduino
-   - Arduino използва имейла с точките заменени с тире (safeEmail) като път: /users/safeEmail/devices/...
-   - Уеб приложението използва същия път според имейла на логнатия потребител. Така сензорите и таблото са за един и същ акаунт.
+   - Уеб приложението използва път /users/<uid>/ (Firebase Auth UID на потребителя).
+   - Arduino трябва да записва под същия път: /users/<uid>/devices/, /users/<uid>/history/ и т.н.
+   - UID-то виждаш във Firebase Console → Authentication → Users (колона User UID) или временно в конзолата на браузъра след вход: firebase.auth().currentUser.uid
+   - Настрой скицата на Arduino да използва този UID вместо safeEmail в пътищата.
 
 Страници:
 - login.html   – Вход (имейл + парола)

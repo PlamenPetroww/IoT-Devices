@@ -1,0 +1,9 @@
+# Firebase конфигурация – съдържа API ключове, не се комитва
+firebase-config.js
+
+# Локални / временни файлове
+.DS_Store
+Thumbs.db
+*.log
+.env
+.env.local

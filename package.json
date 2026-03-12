@@ -1,0 +1,8 @@
+{
+  "scripts": {
+    "build": "echo No build step for static site"
+  },
+  "dependencies": {
+    "unhead": "^2.1.12"
+  }
+}

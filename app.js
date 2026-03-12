@@ -212,11 +212,12 @@ function initContactForm() {
                 const subject = form.querySelector('input[name="_subject"]').value.trim();
                 const message = form.querySelector('textarea[name="message"]').value.trim();
                 const phone = (form.querySelector('input[name="phone"]') && form.querySelector('input[name="phone"]').value) || "";
+                const sensorsTotal = (form.querySelector('input[name="sensorsTotal"]') && form.querySelector('input[name="sensorsTotal"]').value) || "0";
                 const baseUrl = window.location.origin + (window.location.pathname || "").replace(/[^/]+$/, "").replace(/\/$/, "");
                 const res = await fetch(functionsBase.replace(/\/$/, "") + "/submitInquiry", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ email, subject, message, phone, baseUrl })
+                    body: JSON.stringify({ email, subject, message, phone, sensorsTotal, baseUrl })
                 });
                 const data = await res.json().catch(() => ({}));
                 if (res.ok && data.success) {
@@ -254,6 +255,200 @@ function initContactForm() {
     });
 }
 
+function initBuyPanel() {
+    const overlay = document.getElementById("buyPanelOverlay");
+    const panel = document.getElementById("buyPanel");
+    const openBtn = document.getElementById("openBuyPanelBtn");
+    const closeBtn = document.getElementById("closeBuyPanelBtn");
+    const qtyInput = document.getElementById("buyQtyInput");
+    const qtyMinus = document.getElementById("buyQtyMinus");
+    const qtyPlus = document.getElementById("buyQtyPlus");
+    const summaryQty = document.getElementById("buySummaryQty");
+    const summarySubtotal = document.getElementById("buySummarySubtotal");
+    const summaryTotal = document.getElementById("buySummaryTotal");
+    const buyForm = document.getElementById("buyPanelForm");
+    const buyStatus = document.getElementById("buyPanelStatus");
+    const buySubmitBtn = document.getElementById("buyPanelSubmitBtn");
+    const paymentSelect = buyForm ? buyForm.querySelector('select[name="paymentMethod"]') : null;
+    const revolutField = document.getElementById("revolutField");
+    if (!overlay || !panel || !openBtn || !buyForm) return;
+
+    const UNIT_PRICE_EUR = 69;
+    const BUNDLES = { 1: 69, 3: 189, 5: 299 };
+
+    function formatPrice(amount) {
+        const lang = document.documentElement.lang || "bg";
+        const locale = lang === "bg" ? "bg-BG" : lang === "de" ? "de-DE" : "en-US";
+        try {
+            return new Intl.NumberFormat(locale, { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount) + " €";
+        } catch (e) {
+            return amount + " €";
+        }
+    }
+
+    function getTotalForQty(q) {
+        if (BUNDLES[q]) return BUNDLES[q];
+        return q * UNIT_PRICE_EUR;
+    }
+
+    function updateSummary() {
+        if (!qtyInput) return;
+        let q = parseInt(qtyInput.value, 10);
+        if (!Number.isFinite(q) || q < 1) q = 1;
+        if (q > 99) q = 99;
+        qtyInput.value = q;
+        const total = getTotalForQty(q);
+        const formatted = formatPrice(total);
+        const summaryUnitPrice = document.getElementById("buySummaryUnitPrice");
+        if (summaryQty) summaryQty.textContent = String(q);
+        if (summaryUnitPrice) {
+            if (q === 1) summaryUnitPrice.textContent = "69 €";
+            else if (q === 3) summaryUnitPrice.textContent = "189 € (3 бр.)";
+            else if (q === 5) summaryUnitPrice.textContent = "299 € (5 бр.)";
+            else summaryUnitPrice.textContent = "69 € × " + q;
+        }
+        if (summarySubtotal) summarySubtotal.textContent = formatted;
+        if (summaryTotal) summaryTotal.textContent = formatted;
+    }
+
+    function updatePaymentFields() {
+        if (!revolutField || !paymentSelect) return;
+        const method = paymentSelect.value;
+        revolutField.style.display = method === "revolut" ? "flex" : "none";
+    }
+
+    function openPanel() {
+        overlay.classList.add("visible");
+        panel.classList.add("visible");
+        overlay.setAttribute("aria-hidden", "false");
+        panel.setAttribute("aria-hidden", "false");
+        document.body.style.overflow = "hidden";
+        updateSummary();
+        updatePaymentFields();
+    }
+    function closePanel() {
+        overlay.classList.remove("visible");
+        panel.classList.remove("visible");
+        overlay.setAttribute("aria-hidden", "true");
+        panel.setAttribute("aria-hidden", "true");
+        document.body.style.overflow = "";
+    }
+
+    openBtn.addEventListener("click", openPanel);
+    if (closeBtn) closeBtn.addEventListener("click", closePanel);
+    overlay.addEventListener("click", closePanel);
+
+    document.querySelectorAll(".pricing-card-btn[data-pack]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+            const pack = parseInt(btn.getAttribute("data-pack"), 10);
+            if (qtyInput && Number.isFinite(pack) && pack >= 1) {
+                qtyInput.value = Math.min(99, pack);
+                openPanel();
+            }
+        });
+    });
+
+    if (qtyMinus && qtyInput) {
+        qtyMinus.addEventListener("click", () => {
+            const v = Math.max(1, parseInt(qtyInput.value, 10) - 1);
+            qtyInput.value = v;
+            updateSummary();
+        });
+    }
+    if (qtyPlus && qtyInput) {
+        qtyPlus.addEventListener("click", () => {
+            const v = Math.min(99, parseInt(qtyInput.value, 10) + 1);
+            qtyInput.value = v;
+            updateSummary();
+        });
+    }
+
+    if (paymentSelect) {
+        paymentSelect.addEventListener("change", updatePaymentFields);
+    }
+
+    buyForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const functionsBase = (typeof window !== "undefined" && window.INQUIRY_FUNCTIONS_BASE_URL) ? window.INQUIRY_FUNCTIONS_BASE_URL.trim() : "";
+        const useVerifyFlow = !!functionsBase;
+        if (!useVerifyFlow && FORMSPREE_FORM_ID === "YOUR_FORMSPREE_FORM_ID") {
+            buyStatus.textContent = "Настройте FORMSPREE_FORM_ID в app.js.";
+            buyStatus.className = "form-status form-status-error";
+            return;
+        }
+
+        const origLabel = buySubmitBtn ? buySubmitBtn.textContent : "";
+        if (buySubmitBtn) { buySubmitBtn.disabled = true; buySubmitBtn.textContent = "..."; }
+        buyStatus.textContent = "";
+        buyStatus.className = "form-status";
+
+        const lang = document.documentElement.lang || "bg";
+        const msgError = { bg: "Неуспешно. Опитайте отново.", en: "Failed. Try again.", de: "Fehlgeschlagen. Bitte erneut versuchen." };
+        const msgSuccessTitle = { bg: "Поръчката е изпратена!", en: "Order submitted!", de: "Bestellung gesendet!" };
+
+        const quantity = (qtyInput && qtyInput.value) || "1";
+        const paymentMethod = (buyForm.querySelector('select[name="paymentMethod"]') && buyForm.querySelector('select[name="paymentMethod"]').value) || "";
+        const revolutId = (buyForm.querySelector('input[name="revolutId"]') && buyForm.querySelector('input[name="revolutId"]').value.trim()) || "";
+        const deliveryAddress = (buyForm.querySelector('input[name="deliveryAddress"]') && buyForm.querySelector('input[name="deliveryAddress"]').value.trim()) || "";
+        const phone = (buyForm.querySelector('input[name="phone"]') && buyForm.querySelector('input[name="phone"]').value) || "";
+        const email = (buyForm.querySelector('input[name="_replyto"]') && buyForm.querySelector('input[name="_replyto"]').value.trim()) || "";
+
+        try {
+            if (useVerifyFlow) {
+                const baseUrl = window.location.origin + (window.location.pathname || "").replace(/[^/]+$/, "").replace(/\/$/, "");
+                const res = await fetch(functionsBase.replace(/\/$/, "") + "/submitInquiry", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        email,
+                        subject: "Direct order",
+                        message: `Direct order: ${quantity} pcs, Payment: ${paymentMethod}, Address: ${deliveryAddress}`,
+                        phone,
+                        orderType: "direct",
+                        quantity,
+                        paymentMethod,
+                        revolutId,
+                        deliveryAddress,
+                        baseUrl
+                    })
+                });
+                const data = await res.json().catch(() => ({}));
+                if (res.ok && data.success) {
+                    buyForm.reset();
+                    if (qtyInput) qtyInput.value = 1;
+                    closePanel();
+                    showSuccessNotification(msgSuccessTitle[lang] || msgSuccessTitle.bg);
+                } else {
+                    buyStatus.textContent = data.error || msgError[lang] || msgError.bg;
+                    buyStatus.className = "form-status form-status-error";
+                }
+            } else {
+                const formData = new FormData(buyForm);
+                formData.set("_subject", "Direct order – " + quantity + " pcs");
+                const res = await fetch(`https://formspree.io/f/${FORMSPREE_FORM_ID}`, {
+                    method: "POST",
+                    body: formData,
+                    headers: { Accept: "application/json" }
+                });
+                const data = await res.json().catch(() => ({}));
+                if (res.ok && (data.ok === true || res.status === 200)) {
+                    buyForm.reset();
+                    if (qtyInput) qtyInput.value = 1;
+                    closePanel();
+                    showSuccessNotification(msgSuccessTitle[lang] || msgSuccessTitle.bg);
+                } else {
+                    buyStatus.textContent = msgError[lang] || msgError.bg;
+                    buyStatus.className = "form-status form-status-error";
+                }
+            }
+        } catch (err) {
+            buyStatus.textContent = msgError[lang] || msgError.bg;
+            buyStatus.className = "form-status form-status-error";
+        }
+        if (buySubmitBtn) { buySubmitBtn.disabled = false; buySubmitBtn.textContent = origLabel; }
+    });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
     if (typeof history !== "undefined" && history.scrollRestoration) history.scrollRestoration = "manual";
     window.scrollTo(0, 0);
@@ -264,6 +459,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initSmoothScroll();
     initFooterYear();
     initContactForm();
+    initBuyPanel();
 });
 
 function initMobileMenu() {

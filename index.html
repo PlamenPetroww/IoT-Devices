@@ -22,6 +22,8 @@
                     <a href="#problem" data-i18n="nav.problem">Проблем</a>
                     <a href="#solution" data-i18n="nav.solution">Решение</a>
                     <a href="#product" data-i18n="nav.product">Продукт</a>
+                    <a href="#advantages" data-i18n="nav.advantages">Предимства</a>
+                    <a href="#pricing" data-i18n="nav.pricing">Цени</a>
                     <a href="#stats" data-i18n="nav.stats">Резултати</a>
                     <a href="#cta" data-i18n="nav.cta">Започни</a>
                 </div>
@@ -158,7 +160,14 @@
 
                     <div class="product-grid">
                         <article class="product-card">
-                            <div class="product-icon product-icon-window"></div>
+                            <div class="product-icon product-icon-window" aria-hidden="true">
+                                <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="4" y="8" width="40" height="32" rx="3"/>
+                                    <line x1="4" y1="24" x2="44" y2="24"/>
+                                    <line x1="24" y1="8" x2="24" y2="40"/>
+                                    <circle cx="24" cy="24" r="2.5" fill="currentColor"/>
+                                </svg>
+                            </div>
                             <h3 data-i18n="product.windowTitle">Сензори за прозорци</h3>
                             <p data-i18n="product.windowDesc">
                                 Компактни безжични сензори, които засичат отваряне и оставане отворено.
@@ -167,7 +176,13 @@
                         </article>
 
                         <article class="product-card">
-                            <div class="product-icon product-icon-door"></div>
+                            <div class="product-icon product-icon-door" aria-hidden="true">
+                                <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="6" y="4" width="26" height="40" rx="2"/>
+                                    <line x1="32" y1="4" x2="32" y2="44"/>
+                                    <circle cx="28" cy="24" r="2.5" fill="currentColor"/>
+                                </svg>
+                            </div>
                             <h3 data-i18n="product.doorTitle">Сензори за входни врати</h3>
                             <p data-i18n="product.doorDesc">
                                 Устойчиви сензори за входни и гаражни врати, които предупреждават
@@ -176,7 +191,15 @@
                         </article>
 
                         <article class="product-card">
-                            <div class="product-icon product-icon-app"></div>
+                            <div class="product-icon product-icon-app" aria-hidden="true">
+                                <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="12" y="4" width="24" height="40" rx="4"/>
+                                    <line x1="20" y1="8" x2="28" y2="8"/>
+                                    <rect x="14" y="12" width="20" height="28" rx="2"/>
+                                    <circle cx="34" cy="14" r="3" fill="currentColor"/>
+                                    <path d="M22 22h12M22 26h10M22 30h8"/>
+                                </svg>
+                            </div>
                             <h3 data-i18n="product.appTitle">Мобилно приложение</h3>
                             <p data-i18n="product.appDesc">
                                 Виждаш в реално време статуса на всеки сензор, получаваш известия
@@ -187,6 +210,23 @@
                     <p class="product-wifi-note" data-i18n="product.wifiNote">
                         За да използваш сензорите ни, в дома ти трябва да има стабилна WiFi връзка – сензорите се свързват с нея и изпращат данните до приложението.
                     </p>
+                </div>
+            </section>
+
+            <section id="advantages" class="section section-advantages">
+                <div class="section-content">
+                    <h2 data-i18n="advantages.title">Нашите предимства</h2>
+                    <p class="section-subtitle" data-i18n="advantages.subtitle">Какво ви предлагаме и защо да изберете Aura.</p>
+                    <ul class="advantages-list">
+                        <li data-i18n-html="advantages.noHub">Без хъб. Директно към WiFi.</li>
+                        <li data-i18n-html="advantages.noEcosystem">Без Smart Home екосистеми. Работи сама.</li>
+                        <li data-i18n-html="advantages.standalone">Самостоятелно – без умни крушки и допълнения.</li>
+                        <li data-i18n-html="advantages.ownCloud">Собствена cloud – не споделена платформа.</li>
+                        <li data-i18n-html="advantages.pushNotifications">Моментални push известия при отваряне.</li>
+                        <li data-i18n-html="advantages.personalAccount">Персонален акаунт. Данните са само ваши.</li>
+                        <li data-i18n-html="advantages.easyInstall">Самоинсталация. Без майстори и кабели.</li>
+                        <li data-i18n-html="advantages.longBattery">Месеци на батерия без подзареждане.</li>
+                    </ul>
                 </div>
             </section>
 
@@ -312,18 +352,46 @@
                 </div>
             </section>
 
+            <section id="pricing" class="section section-pricing">
+                <div class="section-content">
+                    <h2 data-i18n="pricing.title">Изберете пакет за сигурност</h2>
+                    <p class="section-subtitle" data-i18n="pricing.subtitle">Без абонамент. Моментални известия.</p>
+                    <div class="pricing-grid">
+                        <article class="pricing-card">
+                            <h3 class="pricing-card-title" data-i18n="pricing.pack1Title">1 сензор</h3>
+                            <p class="pricing-card-price">69&nbsp;€</p>
+                            <p class="pricing-card-desc" data-i18n="pricing.pack1Desc">Идеален за една врата, прозорец или гараж.</p>
+                            <button type="button" class="pricing-card-btn cta-primary-link" data-pack="1" data-i18n="pricing.choose">Избери</button>
+                        </article>
+                        <article class="pricing-card pricing-card-popular">
+                            <span class="pricing-badge" data-i18n="pricing.mostPopular">Най-популярен</span>
+                            <h3 class="pricing-card-title" data-i18n="pricing.pack3Title">3 сензора</h3>
+                            <p class="pricing-card-price">189&nbsp;€</p>
+                            <p class="pricing-card-desc" data-i18n="pricing.pack3Desc">Покрийте основните входни точки у дома. Спестявате 7 € на сензор.</p>
+                            <button type="button" class="pricing-card-btn cta-primary-link" data-pack="3" data-i18n="pricing.choose">Избери</button>
+                        </article>
+                        <article class="pricing-card pricing-card-value">
+                            <span class="pricing-badge pricing-badge-value" data-i18n="pricing.bestValue">Най-изгоден</span>
+                            <h3 class="pricing-card-title" data-i18n="pricing.pack5Title">5 сензора</h3>
+                            <p class="pricing-card-price">299&nbsp;€</p>
+                            <p class="pricing-card-desc" data-i18n="pricing.pack5Desc">Пълна защита за дом, офис или Airbnb. Спестявате 25 € общо.</p>
+                            <button type="button" class="pricing-card-btn cta-primary-link" data-pack="5" data-i18n="pricing.choose">Избери</button>
+                        </article>
+                    </div>
+                    <p class="pricing-note" data-i18n="pricing.deviceNote">* Всеки акаунт може да бъде използван едновременно на до 2 устройства (например телефон и лаптоп).</p>
+                </div>
+            </section>
+
             <section id="cta" class="section section-cta">
                 <div class="section-content">
                     <h2 data-i18n="cta.title">Готов ли си да защитиш дома си?</h2>
-                    <p class="section-subtitle" data-i18n="cta.subtitle">
-                        Разкажи ни с какво жилище разполагаш и ще ти предложим конкретна конфигурация
-                        от сензори за врати и прозорци.
-                    </p>
-                    <ol class="cta-steps">
-                        <li data-i18n="cta.step1">Споделяш ни колко стаи, прозорци и входни врати имаш.</li>
-                        <li data-i18n="cta.step2">Предлагаме ти примерен пакет сензори и ориентировъчна цена.</li>
-                        <li data-i18n="cta.step3">Сензорите се инсталират и настройват супер лесно сами – приложението те води стъпка по стъпка.</li>
-                    </ol>
+
+                    <div class="cta-actions">
+                        <button type="button" class="cta-primary-link cta-buy-btn" id="openBuyPanelBtn">Купи директно</button>
+                        <span class="cta-actions-sep">или</span>
+                    </div>
+
+                    <p class="cta-inquiry-label">Изпрати запитване</p>
                     <form id="contactForm" class="contact-form" action="#" method="post">
                         <label class="form-label">
                             <span class="form-label-text" data-i18n="form.title">Заглавие</span>
@@ -332,6 +400,10 @@
                         <label class="form-label">
                             <span class="form-label-text" data-i18n="form.message">Съобщение</span>
                             <textarea name="message" class="form-input form-textarea" required rows="4" placeholder="Напишете вашето съобщение..." data-i18n-placeholder="form.messagePlaceholder"></textarea>
+                        </label>
+                        <label class="form-label">
+                            <span class="form-label-text" data-i18n="form.sensorsTotal">Сензори – общо брой (по избор)</span>
+                            <input type="number" name="sensorsTotal" class="form-input form-input-number" min="0" max="99" value="0" placeholder="0" />
                         </label>
                         <label class="form-label">
                             <span class="form-label-text" data-i18n="form.phone">Телефон</span>
@@ -347,6 +419,91 @@
                 </div>
             </section>
         </main>
+
+        <div id="buyPanelOverlay" class="buy-panel-overlay" aria-hidden="true"></div>
+        <aside id="buyPanel" class="buy-panel" role="dialog" aria-labelledby="buyPanelTitle" aria-modal="true">
+            <div class="buy-panel-inner">
+                <button type="button" class="buy-panel-close" id="closeBuyPanelBtn" aria-label="Затвори">×</button>
+                <h2 id="buyPanelTitle" class="buy-panel-title">Директна поръчка</h2>
+                <p class="buy-panel-desc">Безжични сензори за прозорци и врати – свързват се с приложението и ви уведомяват при отваряне. Подходящи за всяка врата или прозорец.</p>
+
+                <div class="buy-panel-price-row">
+                    <span class="buy-panel-price-label">Цена за 1 сензор</span>
+                    <span class="buy-panel-price">69&nbsp;€</span>
+                </div>
+                <p class="buy-panel-note">Цената не включва доставка – разходите за куриер са за сметка на купувача.</p>
+
+                <form id="buyPanelForm" class="buy-panel-form">
+                    <input type="hidden" name="_subject" value="Direct order" />
+                    <input type="hidden" name="orderType" value="direct" />
+
+                    <div class="buy-panel-layout">
+                        <div class="buy-panel-summary">
+                            <h3 class="buy-summary-title">Вашата поръчка</h3>
+                            <ul class="buy-summary-list">
+                                <li class="buy-summary-row">
+                                    <span class="buy-summary-label">Сензори</span>
+                                    <span class="buy-summary-value">× <span id="buySummaryQty">1</span></span>
+                                </li>
+                                <li class="buy-summary-row">
+                                    <span class="buy-summary-label">Цена за 1 сензор</span>
+                                    <span class="buy-summary-value" id="buySummaryUnitPrice">69 €</span>
+                                </li>
+                                <li class="buy-summary-row">
+                                    <span class="buy-summary-label">Междинна сума</span>
+                                    <span class="buy-summary-value" id="buySummarySubtotal">69 €</span>
+                                </li>
+                                <li class="buy-summary-row">
+                                    <span class="buy-summary-label">Доставка</span>
+                                    <span class="buy-summary-value">За сметка на купувача</span>
+                                </li>
+                                <li class="buy-summary-row buy-summary-total">
+                                    <span class="buy-summary-label">Общо</span>
+                                    <span class="buy-summary-value" id="buySummaryTotal">69 €</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div class="buy-panel-payment">
+                            <div class="buy-panel-quantity">
+                                <span class="form-label-text">Брой</span>
+                                <div class="quantity-stepper">
+                                    <button type="button" class="quantity-btn" id="buyQtyMinus" aria-label="Намали">−</button>
+                                    <input type="number" name="quantity" id="buyQtyInput" class="form-input quantity-input" min="1" max="99" value="1" readonly />
+                                    <button type="button" class="quantity-btn" id="buyQtyPlus" aria-label="Увеличи">+</button>
+                                </div>
+                            </div>
+                            <label class="form-label">
+                                <span class="form-label-text">Начин на плащане</span>
+                                <select name="paymentMethod" class="form-input form-select" required>
+                                    <option value="">Изберете</option>
+                                    <option value="stripe">Stripe</option>
+                                    <option value="revolut">Revolut</option>
+                                </select>
+                            </label>
+                            <label class="form-label" id="revolutField" style="display: none;">
+                                <span class="form-label-text">Revolut потребител / телефон</span>
+                                <input type="text" name="revolutId" class="form-input" placeholder="@user или телефон" />
+                            </label>
+                            <label class="form-label">
+                                <span class="form-label-text" data-i18n="form.deliveryAddress">Адрес за доставка</span>
+                                <input type="text" name="deliveryAddress" class="form-input" required maxlength="300" data-i18n-placeholder="form.deliveryAddressPlaceholder" placeholder="град, адрес, пощенски код" />
+                            </label>
+                            <label class="form-label">
+                                <span class="form-label-text" data-i18n="form.phone">Телефон</span>
+                                <input type="tel" name="phone" class="form-input" required data-i18n-placeholder="form.phonePlaceholder" placeholder="+359 888 123 456" />
+                            </label>
+                            <label class="form-label">
+                                <span class="form-label-text" data-i18n="form.email">Имейл</span>
+                                <input type="email" name="_replyto" class="form-input" required data-i18n-placeholder="form.emailPlaceholder" placeholder="your@email.com" />
+                            </label>
+                        </div>
+                    </div>
+                    <p id="buyPanelStatus" class="form-status" aria-live="polite"></p>
+                    <button type="submit" class="cta-primary-link cta-submit" id="buyPanelSubmitBtn">Поръчай</button>
+                </form>
+            </div>
+        </aside>
 
         <footer class="site-footer">
             <p>Aura HomeSystems &copy; <span id="footerYear"></span> – <span data-i18n="footer.text">Умни сензори за по-спокоен дом.</span></p>

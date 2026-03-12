@@ -1,6 +1,6 @@
 const translations = {
     bg: {
-        nav: { problem: "Проблем", solution: "Решение", product: "Продукт", stats: "Резултати", cta: "Започни", login: "Вход", register: "Регистрация" },
+        nav: { problem: "Проблем", solution: "Решение", product: "Продукт", advantages: "Предимства", pricing: "Цени", stats: "Резултати", cta: "Започни", login: "Вход", register: "Регистрация" },
         hero: {
             eyebrow: "Когато никой не е у дома...",
             title: "Aura HomeSystems пази дома ти, когато е празен.",
@@ -34,6 +34,32 @@ const translations = {
             appTitle: "Мобилно приложение",
             appDesc: "Изключително удобно приложение: виждаш в реално време статуса на всеки сензор, получаваш известия и история на събитията – директно на телефона си.",
             wifiNote: "За да използваш сензорите ни, в дома ти трябва да има стабилна WiFi връзка – сензорите се свързват с нея и изпращат данните до приложението."
+        },
+        advantages: {
+            title: "Нашите предимства",
+            subtitle: "Какво точно ви даваме с Aura и с какво се отличава от останалите решения.",
+            noHub: "<strong>Без хъб.</strong> Директно към WiFi.",
+            noEcosystem: "<strong>Без Smart Home екосистеми.</strong> Работи сама.",
+            standalone: "<strong>Самостоятелно</strong> – без умни крушки и допълнения.",
+            ownCloud: "<strong>Собствена cloud</strong> – не споделена платформа.",
+            pushNotifications: "<strong>Моментални push известия</strong> при отваряне.",
+            personalAccount: "<strong>Персонален акаунт.</strong> Данните са само ваши.",
+            easyInstall: "<strong>Самоинсталация.</strong> Без майстори и кабели.",
+            longBattery: "<strong>Месеци на батерия</strong> без подзареждане."
+        },
+        pricing: {
+            title: "Изберете пакет за сигурност",
+            subtitle: "Без абонамент. Моментални известия.",
+            pack1Title: "1 сензор",
+            pack1Desc: "Идеален за една врата, прозорец или гараж.",
+            pack3Title: "3 сензора",
+            pack3Desc: "Покрийте основните входни точки у дома. Около 9% отстъпка.",
+            pack5Title: "5 сензора",
+            pack5Desc: "Пълна защита за дом, офис или Airbnb. Около 13% отстъпка.",
+            mostPopular: "Най-популярен",
+            bestValue: "Най-изгоден",
+            choose: "Избери",
+            deviceNote: "* Всеки акаунт може да бъде използван едновременно на до 2 устройства (например телефон и лаптоп)."
         },
         cases: {
             title: "Как изглежда Aura у дома",
@@ -77,7 +103,14 @@ const translations = {
             step1: "Споделяш ни колко стаи, прозорци и входни врати имаш.",
             step2: "Предлагаме ти примерен пакет сензори и ориентировъчна цена.",
             step3: "Сензорите се инсталират и настройват супер лесно сами – приложението те води стъпка по стъпка.",
-            link: "Заяви безплатна консултация по имейл"
+            link: "Заяви безплатна консултация по имейл",
+            paymentTitle: "Плащане",
+            paymentMethods: "Приемаме плащане чрез <strong>Stripe</strong> (карта) и <strong>Revolut</strong>. След потвърждение на поръчката ще получите линк за сигурно плащане.",
+            returnTitle: "Връщане на стока",
+            returnPolicy: "До <strong>7 дни</strong> след получаване на продукта можете да го върнете при условие, че е в същото състояние, в което е получен – без да е отварян, повреден или променен по друг начин.",
+            buyDirect: "Купи директно",
+            or: "или",
+            inquiryLabel: "Изпрати запитване"
         },
         form: {
             title: "Заглавие",
@@ -88,7 +121,22 @@ const translations = {
             titlePlaceholder: "напр. Запитване за сензори",
             messagePlaceholder: "Напишете вашето съобщение...",
             phonePlaceholder: "+359 888 123 456",
-            emailPlaceholder: "your@email.com"
+            emailPlaceholder: "your@email.com",
+            orderTitle: "Поръчка на сензори",
+            sensorsTotal: "Сензори – общо брой (по избор)",
+            deliveryAddress: "Адрес за доставка",
+            deliveryAddressPlaceholder: "град, адрес, пощенски код (по избор)"
+        },
+        buyPanel: {
+            title: "Директна поръчка",
+            productDesc: "Безжични сензори за прозорци и врати – свързват се с приложението и ви уведомяват при отваряне. Подходящи за всяка врата или прозорец.",
+            priceLabel: "Цена за 1 сензор",
+            priceValue: "69 €",
+            shippingNote: "Цената не включва доставка – разходите за куриер са изцяло за сметка на купувача.",
+            quantity: "Брой",
+            paymentMethod: "Начин на плащане",
+            payChoose: "Изберете",
+            submit: "Поръчай"
         },
         footer: { text: "Умни сензори за по-спокоен дом.", wifiNote: "За да използваш нашите сензори, необходима е стабилна WiFi връзка у дома.", impressum: "Импресум" },
         impressum: {
@@ -109,7 +157,7 @@ const translations = {
         }
     },
     en: {
-        nav: { problem: "Problem", solution: "Solution", product: "Product", stats: "Results", cta: "Get started", login: "Login", register: "Register" },
+        nav: { problem: "Problem", solution: "Solution", product: "Product", advantages: "Advantages", pricing: "Pricing", stats: "Results", cta: "Get started", login: "Login", register: "Register" },
         hero: {
             eyebrow: "When nobody's home...",
             title: "Aura HomeSystems keeps your home safe when it's empty.",
@@ -143,6 +191,32 @@ const translations = {
             appTitle: "Mobile app",
             appDesc: "An extremely user-friendly app: see each sensor's status in real time, get notifications and event history – right on your phone.",
             wifiNote: "To use our sensors, you need a stable WiFi connection at home – the sensors connect to it and send data to the app."
+        },
+        advantages: {
+            title: "Our advantages",
+            subtitle: "What we offer and why choose Aura.",
+            noHub: "<strong>No hub.</strong> Direct to WiFi.",
+            noEcosystem: "<strong>No Smart Home ecosystems.</strong> Works on its own.",
+            standalone: "<strong>Standalone</strong> – no smart bulbs or add-ons.",
+            ownCloud: "<strong>Own cloud</strong> – not a shared platform.",
+            pushNotifications: "<strong>Instant push alerts</strong> on open.",
+            personalAccount: "<strong>Personal account.</strong> Your data stays yours.",
+            easyInstall: "<strong>Self-install.</strong> No technicians or cables.",
+            longBattery: "<strong>Months on battery</strong> without recharging."
+        },
+        pricing: {
+            title: "Choose your security pack",
+            subtitle: "No subscription. Instant alerts.",
+            pack1Title: "1 Sensor",
+            pack1Desc: "Perfect for a single door, window or garage.",
+            pack3Title: "3 Sensors",
+            pack3Desc: "Protect your home's main entry points. About 9% off.",
+            pack5Title: "5 Sensors",
+            pack5Desc: "Full-home protection for houses, offices or Airbnb. About 13% off.",
+            mostPopular: "Most Popular",
+            bestValue: "Best Value",
+            choose: "Choose",
+            deviceNote: "* Each account can be used on up to 2 devices at the same time (e.g. phone and laptop)."
         },
         cases: {
             title: "What Aura looks like at home",
@@ -186,7 +260,14 @@ const translations = {
             step1: "You tell us how many rooms, windows and entrance doors you have.",
             step2: "We propose a sample sensor package and indicative price.",
             step3: "The sensors are super easy to install and set up yourself – the app guides you step by step.",
-            link: "Request a free consultation by email"
+            link: "Request a free consultation by email",
+            paymentTitle: "Payment",
+            paymentMethods: "We accept payment via <strong>Stripe</strong> (card) and <strong>Revolut</strong>. After your order is confirmed you will receive a secure payment link.",
+            returnTitle: "Returns",
+            returnPolicy: "Within <strong>7 days</strong> of receiving the product you may return it provided it is in the same condition as received – unopened, undamaged and not otherwise altered.",
+            buyDirect: "Buy directly",
+            or: "or",
+            inquiryLabel: "Send an inquiry"
         },
         form: {
             title: "Subject",
@@ -197,7 +278,22 @@ const translations = {
             titlePlaceholder: "e.g. Inquiry about sensors",
             messagePlaceholder: "Write your message...",
             phonePlaceholder: "+1 234 567 890",
-            emailPlaceholder: "your@email.com"
+            emailPlaceholder: "your@email.com",
+            orderTitle: "Order sensors",
+            sensorsTotal: "Sensors – total quantity (optional)",
+            deliveryAddress: "Delivery address",
+            deliveryAddressPlaceholder: "city, address, postcode (optional)"
+        },
+        buyPanel: {
+            title: "Direct order",
+            productDesc: "Wireless sensors for windows and doors – they connect to the app and notify you when something opens. Suitable for any door or window.",
+            priceLabel: "Price per sensor",
+            priceValue: "69 €",
+            shippingNote: "Price does not include shipping – delivery costs are covered by the buyer.",
+            quantity: "Quantity",
+            paymentMethod: "Payment method",
+            payChoose: "Choose",
+            submit: "Place order"
         },
         footer: { text: "Smart sensors for a calmer home.", wifiNote: "A stable WiFi connection at home is required to use our sensors.", impressum: "Impressum" },
         impressum: {
@@ -218,7 +314,7 @@ const translations = {
         }
     },
     de: {
-        nav: { problem: "Problem", solution: "Lösung", product: "Produkt", stats: "Ergebnisse", cta: "Loslegen", login: "Anmelden", register: "Registrieren" },
+        nav: { problem: "Problem", solution: "Lösung", product: "Produkt", advantages: "Vorteile", pricing: "Preise", stats: "Ergebnisse", cta: "Loslegen", login: "Anmelden", register: "Registrieren" },
         hero: {
             eyebrow: "Wenn niemand zu Hause ist...",
             title: "Aura HomeSystems schützt Ihr Zuhause, wenn es leer steht.",
@@ -252,6 +348,32 @@ const translations = {
             appTitle: "Mobile App",
             appDesc: "Eine besonders benutzerfreundliche App: Sie sehen in Echtzeit den Status jedes Sensors, bekommen Benachrichtigungen und Verlauf – direkt auf dem Handy.",
             wifiNote: "Für die Nutzung unserer Sensoren ist eine stabile WLAN-Verbindung zu Hause nötig – die Sensoren verbinden sich damit und senden die Daten an die App."
+        },
+        advantages: {
+            title: "Unsere Vorteile",
+            subtitle: "Was wir bieten und warum Aura wählen.",
+            noHub: "<strong>Kein Hub.</strong> Direkt ins WLAN.",
+            noEcosystem: "<strong>Keine Smart-Home-Ökosysteme.</strong> Arbeitet für sich.",
+            standalone: "<strong>Eigenständig</strong> – ohne smarte Lampen oder Zubehör.",
+            ownCloud: "<strong>Eigene Cloud</strong> – keine geteilte Plattform.",
+            pushNotifications: "<strong>Sofortige Push-Meldungen</strong> bei Öffnung.",
+            personalAccount: "<strong>Persönliches Konto.</strong> Ihre Daten bleiben Ihre.",
+            easyInstall: "<strong>Selbstinstallation.</strong> Ohne Techniker und Kabel.",
+            longBattery: "<strong>Monatelang Akku</strong> ohne Nachladen."
+        },
+        pricing: {
+            title: "Wählen Sie Ihr Sicherheitspaket",
+            subtitle: "Kein Abo. Sofortige Benachrichtigungen.",
+            pack1Title: "1 Sensor",
+            pack1Desc: "Ideal für eine Tür, ein Fenster oder die Garage.",
+            pack3Title: "3 Sensoren",
+            pack3Desc: "Schützen Sie die wichtigsten Zugänge. Rund 9 % Rabatt.",
+            pack5Title: "5 Sensoren",
+            pack5Desc: "Rundum-Schutz für Zuhause, Büro oder Airbnb. Rund 13 % Rabatt.",
+            mostPopular: "Am beliebtesten",
+            bestValue: "Bestes Preis-Leistung",
+            choose: "Wählen",
+            deviceNote: "* Ein Konto kann gleichzeitig auf bis zu 2 Geräten genutzt werden (z. B. Handy und Laptop)."
         },
         cases: {
             title: "So sieht Aura bei Ihnen aus",
@@ -295,7 +417,14 @@ const translations = {
             step1: "Sie sagen uns, wie viele Zimmer, Fenster und Eingangstüren Sie haben.",
             step2: "Wir schlagen ein Beispiel-Paket und einen Richtpreis vor.",
             step3: "Die Sensoren sind super einfach selbst zu installieren und einzurichten – die App führt Sie Schritt für Schritt.",
-            link: "Kostenlose Beratung per E-Mail anfragen"
+            link: "Kostenlose Beratung per E-Mail anfragen",
+            paymentTitle: "Zahlung",
+            paymentMethods: "Wir akzeptieren Zahlung per <strong>Stripe</strong> (Karte) und <strong>Revolut</strong>. Nach Bestätigung Ihrer Bestellung erhalten Sie einen Link zur sicheren Zahlung.",
+            returnTitle: "Rückgabe",
+            returnPolicy: "Bis <strong>7 Tage</strong> nach Erhalt des Produkts können Sie es zurückgeben, sofern es im gleichen Zustand wie beim Erhalt ist – ungeöffnet, unbeschädigt und nicht anderweitig verändert.",
+            buyDirect: "Direkt kaufen",
+            or: "oder",
+            inquiryLabel: "Anfrage senden"
         },
         form: {
             title: "Betreff",
@@ -306,7 +435,22 @@ const translations = {
             titlePlaceholder: "z. B. Anfrage zu Sensoren",
             messagePlaceholder: "Schreiben Sie Ihre Nachricht...",
             phonePlaceholder: "+49 123 456789",
-            emailPlaceholder: "ihre@email.de"
+            emailPlaceholder: "ihre@email.de",
+            orderTitle: "Sensoren bestellen",
+            sensorsTotal: "Sensoren – Gesamtanzahl (optional)",
+            deliveryAddress: "Lieferadresse",
+            deliveryAddressPlaceholder: "Ort, Adresse, PLZ (optional)"
+        },
+        buyPanel: {
+            title: "Direktbestellung",
+            productDesc: "Funk-Sensoren für Fenster und Türen – sie verbinden sich mit der App und benachrichtigen Sie bei Öffnung. Geeignet für jede Tür und jedes Fenster.",
+            priceLabel: "Preis pro Sensor",
+            priceValue: "69 €",
+            shippingNote: "Der Preis enthält keine Lieferung – die Versandkosten trägt der Käufer.",
+            quantity: "Anzahl",
+            paymentMethod: "Zahlungsart",
+            payChoose: "Bitte wählen",
+            submit: "Bestellen"
         },
         footer: { text: "Smarte Sensoren für ein ruhigeres Zuhause.", wifiNote: "Für unsere Sensoren ist eine stabile WLAN-Verbindung zu Hause erforderlich.", impressum: "Impressum" },
         impressum: {

@@ -33,10 +33,26 @@
         const form = document.getElementById("loginForm");
         const errorEl = document.getElementById("loginError");
         const submitBtn = document.getElementById("submitBtn");
+        const auth = firebase.auth();
+        const db = firebase.database();
 
         function showError(msg) {
             errorEl.textContent = msg || "";
             errorEl.classList.toggle("visible", !!msg);
+        }
+
+        function getOrCreateDeviceId() {
+            try {
+                const key = "auraDeviceId";
+                let id = localStorage.getItem(key);
+                if (!id) {
+                    id = "web-" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+                    localStorage.setItem(key, id);
+                }
+                return id;
+            } catch (_) {
+                return "web-" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+            }
         }
 
         form.addEventListener("submit", async (e) => {
@@ -49,7 +65,28 @@
             submitBtn.textContent = "Вход...";
 
             try {
-                await firebase.auth().signInWithEmailAndPassword(email, password);
+                const cred = await auth.signInWithEmailAndPassword(email, password);
+                const user = cred.user;
+                const deviceId = getOrCreateDeviceId();
+                const sessionsRef = db.ref("users/" + user.uid + "/sessions");
+
+                const snap = await sessionsRef.once("value");
+                const sessions = snap.val() || {};
+                const knownIds = Object.keys(sessions);
+                if (!sessions[deviceId] && knownIds.length >= 2) {
+                    await auth.signOut();
+                    showError("Този акаунт може да се ползва на до 2 устройства. Ако искаш да влезеш от ново устройство, излез от някое от останалите.");
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = "Вход";
+                    return;
+                }
+
+                await sessionsRef.child(deviceId).set({
+                    createdAt: firebase.database.ServerValue.TIMESTAMP,
+                    lastSeen: firebase.database.ServerValue.TIMESTAMP,
+                    userAgent: navigator.userAgent || ""
+                });
+
                 window.location.href = "dashboard.html";
             } catch (err) {
                 if (err.code === "auth/user-not-found") showError("Няма потребител с този имейл.");

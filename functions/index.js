@@ -62,7 +62,7 @@ export const submitInquiry = onRequest(
             res.status(405).json({ error: "Method not allowed" });
             return;
         }
-        const { email, subject, message, phone, baseUrl } = req.body || {};
+        const { email, subject, message, phone, sensorsTotal, sensorsWindow, sensorsDoor, deliveryAddress, orderType, quantity, paymentMethod, revolutId, baseUrl } = req.body || {};
         if (!email || !subject || !message) {
             res.status(400).json({ error: "Missing email, subject or message" });
             return;
@@ -76,6 +76,14 @@ export const submitInquiry = onRequest(
             subject: String(subject).trim(),
             message: String(message).trim(),
             phone: phone ? String(phone).trim() : "",
+            sensorsTotal: sensorsTotal !== undefined ? String(sensorsTotal).trim() : "",
+            sensorsWindow: sensorsWindow !== undefined ? String(sensorsWindow).trim() : "",
+            sensorsDoor: sensorsDoor !== undefined ? String(sensorsDoor).trim() : "",
+            deliveryAddress: deliveryAddress ? String(deliveryAddress).trim() : "",
+            orderType: orderType ? String(orderType).trim() : "",
+            quantity: quantity !== undefined ? String(quantity).trim() : "",
+            paymentMethod: paymentMethod ? String(paymentMethod).trim() : "",
+            revolutId: revolutId ? String(revolutId).trim() : "",
             baseUrl: base ? String(base).trim() : "",
             verified: false,
             createdAt: new Date().toISOString(),
@@ -168,6 +176,11 @@ export const confirmInquiry = onRequest(
                       <p><strong>От:</strong> ${escapeHtml(data.email)}</p>
                       ${data.phone ? `<p><strong>Телефон:</strong> ${escapeHtml(data.phone)}</p>` : ""}
                       <p><strong>Заглавие:</strong> ${escapeHtml(data.subject)}</p>
+                      ${(data.orderType === "direct" && data.quantity) ? `<p><strong>Поръчка:</strong> ${escapeHtml(data.quantity)} бр. | Плащане: ${escapeHtml(data.paymentMethod || "")} | Адрес: ${escapeHtml(data.deliveryAddress || "")}</p>` : ""}
+                      ${(data.orderType === "direct" && data.paymentMethod === "revolut" && data.revolutId) ? `<p><strong>Revolut:</strong> ${escapeHtml(data.revolutId)}</p>` : ""}
+                      ${(!data.orderType && data.sensorsTotal) ? `<p><strong>Сензори (общо):</strong> ${escapeHtml(data.sensorsTotal)}</p>` : ""}
+                      ${(!data.orderType && (data.sensorsWindow || data.sensorsDoor)) ? `<p><strong>Поръчка:</strong> прозорци ${escapeHtml(data.sensorsWindow || "0")}, врати ${escapeHtml(data.sensorsDoor || "0")}</p>` : ""}
+                      ${data.deliveryAddress && data.orderType !== "direct" ? `<p><strong>Адрес за доставка:</strong> ${escapeHtml(data.deliveryAddress)}</p>` : ""}
                       <hr/>
                       <p>${escapeHtml(data.message).replace(/\n/g, "<br/>")}</p>
                     `,

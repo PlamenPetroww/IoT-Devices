@@ -183,6 +183,22 @@ function initContactForm() {
     const submitBtn = document.getElementById("formSubmitBtn");
     if (!form || !statusEl) return;
 
+    const sensorsInput = document.getElementById("formSensorsTotalInput");
+    const sensorsMinus = document.getElementById("formSensorsTotalMinus");
+    const sensorsPlus = document.getElementById("formSensorsTotalPlus");
+    if (sensorsInput && sensorsMinus && sensorsPlus) {
+        sensorsMinus.addEventListener("click", () => {
+            let v = parseInt(sensorsInput.value, 10);
+            if (!Number.isFinite(v)) v = 0;
+            sensorsInput.value = Math.max(0, v - 1);
+        });
+        sensorsPlus.addEventListener("click", () => {
+            let v = parseInt(sensorsInput.value, 10);
+            if (!Number.isFinite(v)) v = 0;
+            sensorsInput.value = Math.min(99, v + 1);
+        });
+    }
+
     form.addEventListener("submit", async (e) => {
         e.preventDefault();
         const functionsBase = (typeof window !== "undefined" && window.INQUIRY_FUNCTIONS_BASE_URL) ? window.INQUIRY_FUNCTIONS_BASE_URL.trim() : "";
@@ -305,12 +321,21 @@ function initBuyPanel() {
         const total = getTotalForQty(q);
         const formatted = formatPrice(total);
         const summaryUnitPrice = document.getElementById("buySummaryUnitPrice");
+        const summaryPriceLabel = document.getElementById("buySummaryPriceLabel");
+        const lang = document.documentElement.lang || "bg";
+        const t = typeof getTranslation === "function" ? (key) => getTranslation(lang, key) : () => "";
         if (summaryQty) summaryQty.textContent = String(q);
+        if (summaryPriceLabel) {
+            if (q === 1) summaryPriceLabel.textContent = t("buyPanel.summaryPriceLabelUnit") || "Цена за 1 сензор";
+            else if (q === 3) summaryPriceLabel.textContent = t("buyPanel.summaryPriceLabelStandard") || "Standard пакет";
+            else if (q === 5) summaryPriceLabel.textContent = t("buyPanel.summaryPriceLabelAdvanced") || "Advanced пакет";
+            else summaryPriceLabel.textContent = t("buyPanel.summaryPriceLabelMulti") || "Цена";
+        }
         if (summaryUnitPrice) {
-            if (q === 1) summaryUnitPrice.textContent = "69 €";
-            else if (q === 3) summaryUnitPrice.textContent = "189 € (3 бр.)";
-            else if (q === 5) summaryUnitPrice.textContent = "299 € (5 бр.)";
-            else summaryUnitPrice.textContent = "69 € × " + q;
+            const br = t("buyPanel.summaryBr") || "бр.";
+            if (q === 3) summaryUnitPrice.textContent = formatted;
+            else if (q === 5) summaryUnitPrice.textContent = formatted;
+            else summaryUnitPrice.textContent = formatted + " (" + q + " " + br + ")";
         }
         if (summarySubtotal) summarySubtotal.textContent = formatted;
         if (summaryTotal) summaryTotal.textContent = formatted;

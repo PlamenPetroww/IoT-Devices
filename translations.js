@@ -50,10 +50,13 @@ const translations = {
         pricing: {
             title: "Изберете пакет за сигурност",
             subtitle: "Без абонамент. Моментални известия.",
+            pack1Name: "Basis",
             pack1Title: "1 сензор",
             pack1Desc: "Идеален за една врата, прозорец или гараж.",
+            pack3Name: "Standard",
             pack3Title: "3 сензора",
             pack3Desc: "Покрийте основните входни точки у дома.",
+            pack5Name: "Advanced",
             pack5Title: "5 сензора",
             pack5Desc: "Пълна защита за дом, офис или Airbnb.",
             mostPopular: "Най-популярен",
@@ -156,7 +159,14 @@ const translations = {
             quantity: "Брой",
             paymentMethod: "Начин на плащане",
             payChoose: "Изберете",
-            submit: "Поръчай"
+            submit: "Поръчай",
+            summaryBr: "бр.",
+            summaryStandardPack: "3 броя Standard пакет",
+            summaryAdvancedPack: "5 бр – Advanced пакет",
+            summaryPriceLabelUnit: "Цена за 1 сензор",
+            summaryPriceLabelStandard: "Standard пакет",
+            summaryPriceLabelAdvanced: "Advanced пакет",
+            summaryPriceLabelMulti: "Цена"
         },
         footer: { text: "Умни сензори за по-спокоен дом.", wifiNote: "За да използваш нашите сензори, необходима е стабилна WiFi връзка у дома.", impressum: "Импресум", privacy: "Политика за поверителност" },
         impressum: {
@@ -298,10 +308,13 @@ const translations = {
         pricing: {
             title: "Choose your security pack",
             subtitle: "No subscription. Instant alerts.",
+            pack1Name: "Basis",
             pack1Title: "1 Sensor",
             pack1Desc: "Perfect for a single door, window or garage.",
+            pack3Name: "Standard",
             pack3Title: "3 Sensors",
             pack3Desc: "Protect your home's main entry points.",
+            pack5Name: "Advanced",
             pack5Title: "5 Sensors",
             pack5Desc: "Full-home protection for houses, offices or Airbnb.",
             mostPopular: "Most Popular",
@@ -404,7 +417,14 @@ const translations = {
             quantity: "Quantity",
             paymentMethod: "Payment method",
             payChoose: "Choose",
-            submit: "Place order"
+            submit: "Place order",
+            summaryBr: "pcs",
+            summaryStandardPack: "3 pcs Standard package",
+            summaryAdvancedPack: "5 pcs – Advanced package",
+            summaryPriceLabelUnit: "Price per 1 sensor",
+            summaryPriceLabelStandard: "Standard package",
+            summaryPriceLabelAdvanced: "Advanced package",
+            summaryPriceLabelMulti: "Price"
         },
         footer: { text: "Smart sensors for a calmer home.", wifiNote: "A stable WiFi connection at home is required to use our sensors.", impressum: "Impressum", privacy: "Privacy Policy" },
         impressum: {
@@ -546,10 +566,13 @@ const translations = {
         pricing: {
             title: "Wählen Sie Ihr Sicherheitspaket",
             subtitle: "Kein Abo. Sofortige Benachrichtigungen.",
+            pack1Name: "Basis",
             pack1Title: "1 Sensor",
             pack1Desc: "Ideal für eine Tür, ein Fenster oder die Garage.",
+            pack3Name: "Standard",
             pack3Title: "3 Sensoren",
             pack3Desc: "Schützen Sie die wichtigsten Zugänge.",
+            pack5Name: "Advanced",
             pack5Title: "5 Sensoren",
             pack5Desc: "Rundum-Schutz für Zuhause, Büro oder Airbnb.",
             mostPopular: "Am beliebtesten",
@@ -652,7 +675,14 @@ const translations = {
             quantity: "Anzahl",
             paymentMethod: "Zahlungsart",
             payChoose: "Bitte wählen",
-            submit: "Bestellen"
+            submit: "Bestellen",
+            summaryBr: "Stk.",
+            summaryStandardPack: "3 Stk. Standard-Paket",
+            summaryAdvancedPack: "5 Stk. – Advanced-Paket",
+            summaryPriceLabelUnit: "Preis pro 1 Sensor",
+            summaryPriceLabelStandard: "Standard-Paket",
+            summaryPriceLabelAdvanced: "Advanced-Paket",
+            summaryPriceLabelMulti: "Preis"
         },
         footer: { text: "Smarte Sensoren für ein ruhigeres Zuhause.", wifiNote: "Für unsere Sensoren ist eine stabile WLAN-Verbindung zu Hause erforderlich.", impressum: "Impressum", privacy: "Datenschutz" },
         impressum: {

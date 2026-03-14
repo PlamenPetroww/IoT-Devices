@@ -372,6 +372,7 @@
                     <p class="section-subtitle" data-i18n="pricing.subtitle">Без абонамент. Моментални известия.</p>
                     <div class="pricing-grid">
                         <article class="pricing-card">
+                            <span class="pricing-card-name" data-i18n="pricing.pack1Name">Basis</span>
                             <h3 class="pricing-card-title" data-i18n="pricing.pack1Title">1 сензор</h3>
                             <p class="pricing-card-price">69&nbsp;€</p>
                             <p class="pricing-card-desc" data-i18n="pricing.pack1Desc">Идеален за една врата, прозорец или гараж.</p>
@@ -379,6 +380,7 @@
                         </article>
                         <article class="pricing-card pricing-card-popular">
                             <span class="pricing-badge" data-i18n="pricing.mostPopular">Най-популярен</span>
+                            <span class="pricing-card-name" data-i18n="pricing.pack3Name">Standard</span>
                             <h3 class="pricing-card-title" data-i18n="pricing.pack3Title">3 сензора</h3>
                             <p class="pricing-card-price">189&nbsp;€</p>
                             <p class="pricing-card-desc" data-i18n="pricing.pack3Desc">Покрийте основните входни точки у дома.</p>
@@ -386,6 +388,7 @@
                         </article>
                         <article class="pricing-card pricing-card-value">
                             <span class="pricing-badge pricing-badge-value" data-i18n="pricing.bestValue">Най-изгоден</span>
+                            <span class="pricing-card-name" data-i18n="pricing.pack5Name">Advanced</span>
                             <h3 class="pricing-card-title" data-i18n="pricing.pack5Title">5 сензора</h3>
                             <p class="pricing-card-price">299&nbsp;€</p>
                             <p class="pricing-card-desc" data-i18n="pricing.pack5Desc">Пълна защита за дом, офис или Airbnb.</p>
@@ -475,7 +478,11 @@
                         </label>
                         <label class="form-label">
                             <span class="form-label-text" data-i18n="form.sensorsTotal">Сензори – общо брой (по избор)</span>
-                            <input type="number" name="sensorsTotal" class="form-input form-input-number" min="0" max="99" value="0" placeholder="0" />
+                            <div class="quantity-stepper">
+                                <button type="button" class="quantity-btn" id="formSensorsTotalMinus" aria-label="Намали">−</button>
+                                <input type="number" name="sensorsTotal" id="formSensorsTotalInput" class="form-input quantity-input form-input-number" min="0" max="99" value="0" />
+                                <button type="button" class="quantity-btn" id="formSensorsTotalPlus" aria-label="Увеличи">+</button>
+                            </div>
                         </label>
                         <label class="form-label">
                             <span class="form-label-text" data-i18n="form.phone">Телефон</span>
@@ -518,7 +525,7 @@
                                     <span class="buy-summary-value">× <span id="buySummaryQty">1</span></span>
                                 </li>
                                 <li class="buy-summary-row">
-                                    <span class="buy-summary-label">Цена за 1 сензор</span>
+                                    <span class="buy-summary-label" id="buySummaryPriceLabel">Цена за 1 сензор</span>
                                     <span class="buy-summary-value buy-summary-value-num" id="buySummaryUnitPrice">69 €</span>
                                 </li>
                                 <li class="buy-summary-row">

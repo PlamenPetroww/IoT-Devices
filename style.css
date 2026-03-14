@@ -1336,6 +1336,21 @@ main {
     background: linear-gradient(135deg, rgba(34, 197, 94, 0.9), rgba(22, 163, 74, 0.95));
 }
 
+.pricing-card-name {
+    display: block;
+    margin: 0 0 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent-strong);
+}
+
+.pricing-card-popular .pricing-card-name,
+.pricing-card-value .pricing-card-name {
+    margin-top: 6px;
+}
+
 .pricing-card-title {
     margin: 0 0 8px;
     font-size: 1.15rem;
@@ -1370,6 +1385,7 @@ main {
     font-size: 11px;
     line-height: 1.5;
     color: var(--text-muted);
+    text-align: center;
 }
 
 .section-faq {
@@ -1776,7 +1792,7 @@ main {
 
 .buy-panel-layout {
     display: grid;
-    grid-template-columns: minmax(220px, 1.2fr) minmax(0, 1.5fr);
+    grid-template-columns: minmax(260px, 1.6fr) minmax(0, 1.4fr);
     gap: 28px;
     align-items: flex-start;
     margin-bottom: 18px;
@@ -1869,13 +1885,18 @@ main {
 }
 
 .quantity-btn {
-    width: 44px;
-    height: 44px;
-    border-radius: 999px;
+    width: 36px;
+    min-width: 36px;
+    max-width: 36px;
+    height: 36px;
+    min-height: 36px;
+    max-height: 36px;
+    flex-shrink: 0;
+    border-radius: var(--radius-md, 8px);
     border: 1px solid rgba(34, 197, 94, 0.7);
     background: radial-gradient(circle at top left, rgba(34, 197, 94, 0.16), rgba(15, 23, 42, 0.98));
     color: var(--accent-strong);
-    font-size: 20px;
+    font-size: 16px;
     line-height: 1;
     cursor: pointer;
     display: flex;
@@ -1890,14 +1911,6 @@ main {
         filter var(--transition-fast);
 }
 
-.quantity-btn:first-of-type {
-    border-radius: 999px;
-}
-
-.quantity-btn:last-of-type {
-    border-radius: 999px;
-}
-
 .quantity-btn:hover {
     transform: translateY(-1px);
     filter: brightness(1.03);
@@ -1907,12 +1920,23 @@ main {
 }
 
 .quantity-input {
-    width: 70px;
-    min-width: 70px;
+    width: 56px;
+    min-width: 56px;
     text-align: center;
     border-radius: 0;
     border-left: none;
     border-right: none;
+}
+
+/* Hide native number spin buttons when using custom stepper */
+.quantity-stepper input[type="number"]::-webkit-inner-spin-button,
+.quantity-stepper input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+.quantity-stepper input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
 }
 
 .form-select {

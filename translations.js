@@ -1,14 +1,14 @@
 const translations = {
     bg: {
-        nav: { problem: "Проблем", solution: "Решение", product: "Продукт", advantages: "Предимства", compatibility: "Съвместимост", pricing: "Цени", faq: "FAQ", stats: "Резултати", cta: "Започни", login: "Вход", register: "Регистрация" },
+        nav: { problem: "Проблем", solution: "Решение", product: "Продукт", advantages: "Предимства", compatibility: "Съвместимост", pricing: "Цени", faq: "FAQ", stats: "Резултати", cta: "Започни", login: "Вход", register: "Регистрация", more: "Още" },
         hero: {
             eyebrow: "Когато никой не е у дома...",
             title: "Aura HomeSystems пази дома ти, когато е празен.",
-            subtitle: "Най-честите кражби стават през прозорците и входната врата. Сензорите ни са изключително лесно за инсталиране и настройка, а приложението е изключително удобно – получаваш мигновени сигнали на телефона при всяко нежелано отваряне.",
+            subtitle: "Най-честите кражби стават през прозорците и входната врата. Сензорите ни са изключително лесни за инсталиране и настройка, а приложението е изключително удобно – получаваш мигновени сигнали на телефона при всяко нежелано отваряне.",
             cta: "Започни с Aura",
             ctaNote: "Виж как работи системата и как можеш да я инсталираш у дома си"
         },
-        scene: { caption: "Статус в приложението в реално време", notifOpen: "Прозорецът е отворен", notifSafe: "Входната врата е защитена" },
+        scene: { caption: "Статус в приложението в реално време", labelWindow: "Прозорец", labelDoor: "Входна врата", statusOpen: "Отворен", statusClosed: "Затворена", statusOpenM: "Отворен", statusClosedM: "Затворен", statusOpenF: "Отворена", statusClosedF: "Затворена", notifOpen: "Прозорецът е отворен", notifSafe: "Входната врата е защитена", notifDoorOpen: "Входната врата е отворена", notifAllClosed: "Всичко затворено", notifTime: "сега", appName: "Aura HomeSystems" },
         problem: {
             title: "Проблемът: домът остава без надзор",
             p1: "Когато семейството е на работа, на почивка или просто извън града, домът остава уязвим и най-често напълно „невидим“ за собствениците. Най-честите кражби се случват през <strong>прозорците</strong> и <strong>входната врата</strong> – точно когато няма кой да реагира навреме и няма реална информация какво се случва вътре.",
@@ -19,7 +19,7 @@ const translations = {
         },
         solution: {
             title: "Нашето решение: умни сензори с реални сигнали",
-            p1: "Сензорите са супер лесно за инсталиране и настройка – закачаш ги на прозорците и входните врати, свързват се с приложението и веднага следят статуса в реално време. При всяка промяна получаваш <strong>незабавно известие на телефона</strong>. Нашето приложение е изключително удобно: ясен сигнал кой отвор е засегнат, кога се е случило и колко дълго е останал отворен.",
+            p1: "Сензорите са супер лесни за инсталиране и настройка – закачаш ги на прозорците и входните врати, свързват се с приложението и веднага следят статуса в реално време. При всяка промяна получаваш <strong>незабавно известие на телефона</strong>. Нашето приложение е изключително удобно: ясен сигнал кой отвор е засегнат, кога се е случило и колко дълго е останал отворен.",
             li1: "Следиш в реално време дали е отворено или затворено.",
             li2: "Получаваш ясни известия при всяко съмнително движение.",
             li3: "Можеш да реагираш веднага – независимо къде се намираш."
@@ -157,8 +157,13 @@ const translations = {
             priceValue: "69 €",
             shippingNote: "Цената не включва доставка – разходите за куриер са изцяло за сметка на купувача.",
             quantity: "Брой",
+            quantityDecrease: "Намали",
+            quantityIncrease: "Увеличи",
             paymentMethod: "Начин на плащане",
             payChoose: "Изберете",
+            revolutLabel: "Revolut потребител / телефон",
+            revolutPlaceholder: "@user или телефон",
+            closeLabel: "Затвори",
             submit: "Поръчай",
             summaryBr: "бр.",
             summaryStandardPack: "3 броя Standard пакет",
@@ -166,7 +171,25 @@ const translations = {
             summaryPriceLabelUnit: "Цена за 1 сензор",
             summaryPriceLabelStandard: "Standard пакет",
             summaryPriceLabelAdvanced: "Advanced пакет",
-            summaryPriceLabelMulti: "Цена"
+            summaryPriceLabelMulti: "Цена",
+            summaryTitle: "Вашата поръчка",
+            summarySensors: "Сензори",
+            summarySubtotal: "Междинна сума",
+            summaryDelivery: "Доставка",
+            summaryBuyerExpense: "За сметка на купувача",
+            summaryTotal: "Общо",
+            shippingCountryLabel: "Държава / регион за доставка",
+            shippingZoneChoose: "Изберете",
+            shippingZone_BG: "България",
+            shippingZone_EU: "ЕС (други страни)",
+            shippingZone_UK_CH_NO: "Обединено кралство / Швейцария / Норвегия",
+            shippingZone_US_CA: "САЩ / Канада",
+            shippingZone_WORLD: "Останал свят",
+            shippingApprox: "прибл.",
+            shippingWorkingDays: "работни дни",
+            shippingMethodLabel: "Начин на доставка",
+            shippingMethodStandard: "Стандартна (по-евтина, по-бавна)",
+            shippingMethodExpress: "Експрес (по-бърза, по-скъпа)"
         },
         footer: { text: "Умни сензори за по-спокоен дом.", wifiNote: "За да използваш нашите сензори, необходима е стабилна WiFi връзка у дома.", impressum: "Импресум", privacy: "Политика за поверителност" },
         impressum: {
@@ -258,7 +281,7 @@ const translations = {
         }
     },
     en: {
-        nav: { problem: "Problem", solution: "Solution", product: "Product", advantages: "Advantages", compatibility: "Compatibility", pricing: "Pricing", faq: "FAQ", stats: "Results", cta: "Get started", login: "Login", register: "Register" },
+        nav: { problem: "Problem", solution: "Solution", product: "Product", advantages: "Advantages", compatibility: "Compatibility", pricing: "Pricing", faq: "FAQ", stats: "Results", cta: "Get started", login: "Login", register: "Register", more: "More" },
         hero: {
             eyebrow: "When nobody's home...",
             title: "Aura HomeSystems keeps your home safe when it's empty.",
@@ -266,7 +289,7 @@ const translations = {
             cta: "Get started with Aura",
             ctaNote: "See how the system works and how you can install it at home"
         },
-        scene: { caption: "Live status in the app", notifOpen: "Window is open", notifSafe: "Front door is secure" },
+        scene: { caption: "Live status in the app", labelWindow: "Window", labelDoor: "Front door", statusOpen: "Open", statusClosed: "Closed", statusOpenM: "Open", statusClosedM: "Closed", statusOpenF: "Open", statusClosedF: "Closed", notifOpen: "Window is open", notifSafe: "Front door is secure", notifDoorOpen: "Front door is open", notifAllClosed: "All closed", notifTime: "Now", appName: "Aura HomeSystems" },
         problem: {
             title: "The problem: your home is left unwatched",
             p1: "When the family is at work, on holiday or simply away, the home is vulnerable and often completely \"invisible\" to the owners. Most break-ins happen through <strong>windows</strong> and the <strong>front door</strong> – exactly when there's no one to react in time and no real information about what's going on inside.",
@@ -415,8 +438,13 @@ const translations = {
             priceValue: "69 €",
             shippingNote: "Price does not include shipping – delivery costs are covered by the buyer.",
             quantity: "Quantity",
+            quantityDecrease: "Decrease",
+            quantityIncrease: "Increase",
             paymentMethod: "Payment method",
             payChoose: "Choose",
+            revolutLabel: "Revolut user / phone",
+            revolutPlaceholder: "@user or phone",
+            closeLabel: "Close",
             submit: "Place order",
             summaryBr: "pcs",
             summaryStandardPack: "3 pcs Standard package",
@@ -424,7 +452,25 @@ const translations = {
             summaryPriceLabelUnit: "Price per 1 sensor",
             summaryPriceLabelStandard: "Standard package",
             summaryPriceLabelAdvanced: "Advanced package",
-            summaryPriceLabelMulti: "Price"
+            summaryPriceLabelMulti: "Price",
+            summaryTitle: "Your order",
+            summarySensors: "Sensors",
+            summarySubtotal: "Subtotal",
+            summaryDelivery: "Delivery",
+            summaryBuyerExpense: "At buyer's expense",
+            summaryTotal: "Total",
+            shippingCountryLabel: "Country / region for delivery",
+            shippingZoneChoose: "Choose",
+            shippingZone_BG: "Bulgaria",
+            shippingZone_EU: "EU (other countries)",
+            shippingZone_UK_CH_NO: "UK / Switzerland / Norway",
+            shippingZone_US_CA: "USA / Canada",
+            shippingZone_WORLD: "Rest of world",
+            shippingApprox: "approx.",
+            shippingWorkingDays: "working days",
+            shippingMethodLabel: "Delivery method",
+            shippingMethodStandard: "Standard (cheaper, slower)",
+            shippingMethodExpress: "Express (faster, higher cost)"
         },
         footer: { text: "Smart sensors for a calmer home.", wifiNote: "A stable WiFi connection at home is required to use our sensors.", impressum: "Impressum", privacy: "Privacy Policy" },
         impressum: {
@@ -516,7 +562,7 @@ const translations = {
         }
     },
     de: {
-        nav: { problem: "Problem", solution: "Lösung", product: "Produkt", advantages: "Vorteile", compatibility: "Kompatibilität", pricing: "Preise", faq: "FAQ", stats: "Ergebnisse", cta: "Loslegen", login: "Anmelden", register: "Registrieren" },
+        nav: { problem: "Problem", solution: "Lösung", product: "Produkt", advantages: "Vorteile", compatibility: "Kompatibilität", pricing: "Preise", faq: "FAQ", stats: "Ergebnisse", cta: "Loslegen", login: "Anmelden", register: "Registrieren", more: "Mehr" },
         hero: {
             eyebrow: "Wenn niemand zu Hause ist...",
             title: "Aura HomeSystems schützt Ihr Zuhause, wenn es leer steht.",
@@ -524,7 +570,7 @@ const translations = {
             cta: "Mit Aura starten",
             ctaNote: "Erfahren Sie, wie das System funktioniert und wie Sie es bei sich einbauen können"
         },
-        scene: { caption: "Live-Status in der App", notifOpen: "Fenster ist offen", notifSafe: "Haustür ist gesichert" },
+        scene: { caption: "Live-Status in der App", labelWindow: "Fenster", labelDoor: "Haustür", statusOpen: "Offen", statusClosed: "Geschlossen", statusOpenM: "Offen", statusClosedM: "Geschlossen", statusOpenF: "Offen", statusClosedF: "Geschlossen", notifOpen: "Fenster ist offen", notifSafe: "Haustür ist gesichert", notifDoorOpen: "Haustür ist offen", notifAllClosed: "Alles geschlossen", notifTime: "Jetzt", appName: "Aura HomeSystems" },
         problem: {
             title: "Das Problem: Das Zuhause bleibt unbeaufsichtigt",
             p1: "Wenn die Familie arbeitet, im Urlaub oder einfach unterwegs ist, ist das Zuhause gefährdet und oft völlig „unsichtbar“ für die Besitzer. Die meisten Einbrüche geschehen über <strong>Fenster</strong> und <strong>Haustür</strong> – genau wenn niemand rechtzeitig reagieren kann und keine echten Infos da sind, was drinnen passiert.",
@@ -673,8 +719,13 @@ const translations = {
             priceValue: "69 €",
             shippingNote: "Der Preis enthält keine Lieferung – die Versandkosten trägt der Käufer.",
             quantity: "Anzahl",
+            quantityDecrease: "Verringern",
+            quantityIncrease: "Erhöhen",
             paymentMethod: "Zahlungsart",
             payChoose: "Bitte wählen",
+            revolutLabel: "Revolut Nutzer / Telefon",
+            revolutPlaceholder: "@user oder Telefon",
+            closeLabel: "Schließen",
             submit: "Bestellen",
             summaryBr: "Stk.",
             summaryStandardPack: "3 Stk. Standard-Paket",
@@ -682,7 +733,25 @@ const translations = {
             summaryPriceLabelUnit: "Preis pro 1 Sensor",
             summaryPriceLabelStandard: "Standard-Paket",
             summaryPriceLabelAdvanced: "Advanced-Paket",
-            summaryPriceLabelMulti: "Preis"
+            summaryPriceLabelMulti: "Preis",
+            summaryTitle: "Ihre Bestellung",
+            summarySensors: "Sensoren",
+            summarySubtotal: "Zwischensumme",
+            summaryDelivery: "Lieferung",
+            summaryBuyerExpense: "Auf Kosten des Käufers",
+            summaryTotal: "Gesamt",
+            shippingCountryLabel: "Land / Region für die Lieferung",
+            shippingZoneChoose: "Bitte wählen",
+            shippingZone_BG: "Bulgarien",
+            shippingZone_EU: "EU (andere Länder)",
+            shippingZone_UK_CH_NO: "UK / Schweiz / Norwegen",
+            shippingZone_US_CA: "USA / Kanada",
+            shippingZone_WORLD: "Übrige Welt",
+            shippingApprox: "ca.",
+            shippingWorkingDays: "Arbeitstage",
+            shippingMethodLabel: "Versandart",
+            shippingMethodStandard: "Standard (günstiger, langsamer)",
+            shippingMethodExpress: "Express (schneller, teurer)"
         },
         footer: { text: "Smarte Sensoren für ein ruhigeres Zuhause.", wifiNote: "Für unsere Sensoren ist eine stabile WLAN-Verbindung zu Hause erforderlich.", impressum: "Impressum", privacy: "Datenschutz" },
         impressum: {

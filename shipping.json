@@ -1,0 +1,80 @@
+{
+  "zones": [
+    {
+      "id": "BG",
+      "name": "Bulgaria",
+      "countries": ["BG"],
+      "currency": "BGN",
+      "priceMin": 5,
+      "priceMax": 7,
+      "processingDaysMin": 7,
+      "processingDaysMax": 8,
+      "shippingDaysMin": 1,
+      "shippingDaysMax": 2
+    },
+    {
+      "id": "EU",
+      "name": "European Union",
+      "countries": ["AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "FR", "DE", "GR", "HU", "IE", "IT", "LV", "LT", "LU", "MT", "NL", "PL", "PT", "RO", "SK", "SI", "ES", "SE"],
+      "currency": "EUR",
+      "priceMin": 10,
+      "priceMax": 12,
+      "processingDaysMin": 7,
+      "processingDaysMax": 8,
+      "shippingDaysMin": 5,
+      "shippingDaysMax": 10,
+      "expressPriceMin": 22,
+      "expressPriceMax": 28,
+      "expressShippingDaysMin": 3,
+      "expressShippingDaysMax": 7
+    },
+    {
+      "id": "UK_CH_NO",
+      "name": "UK / Switzerland / Norway",
+      "countries": ["GB", "CH", "NO"],
+      "currency": "EUR",
+      "priceMin": 14,
+      "priceMax": 16,
+      "processingDaysMin": 7,
+      "processingDaysMax": 8,
+      "shippingDaysMin": 5,
+      "shippingDaysMax": 12,
+      "expressPriceMin": 26,
+      "expressPriceMax": 32,
+      "expressShippingDaysMin": 4,
+      "expressShippingDaysMax": 8
+    },
+    {
+      "id": "US_CA",
+      "name": "USA / Canada",
+      "countries": ["US", "CA"],
+      "currency": "EUR",
+      "priceMin": 18,
+      "priceMax": 22,
+      "processingDaysMin": 7,
+      "processingDaysMax": 8,
+      "shippingDaysMin": 10,
+      "shippingDaysMax": 20,
+      "expressPriceMin": 35,
+      "expressPriceMax": 44,
+      "expressShippingDaysMin": 5,
+      "expressShippingDaysMax": 10
+    },
+    {
+      "id": "WORLD",
+      "name": "Rest of world",
+      "countries": [],
+      "currency": "EUR",
+      "priceMin": 20,
+      "priceMax": 25,
+      "processingDaysMin": 7,
+      "processingDaysMax": 8,
+      "shippingDaysMin": 10,
+      "shippingDaysMax": 25,
+      "expressPriceMin": 42,
+      "expressPriceMax": 55,
+      "expressShippingDaysMin": 6,
+      "expressShippingDaysMax": 12
+    }
+  ]
+}

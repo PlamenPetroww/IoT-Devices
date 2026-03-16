@@ -23,6 +23,11 @@ function applyLanguage(lang) {
         const t = getTranslation(lang, key);
         if (t) el.setAttribute("placeholder", t);
     });
+    document.querySelectorAll("[data-i18n-aria-label]").forEach((el) => {
+        const key = el.getAttribute("data-i18n-aria-label");
+        const t = getTranslation(lang, key);
+        if (t) el.setAttribute("aria-label", t);
+    });
 
     const triggerFlag = document.getElementById("langTriggerFlag");
     const triggerCode = document.getElementById("langTriggerCode");
@@ -44,6 +49,7 @@ function applyLanguage(lang) {
         }
     } catch (_) {}
     try { localStorage.setItem("aura-lang", lang); } catch (_) {}
+    try { window.dispatchEvent(new CustomEvent("aura-lang-applied", { detail: { lang } })); } catch (_) {}
 }
 
 function initI18n() {
@@ -292,7 +298,116 @@ function initBuyPanel() {
     const buySubmitBtn = document.getElementById("buyPanelSubmitBtn");
     const paymentSelect = buyForm ? buyForm.querySelector('select[name="paymentMethod"]') : null;
     const revolutField = document.getElementById("revolutField");
+    const shippingZoneSelect = document.getElementById("buyShippingZone");
+    const shippingMethodSelect = document.getElementById("buyShippingMethod");
+    const shippingMethodWrap = document.getElementById("buyShippingMethodWrap");
+    const deliveryPriceDaysEl = document.getElementById("buySummaryDeliveryPriceDays");
     if (!overlay || !panel || !openBtn || !buyForm) return;
+
+    let shippingZones = [];
+    fetch("shipping.json")
+        .then((r) => r.json())
+        .then((data) => { shippingZones = data.zones || []; updateDeliveryEstimate(); })
+        .catch(() => {});
+
+    function hasExpress(zone) {
+        return zone && typeof zone.expressPriceMax === "number";
+    }
+
+    function getShippingForZone(zoneId, method) {
+        const zone = shippingZones.find((z) => z.id === zoneId);
+        if (!zone) return null;
+        const useExpress = method === "express" && hasExpress(zone);
+        const priceMax = useExpress ? zone.expressPriceMax : zone.priceMax;
+        const priceMin = useExpress ? (zone.expressPriceMin ?? zone.expressPriceMax) : zone.priceMin;
+        const shipDaysMin = useExpress ? (zone.expressShippingDaysMin || 0) : (zone.shippingDaysMin || 0);
+        const shipDaysMax = useExpress ? (zone.expressShippingDaysMax || 0) : (zone.shippingDaysMax || 0);
+        const totalDaysMin = (zone.processingDaysMin || 0) + shipDaysMin;
+        const totalDaysMax = (zone.processingDaysMax || 0) + shipDaysMax;
+        return { zone: { ...zone, priceMin, priceMax, currency: zone.currency }, totalDaysMin, totalDaysMax };
+    }
+
+    function addWorkingDays(fromDate, workingDays) {
+            const d = new Date(fromDate.getTime());
+            let added = 0;
+            while (added < workingDays) {
+                d.setDate(d.getDate() + 1);
+                const day = d.getDay();
+                if (day !== 0 && day !== 6) added++;
+            }
+            return d;
+        }
+
+        function formatDeliveryDate(date, refYear) {
+            const dd = String(date.getDate()).padStart(2, "0");
+            const mm = String(date.getMonth() + 1).padStart(2, "0");
+            const y = date.getFullYear();
+            return y !== refYear ? dd + "." + mm + "." + y : dd + "." + mm;
+        }
+
+        function updateDeliveryEstimate() {
+            if (!deliveryPriceDaysEl) return;
+            const zoneId = shippingZoneSelect && shippingZoneSelect.value ? shippingZoneSelect.value.trim() : "";
+            const method = (shippingMethodSelect && shippingMethodSelect.value) || "standard";
+            if (!zoneId) {
+                deliveryPriceDaysEl.textContent = "";
+                if (shippingMethodWrap) shippingMethodWrap.style.display = "none";
+                updateSummary();
+                updateOrderButtonState();
+                return;
+            }
+            const zone = shippingZones.find((z) => z.id === zoneId);
+            if (shippingMethodWrap) shippingMethodWrap.style.display = hasExpress(zone) ? "flex" : "none";
+            const result = getShippingForZone(zoneId, method);
+            if (!result) {
+                deliveryPriceDaysEl.textContent = "";
+                updateSummary();
+                updateOrderButtonState();
+                return;
+            }
+            const { zone: zoneResult, totalDaysMin, totalDaysMax } = result;
+            const deliveryEur = zoneResult.currency === "BGN" ? zoneResult.priceMax / BGN_TO_EUR : zoneResult.priceMax;
+            const priceStr = formatPriceCents(Math.round(deliveryEur * 100) / 100);
+            const orderDate = new Date();
+            const deliveryStart = addWorkingDays(orderDate, totalDaysMin);
+            const deliveryEnd = addWorkingDays(orderDate, totalDaysMax);
+            const refYear = orderDate.getFullYear();
+            const dateRangeStr = totalDaysMin === totalDaysMax
+                ? formatDeliveryDate(deliveryStart, refYear)
+                : formatDeliveryDate(deliveryStart, refYear) + " – " + formatDeliveryDate(deliveryEnd, refYear);
+            deliveryPriceDaysEl.textContent = priceStr + ", " + dateRangeStr + ".";
+            updateSummary();
+            updateOrderButtonState();
+        }
+
+    const BGN_TO_EUR = 1.95583;
+
+    function getDeliveryAmountEur() {
+        const zoneId = shippingZoneSelect && shippingZoneSelect.value ? shippingZoneSelect.value.trim() : "";
+        const method = (shippingMethodSelect && shippingMethodSelect.value) || "standard";
+        const result = zoneId ? getShippingForZone(zoneId, method) : null;
+        if (!result) return 0;
+        const zone = result.zone;
+        if (zone.currency === "EUR") return zone.priceMax;
+        if (zone.currency === "BGN") return zone.priceMax / BGN_TO_EUR;
+        return zone.priceMax;
+    }
+
+    function updateOrderButtonState() {
+        if (!buySubmitBtn || !shippingZoneSelect) return;
+        const zoneId = shippingZoneSelect.value ? shippingZoneSelect.value.trim() : "";
+        buySubmitBtn.disabled = !zoneId;
+        buySubmitBtn.setAttribute("aria-disabled", zoneId ? "false" : "true");
+    }
+
+    if (shippingZoneSelect) {
+        shippingZoneSelect.addEventListener("change", () => {
+            if (shippingMethodSelect) shippingMethodSelect.value = "standard";
+            updateDeliveryEstimate();
+        });
+    }
+    if (shippingMethodSelect) shippingMethodSelect.addEventListener("change", updateDeliveryEstimate);
+    window.addEventListener("aura-lang-applied", function () { updateDeliveryEstimate(); });
 
     const UNIT_PRICE_EUR = 69;
     const BUNDLES = { 1: 69, 3: 189, 5: 299 };
@@ -304,6 +419,16 @@ function initBuyPanel() {
             return new Intl.NumberFormat(locale, { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount) + " €";
         } catch (e) {
             return amount + " €";
+        }
+    }
+
+    function formatPriceCents(amount) {
+        const lang = document.documentElement.lang || "bg";
+        const locale = lang === "bg" ? "bg-BG" : lang === "de" ? "de-DE" : "en-US";
+        try {
+            return new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount) + " €";
+        } catch (e) {
+            return Number(amount).toFixed(2) + " €";
         }
     }
 
@@ -338,7 +463,9 @@ function initBuyPanel() {
             else summaryUnitPrice.textContent = formatted + " (" + q + " " + br + ")";
         }
         if (summarySubtotal) summarySubtotal.textContent = formatted;
-        if (summaryTotal) summaryTotal.textContent = formatted;
+        const deliveryEur = getDeliveryAmountEur ? getDeliveryAmountEur() : 0;
+        const totalWithDelivery = Math.round((total + deliveryEur) * 100) / 100;
+        if (summaryTotal) summaryTotal.textContent = formatPriceCents(totalWithDelivery);
     }
 
     function updatePaymentFields() {
@@ -354,6 +481,7 @@ function initBuyPanel() {
         panel.setAttribute("aria-hidden", "false");
         document.body.style.overflow = "hidden";
         updateSummary();
+        updateDeliveryEstimate();
         updatePaymentFields();
     }
     function closePanel() {
@@ -399,6 +527,13 @@ function initBuyPanel() {
 
     buyForm.addEventListener("submit", async (e) => {
         e.preventDefault();
+        const zoneId = shippingZoneSelect && shippingZoneSelect.value ? shippingZoneSelect.value.trim() : "";
+        if (!zoneId) {
+            const lang = document.documentElement.lang || "bg";
+            const msg = { bg: "Изберете държава / регион за доставка.", en: "Please select country / region for delivery.", de: "Bitte wählen Sie Land / Region für die Lieferung." };
+            if (buyStatus) { buyStatus.textContent = msg[lang] || msg.bg; buyStatus.className = "form-status form-status-error"; }
+            return;
+        }
         const functionsBase = (typeof window !== "undefined" && window.INQUIRY_FUNCTIONS_BASE_URL) ? window.INQUIRY_FUNCTIONS_BASE_URL.trim() : "";
         const useVerifyFlow = !!functionsBase;
         if (!useVerifyFlow && FORMSPREE_FORM_ID === "YOUR_FORMSPREE_FORM_ID") {
@@ -514,11 +649,46 @@ function initFaqAccordion() {
     });
 }
 
+function initHeroSceneRotation() {
+    const rowWindow = document.getElementById("heroStatusRowWindow");
+    const rowDoor = document.getElementById("heroStatusRowDoor");
+    const valueWindow = document.getElementById("heroStatusValueWindow");
+    const valueDoor = document.getElementById("heroStatusValueDoor");
+    const pushTitle = document.getElementById("heroPushTitle");
+    if (!rowWindow || !rowDoor || !valueWindow || !valueDoor || !pushTitle) return;
+
+    const states = [
+        { windowOpen: true, doorOpen: false, notifKey: "scene.notifOpen" },
+        { windowOpen: false, doorOpen: false, notifKey: "scene.notifAllClosed" },
+        { windowOpen: false, doorOpen: true, notifKey: "scene.notifDoorOpen" },
+        { windowOpen: true, doorOpen: true, notifKey: "scene.notifOpen" }
+    ];
+    let index = 0;
+
+    function applyState() {
+        const lang = document.documentElement.lang || "bg";
+        const t = typeof getTranslation === "function" ? (k) => getTranslation(lang, k) : () => "";
+        const s = states[index];
+        rowWindow.classList.toggle("status-open", s.windowOpen);
+        rowWindow.classList.toggle("status-closed", !s.windowOpen);
+        rowDoor.classList.toggle("status-open", s.doorOpen);
+        rowDoor.classList.toggle("status-closed", !s.doorOpen);
+        valueWindow.textContent = t(s.windowOpen ? "scene.statusOpenM" : "scene.statusClosedM");
+        valueDoor.textContent = t(s.doorOpen ? "scene.statusOpenF" : "scene.statusClosedF");
+        pushTitle.textContent = t(s.notifKey);
+        index = (index + 1) % states.length;
+    }
+
+    setInterval(applyState, 3500);
+    window.addEventListener("aura-lang-applied", applyState);
+}
+
 document.addEventListener("DOMContentLoaded", () => {
     if (typeof history !== "undefined" && history.scrollRestoration) history.scrollRestoration = "manual";
     window.scrollTo(0, 0);
 
     initI18n();
+    initHeroSceneRotation();
     initMobileMenu();
     initStatsCounters();
     initSmoothScroll();
@@ -553,6 +723,22 @@ function initMobileMenu() {
             toggle.setAttribute("aria-expanded", "false");
         });
     });
+
+    const more = nav.querySelector(".nav-more");
+    const moreTrigger = more ? more.querySelector(".nav-more-trigger") : null;
+    if (more && moreTrigger) {
+        moreTrigger.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const isOpen = more.classList.toggle("open");
+            moreTrigger.setAttribute("aria-expanded", isOpen ? "true" : "false");
+        });
+        document.addEventListener("click", (e) => {
+            if (!more.classList.contains("open")) return;
+            if (e.target.closest(".nav-more")) return;
+            more.classList.remove("open");
+            moreTrigger.setAttribute("aria-expanded", "false");
+        });
+    }
 
     document.addEventListener("click", (e) => {
         if (e.target.closest(".site-header")) return;

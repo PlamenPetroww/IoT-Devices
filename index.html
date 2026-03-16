@@ -27,14 +27,34 @@
             <a href="#problem" data-i18n="nav.problem">Проблем</a>
             <a href="#solution" data-i18n="nav.solution">Решение</a>
             <a href="#product" data-i18n="nav.product">Продукт</a>
-            <a href="#advantages" data-i18n="nav.advantages">Предимства</a>
-            <a href="#compatibility" data-i18n="nav.compatibility"
-              >Съвместимост</a
-            >
             <a href="#pricing" data-i18n="nav.pricing">Цени</a>
-            <a href="#faq" data-i18n="nav.faq">FAQ</a>
-            <a href="#stats" data-i18n="nav.stats">Резултати</a>
-            <a href="#cta" data-i18n="nav.cta">Започни</a>
+            <div class="nav-more">
+              <button
+                type="button"
+                class="nav-more-trigger"
+                aria-haspopup="true"
+                aria-expanded="false"
+              >
+                <span data-i18n="nav.more">Още</span>
+                <span class="nav-more-chevron" aria-hidden="true">▾</span>
+              </button>
+              <div class="nav-more-menu" role="menu">
+                <a href="#advantages" data-i18n="nav.advantages" role="menuitem"
+                  >Предимства</a
+                >
+                <a
+                  href="#compatibility"
+                  data-i18n="nav.compatibility"
+                  role="menuitem"
+                  >Съвместимост</a
+                >
+                <a href="#faq" data-i18n="nav.faq" role="menuitem">FAQ</a>
+                <a href="#stats" data-i18n="nav.stats" role="menuitem"
+                  >Резултати</a
+                >
+                <a href="#cta" data-i18n="nav.cta" role="menuitem">Започни</a>
+              </div>
+            </div>
           </div>
           <div class="nav-actions">
             <a href="login.html" data-i18n="nav.login">Вход</a>
@@ -102,7 +122,7 @@
             </h1>
             <p class="hero-subtitle" data-i18n="hero.subtitle">
               Най-честите кражби стават през прозорците и входната врата.
-              Сензорите ни са изключително лесно за инсталиране и настройка, а
+              Сензорите ни са изключително лесни за инсталиране и настройка, а
               приложението е изключително удобно – получаваш мигновени сигнали
               на телефона при всяко нежелано отваряне.
             </p>
@@ -121,45 +141,44 @@
               <p class="scene-caption" data-i18n="scene.caption">
                 Статус в приложението в реално време
               </p>
-              <div class="scene">
-                <div class="scene-background-glow"></div>
-                <div class="house">
-                  <div class="roof"></div>
-                  <div class="body">
-                    <div class="window window-left">
-                      <div class="sensor-dot"></div>
-                      <div class="window-glass"></div>
+              <div class="phone-mockup" aria-hidden="true">
+                <div class="phone-frame">
+                  <div class="phone-notch"></div>
+                  <div class="phone-screen">
+                    <div class="phone-status-bar">
+                      <span class="phone-time">9:41</span>
+                      <span class="phone-icons">
+                        <span class="phone-icon-signal"></span>
+                        <span class="phone-icon-wifi"></span>
+                        <span class="phone-icon-battery"></span>
+                      </span>
                     </div>
-                    <div class="door">
-                      <div class="door-inner"></div>
-                      <div class="sensor-dot sensor-door"></div>
-                    </div>
-                  </div>
-                </div>
-                <div class="burglar">
-                  <div class="burglar-body"></div>
-                  <div class="burglar-mask"></div>
-                </div>
-                <div class="alert-badge"><span class="alert-icon">!</span></div>
-                <div class="phone-panel">
-                  <div class="phone">
-                    <div class="phone-screen">
-                      <div class="notif notif-danger">
-                        <span class="notif-dot"></span>
-                        <span class="notif-text" data-i18n="scene.notifOpen"
-                          >Прозорецът е отворен</span
-                        >
+                    <div class="push-notification push-notification-alert" role="presentation">
+                      <div class="push-notification-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22c4 0 5-2 5-6v-1a7 7 0 0 0-14 0v1c0 4 1 6 5 6z"/><circle cx="12" cy="5" r="2"/></svg>
                       </div>
-                      <div class="notif notif-safe">
-                        <span class="notif-dot"></span>
-                        <span class="notif-text" data-i18n="scene.notifSafe"
-                          >Входната врата е защитена</span
-                        >
+                      <div class="push-notification-content">
+                        <div class="push-notification-header">
+                          <span class="push-notification-app" data-i18n="scene.appName">Aura HomeSystems</span>
+                          <span class="push-notification-time" data-i18n="scene.notifTime">сега</span>
+                        </div>
+                        <p class="push-notification-title" id="heroPushTitle" data-i18n="scene.notifOpen">Прозорецът е отворен</p>
                       </div>
                     </div>
+                    <div class="scene scene-status-panel">
+                      <div class="scene-background-glow"></div>
+                      <div class="status-panel" aria-label="Статус на сензорите в приложението">
+                        <div class="status-row status-open" id="heroStatusRowWindow">
+                          <span class="status-label" data-i18n="scene.labelWindow">Прозорец</span>
+                          <span class="status-value" id="heroStatusValueWindow" data-i18n="scene.statusOpenM">Отворен</span>
+                        </div>
+                        <div class="status-row status-closed" id="heroStatusRowDoor">
+                          <span class="status-label" data-i18n="scene.labelDoor">Входна врата</span>
+                          <span class="status-value" id="heroStatusValueDoor" data-i18n="scene.statusClosedF">Затворена</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div class="signal-wave signal-wave-1"></div>
-                  <div class="signal-wave signal-wave-2"></div>
                 </div>
               </div>
             </div>
@@ -205,7 +224,7 @@
               Нашето решение: умни сензори с реални сигнали
             </h2>
             <p data-i18n-html="solution.p1">
-              Сензорите са супер лесно за инсталиране и настройка – закачаш ги
+              Сензорите са супер лесни за инсталиране и настройка – закачаш ги
               на прозорците и входните врати, свързват се с приложението и
               веднага следят статуса в реално време. При всяка промяна получаваш
               <strong>незабавно известие на телефона</strong>. Нашето приложение
@@ -773,12 +792,13 @@
                 type="button"
                 class="cta-primary-link cta-buy-btn"
                 id="openBuyPanelBtn"
+                data-i18n="cta.buyDirect"
               >
                 Купи директно
               </button>
-              <span class="cta-actions-sep">или</span>
+              <span class="cta-actions-sep" data-i18n="cta.or">или</span>
             </div>
-            <p class="cta-inquiry-label">Изпрати запитване</p>
+            <p class="cta-inquiry-label" data-i18n="cta.inquiryLabel">Изпрати запитване</p>
             <form
               id="contactForm"
               class="contact-form"
@@ -899,32 +919,51 @@
             type="button"
             class="buy-panel-close"
             id="closeBuyPanelBtn"
+            data-i18n-aria-label="buyPanel.closeLabel"
             aria-label="Затвори"
           >
             ×
           </button>
-          <h2 id="buyPanelTitle" class="buy-panel-title">Директна поръчка</h2>
-          <p class="buy-panel-desc">
+          <h2 id="buyPanelTitle" class="buy-panel-title" data-i18n="buyPanel.title">Директна поръчка</h2>
+          <p class="buy-panel-desc" data-i18n="buyPanel.productDesc">
             Безжични сензори за прозорци и врати – свързват се с приложението и
             ви уведомяват при отваряне. Подходящи за всяка врата или прозорец.
           </p>
           <div class="buy-panel-price-row">
-            <span class="buy-panel-price-label">Цена за 1 сензор</span>
+            <span class="buy-panel-price-label" data-i18n="buyPanel.priceLabel">Цена за 1 сензор</span>
             <span class="buy-panel-price">69&nbsp;€</span>
           </div>
-          <p class="buy-panel-note">
+          <p class="buy-panel-note" data-i18n="buyPanel.shippingNote">
             Цената не включва доставка – разходите за куриер са за сметка на
             купувача.
           </p>
           <form id="buyPanelForm" class="buy-panel-form">
             <input type="hidden" name="_subject" value="Direct order" />
             <input type="hidden" name="orderType" value="direct" />
+            <label class="form-label form-label-shipping-zone">
+              <span class="form-label-text" data-i18n="buyPanel.shippingCountryLabel">Държава / регион за доставка</span>
+              <select id="buyShippingZone" class="form-input form-select" aria-describedby="buySummaryDeliveryEstimate">
+                <option value="" data-i18n="buyPanel.shippingZoneChoose">Изберете</option>
+                <option value="BG" data-i18n="buyPanel.shippingZone_BG">България</option>
+                <option value="EU" data-i18n="buyPanel.shippingZone_EU">ЕС (други страни)</option>
+                <option value="UK_CH_NO" data-i18n="buyPanel.shippingZone_UK_CH_NO">Обединено кралство / Швейцария / Норвегия</option>
+                <option value="US_CA" data-i18n="buyPanel.shippingZone_US_CA">САЩ / Канада</option>
+                <option value="WORLD" data-i18n="buyPanel.shippingZone_WORLD">Останал свят</option>
+              </select>
+            </label>
+            <label class="form-label form-label-shipping-method" id="buyShippingMethodWrap" style="display: none;">
+              <span class="form-label-text" data-i18n="buyPanel.shippingMethodLabel">Начин на доставка</span>
+              <select id="buyShippingMethod" class="form-input form-select">
+                <option value="standard" data-i18n="buyPanel.shippingMethodStandard">Стандартна (по-евтина, по-бавна)</option>
+                <option value="express" data-i18n="buyPanel.shippingMethodExpress">Експрес (по-бърза, по-скъпа)</option>
+              </select>
+            </label>
             <div class="buy-panel-layout">
               <div class="buy-panel-summary">
-                <h3 class="buy-summary-title">Вашата поръчка</h3>
+                <h3 class="buy-summary-title" data-i18n="buyPanel.summaryTitle">Вашата поръчка</h3>
                 <ul class="buy-summary-list">
                   <li class="buy-summary-row">
-                    <span class="buy-summary-label">Сензори</span>
+                    <span class="buy-summary-label" data-i18n="buyPanel.summarySensors">Сензори</span>
                     <span class="buy-summary-value"
                       >× <span id="buySummaryQty">1</span></span
                     >
@@ -940,7 +979,7 @@
                     >
                   </li>
                   <li class="buy-summary-row">
-                    <span class="buy-summary-label">Междинна сума</span>
+                    <span class="buy-summary-label" data-i18n="buyPanel.summarySubtotal">Междинна сума</span>
                     <span
                       class="buy-summary-value buy-summary-value-num"
                       id="buySummarySubtotal"
@@ -948,11 +987,13 @@
                     >
                   </li>
                   <li class="buy-summary-row">
-                    <span class="buy-summary-label">Доставка</span>
-                    <span class="buy-summary-value">За сметка на купувача</span>
+                    <span class="buy-summary-label" data-i18n="buyPanel.summaryDelivery">Доставка</span>
+                    <span class="buy-summary-value" id="buySummaryDeliveryEstimate">
+                      <span id="buySummaryDeliveryPriceDays"></span>
+                    </span>
                   </li>
                   <li class="buy-summary-row buy-summary-total">
-                    <span class="buy-summary-label">Общо</span>
+                    <span class="buy-summary-label" data-i18n="buyPanel.summaryTotal">Общо</span>
                     <span
                       class="buy-summary-value buy-summary-value-num"
                       id="buySummaryTotal"
@@ -963,12 +1004,13 @@
               </div>
               <div class="buy-panel-payment">
                 <div class="buy-panel-quantity">
-                  <span class="form-label-text">Брой</span>
+                  <span class="form-label-text" data-i18n="buyPanel.quantity">Брой</span>
                   <div class="quantity-stepper">
                     <button
                       type="button"
                       class="quantity-btn"
                       id="buyQtyMinus"
+                      data-i18n-aria-label="buyPanel.quantityDecrease"
                       aria-label="Намали"
                     >
                       −
@@ -987,6 +1029,7 @@
                       type="button"
                       class="quantity-btn"
                       id="buyQtyPlus"
+                      data-i18n-aria-label="buyPanel.quantityIncrease"
                       aria-label="Увеличи"
                     >
                       +
@@ -994,13 +1037,13 @@
                   </div>
                 </div>
                 <label class="form-label">
-                  <span class="form-label-text">Начин на плащане</span>
+                  <span class="form-label-text" data-i18n="buyPanel.paymentMethod">Начин на плащане</span>
                   <select
                     name="paymentMethod"
                     class="form-input form-select"
                     required
                   >
-                    <option value="">Изберете</option>
+                    <option value="" data-i18n="buyPanel.payChoose">Изберете</option>
                     <option value="stripe">Stripe</option>
                     <option value="revolut">Revolut</option>
                   </select>
@@ -1010,13 +1053,12 @@
                   id="revolutField"
                   style="display: none"
                 >
-                  <span class="form-label-text"
-                    >Revolut потребител / телефон</span
-                  >
+                  <span class="form-label-text" data-i18n="buyPanel.revolutLabel">Revolut потребител / телефон</span>
                   <input
                     type="text"
                     name="revolutId"
                     class="form-input"
+                    data-i18n-placeholder="buyPanel.revolutPlaceholder"
                     placeholder="@user или телефон"
                   />
                 </label>
@@ -1067,6 +1109,9 @@
               type="submit"
               class="cta-primary-link cta-submit"
               id="buyPanelSubmitBtn"
+              disabled
+              aria-disabled="true"
+              data-i18n="buyPanel.submit"
             >
               Поръчай
             </button>

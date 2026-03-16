@@ -205,6 +205,78 @@ body {
     margin-left: auto;
 }
 
+.nav-more {
+    position: relative;
+}
+
+.nav-more-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    border: 1px solid rgba(148, 163, 184, 0.5);
+    background: rgba(15, 23, 42, 0.85);
+    color: var(--text-muted);
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition:
+        background var(--transition-fast),
+        border-color var(--transition-fast),
+        color var(--transition-fast),
+        transform var(--transition-fast),
+        box-shadow var(--transition-fast);
+}
+
+.nav-more-trigger:hover {
+    background: rgba(34, 197, 94, 0.12);
+    border-color: rgba(34, 197, 94, 0.7);
+    color: var(--text);
+    box-shadow:
+        0 10px 26px rgba(15, 23, 42, 0.95),
+        0 0 0 1px rgba(15, 23, 42, 0.95);
+    transform: translateY(-1px);
+}
+
+.nav-more-chevron {
+    font-size: 10px;
+}
+
+.nav-more-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 200px;
+    padding: 8px 6px;
+    border-radius: 12px;
+    background: rgba(15, 23, 42, 0.98);
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.9);
+    display: none;
+    flex-direction: column;
+    gap: 2px;
+    z-index: 40;
+}
+
+.nav-more.open .nav-more-menu {
+    display: flex;
+}
+
+.nav-more-menu a {
+    padding: 8px 10px;
+    border-radius: 8px;
+    text-transform: none;
+    letter-spacing: 0.04em;
+    font-size: 12px;
+    text-align: left;
+}
+
+.nav-more-menu a:hover {
+    background: rgba(34, 197, 94, 0.1);
+}
+
 .nav-actions {
     display: flex;
     align-items: center;
@@ -313,6 +385,18 @@ body {
         flex-direction: column;
         align-items: stretch;
         gap: 2px;
+    }
+
+    .nav-more {
+        width: 100%;
+    }
+
+    .nav-more-menu {
+        position: static;
+        width: 100%;
+        margin-top: 4px;
+        box-shadow: none;
+        border-radius: 10px;
     }
     .nav-actions {
         margin-left: 0;
@@ -691,6 +775,237 @@ main {
     letter-spacing: 0.2em;
     text-transform: uppercase;
     color: var(--text-muted);
+    line-height: 1.4;
+    min-height: 2.8em;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Phone mockup: фиксиран размер на всички езици – един и същ винаги */
+.phone-mockup {
+    width: 260px;
+    flex-shrink: 0;
+}
+
+.phone-frame {
+    position: relative;
+    width: 260px;
+    height: 520px;
+    border-radius: 32px;
+    padding: 8px;
+    background: linear-gradient(145deg, #1e293b, #0f172a);
+    box-shadow:
+        0 0 0 2px rgba(148, 163, 184, 0.2),
+        0 24px 48px rgba(0, 0, 0, 0.45),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.phone-notch {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80px;
+    height: 20px;
+    border-radius: 0 0 14px 14px;
+    background: #0f172a;
+    z-index: 2;
+}
+
+.phone-screen {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    border-radius: 24px;
+    background: #0a0f1a;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.phone-status-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 20px 8px;
+    padding-top: 28px;
+    font-size: 14px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.95);
+}
+
+.phone-time {
+    letter-spacing: 0.02em;
+}
+
+.phone-icons {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.phone-icon-signal,
+.phone-icon-wifi,
+.phone-icon-battery {
+    display: inline-block;
+    background: rgba(255, 255, 255, 0.75);
+}
+
+.phone-icon-signal {
+    width: 18px;
+    height: 10px;
+    background: linear-gradient(90deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.4) 25%, rgba(255,255,255,0.6) 25%, rgba(255,255,255,0.6) 50%, rgba(255,255,255,0.85) 50%, rgba(255,255,255,0.85) 75%, rgba(255,255,255,1) 75%);
+    border-radius: 1px;
+}
+
+.phone-icon-wifi {
+    width: 14px;
+    height: 10px;
+    border-radius: 50%;
+    opacity: 0.85;
+}
+
+.phone-icon-battery {
+    position: relative;
+    width: 22px;
+    height: 10px;
+    border-radius: 2px;
+    background: transparent;
+    border: 1.5px solid rgba(255, 255, 255, 0.75);
+}
+
+.phone-icon-battery::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 5px;
+    border-radius: 1px;
+    background: rgba(52, 211, 153, 0.95);
+}
+
+/* Push notification – еднаква височина на всички езици */
+.push-notification {
+    position: absolute;
+    top: 0;
+    left: 12px;
+    right: 12px;
+    z-index: 3;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 14px;
+    margin: 8px 0 0;
+    min-height: 72px;
+    border-radius: 16px;
+    background: rgba(30, 41, 59, 0.98);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    transform: translateY(-120%);
+    opacity: 0;
+    animation: push-notification-loop 10s ease-in-out 1.5s infinite;
+}
+
+.push-notification-icon {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    border-radius: 10px;
+    background: linear-gradient(135deg, rgba(248, 113, 113, 0.35), rgba(239, 68, 68, 0.5));
+    color: #fca5a5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.push-notification-icon svg {
+    width: 22px;
+    height: 22px;
+}
+
+.push-notification-content {
+    flex: 1;
+    min-width: 0;
+    min-height: 48px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.push-notification-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 2px;
+}
+
+.push-notification-app {
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.push-notification-time {
+    font-size: 11px;
+    color: rgba(148, 163, 184, 0.9);
+    flex-shrink: 0;
+}
+
+.push-notification-title {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.35;
+    color: #fca5a5;
+    min-height: 1.35em;
+}
+
+/* Loop: push влиза → остава дълго видим (като истинско известие) → излиза → repeat */
+@keyframes push-notification-loop {
+    0%, 5% {
+        transform: translateY(-120%);
+        opacity: 0;
+    }
+    10% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+    75% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+    82% {
+        transform: translateY(-120%);
+        opacity: 0;
+    }
+    100% {
+        transform: translateY(-120%);
+        opacity: 0;
+    }
+}
+
+/* Scene inside phone: без отделен правоъгълник – само съдържанието върху екрана */
+.phone-screen .scene {
+    width: 100%;
+    flex: 1;
+    min-height: 160px;
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+    padding: 16px 12px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+}
+
+.phone-screen .scene .scene-background-glow {
+    display: none;
 }
 
 .scene {
@@ -703,6 +1018,139 @@ main {
     box-shadow: var(--shadow-soft);
     overflow: hidden;
     padding: 18px 20px;
+}
+
+.scene-status-panel {
+    height: auto;
+    min-height: 140px;
+    padding: 20px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.status-panel {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 260px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Еднаква височина на редовете на всички езици */
+.status-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 48px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    opacity: 0;
+    transform: translateX(-12px);
+    animation: status-row-in 0.5s ease-out forwards;
+    transition: background 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease;
+}
+
+.status-row .status-label,
+.status-row .status-value {
+    position: relative;
+    z-index: 1;
+    line-height: 1.3;
+    word-break: break-word;
+}
+
+.status-row:nth-child(1) { animation-delay: 0.15s; }
+.status-row:nth-child(2) { animation-delay: 0.4s; }
+
+@keyframes status-row-in {
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.status-row .status-label {
+    color: var(--text-muted);
+    min-width: 0;
+    flex: 1;
+}
+
+.status-row .status-value {
+    font-weight: 700;
+    white-space: nowrap;
+    flex-shrink: 0;
+    min-width: 4.5em;
+    text-align: right;
+}
+
+.status-row.status-open {
+    background: rgba(248, 113, 113, 0.15);
+    border: 1px solid rgba(248, 113, 113, 0.4);
+    box-shadow: 0 0 0 0 rgba(248, 113, 113, 0);
+    animation: status-row-in 0.5s ease-out 0.15s forwards, status-open-pulse 2.2s ease-in-out 1s infinite;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Момент „засечено движение“ – светване преди push да пристигне */
+.status-row.status-open::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: rgba(248, 113, 113, 0.35);
+    opacity: 0;
+    pointer-events: none;
+    animation: sensor-trigger-flash 10s ease-out 1.5s infinite;
+}
+
+.status-row.status-open .status-value {
+    color: #fca5a5;
+}
+
+.status-row.status-closed {
+    background: rgba(34, 197, 94, 0.12);
+    border: 1px solid rgba(34, 197, 94, 0.35);
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+    animation: status-row-in 0.5s ease-out 0.4s forwards, status-closed-pulse 2.6s ease-in-out 1.3s infinite;
+}
+
+.status-row.status-closed .status-value {
+    color: var(--accent-strong);
+}
+
+@keyframes status-open-pulse {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(248, 113, 113, 0);
+        border-color: rgba(248, 113, 113, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 12px 2px rgba(248, 113, 113, 0.25);
+        border-color: rgba(248, 113, 113, 0.65);
+    }
+}
+
+/* В момента на "движение на сензора" – кратък силен пулс, след който идва push */
+@keyframes sensor-trigger-flash {
+    0%, 7% { opacity: 0; }
+    9% { opacity: 0.5; }
+    12%, 100% { opacity: 0; }
+}
+
+@keyframes status-closed-pulse {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+        border-color: rgba(34, 197, 94, 0.35);
+    }
+    50% {
+        box-shadow: 0 0 12px 2px rgba(34, 197, 94, 0.2);
+        border-color: rgba(34, 197, 94, 0.55);
+    }
 }
 
 .scene-background-glow {
@@ -1085,6 +1533,7 @@ main {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 16px 24px;
+    text-align: left;
 }
 
 @media (max-width: 900px) {
@@ -1106,6 +1555,7 @@ main {
     font-size: 15px;
     line-height: 1.5;
     color: var(--text);
+    text-align: left;
 }
 
 .advantages-list li strong {

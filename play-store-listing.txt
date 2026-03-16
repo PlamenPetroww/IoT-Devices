@@ -1,0 +1,87 @@
+# Google Play Store listing – Aura HomeSystems
+# Копирай в съответните полета в Play Console → Store listing
+
+-----------------------------------------
+КРАТКО ОПИСАНИЕ (до 80 символа)
+-----------------------------------------
+
+BG:
+Умни сензори за врати и прозорци – мигновени известия на телефона.
+
+EN:
+Smart sensors for doors and windows – instant alerts on your phone.
+
+DE (по избор):
+Sensoren für Türen und Fenster – sofortige Benachrichtigungen auf dem Handy.
+
+
+-----------------------------------------
+ПЪЛНО ОПИСАНИЕ (до 4000 символа)
+-----------------------------------------
+
+BG:
+Aura HomeSystems пази дома ти, когато е празен.
+
+Умни безжични сензори за прозорци и входни врати – закачаш ги, свързват се с приложението и веднага следят статуса в реално време. При всяко отваряне получаваш незабавно известие на телефона. Ясно виждаш кой отвор е засегнат, кога се е случило и дали е останал отворен.
+
+ЗА КОГО Е:
+• Собственици на дом или апартамент, които искат спокойствие когато са на работа или пътуват
+• Наематели и Airbnb hosts – контрол в реално време
+• Родители – да знаете дали прозорците и вратите са затворени
+
+КАКВО ПОЛУЧВАШ:
+• Сензори за прозорци и врати – без кабели, без хъб, директно WiFi
+• Мобилно приложение с статус в реално време и история на събитията
+• Моментални push известия при отваряне
+• Работи на до 2 устройства едновременно (телефон, таблет, лаптоп)
+
+ПРЕДИМСТВА:
+• Без месечен абонамент – плащаш веднъж за сензорите и приложението
+• Самоинсталация – без майстори
+• Дълготрайна батерия – месеци без подзареждане
+• Личен акаунт – данните са само ваши
+
+Съвместимост: Android 8+, WiFi 2.4 GHz у дома.
+За поръчки и информация: www.aurahomesystems.eu
+
+EN:
+Aura HomeSystems keeps your home safe when it’s empty.
+
+Smart wireless sensors for windows and doors – attach them, they connect to the app and instantly monitor status in real time. On every opening you get an immediate alert on your phone. You see clearly which opening was affected, when it happened, and whether it stayed open.
+
+FOR WHO:
+• Home and apartment owners who want peace of mind when at work or travelling
+• Renters and Airbnb hosts – real-time control
+• Parents – know if windows and doors are closed
+
+WHAT YOU GET:
+• Sensors for windows and doors – no cables, no hub, direct WiFi
+• Mobile app with real-time status and event history
+• Instant push notifications on opening
+• Works on up to 2 devices at once (phone, tablet, laptop)
+
+BENEFITS:
+• No monthly subscription – pay once for sensors and app
+• Self-install – no technicians
+• Long battery life – months without recharging
+• Personal account – your data stays yours
+
+Compatibility: Android 8+, 2.4 GHz WiFi at home.
+For orders and info: www.aurahomesystems.eu
+
+
+-----------------------------------------
+КАКВО Е НОВОТО (при първо пускане – по избор)
+-----------------------------------------
+
+BG:
+Първо издание на приложението. Достъп до началната страница, информация за продуктите, цени и възможност за запитване и директна поръчка.
+
+EN:
+First release. Access to the home page, product info, pricing, and the option to send an inquiry or place a direct order.
+
+
+-----------------------------------------
+PRIVACY POLICY URL (за Play Console)
+-----------------------------------------
+https://www.aurahomesystems.eu/privacy.html

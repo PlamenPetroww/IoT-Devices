@@ -1,6 +1,5 @@
 /**
- * URL на Cloud Functions за запитвания с потвърждение по имейл.
- * След deploy замени с реалния URL, напр.:
- * https://us-central1-cleverhaus-petrov.cloudfunctions.net
+ * Backend за запитвания и поръчки. Сочи към Render – от там се препраща към Formspree.
+ * Сайтът на Netlify (aurahomesystems.eu) вика този URL.
  */
-window.INQUIRY_FUNCTIONS_BASE_URL = "";
+window.INQUIRY_FUNCTIONS_BASE_URL = "https://cleverhaus.onrender.com";

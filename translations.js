@@ -76,26 +76,15 @@ const translations = {
             q1: "Работи ли без WiFi?",
             a1: "Сензорите се свързват с домашния ви WiFi и изпращат данни до приложението. Без WiFi няма връзка – затова е нужна стабилна мрежа у дома.",
             q2: "Колко време издържа батерията?",
-            a2: "При нормална употреба батерията издържа месеци. Точният срок зависи от броя известия и настройките за deep sleep на сензора.",
+            a2: "При нормална употреба батерията издържа месеци. Батерията може да бъде презаредена почти безплатно у дома.",
             q3: "Какво става ако интернетът спре?",
             a3: "Сензорите записват състоянието локално, но известията на телефона идват през интернет. При прекъсване ще получите актуализация след възстановяване на връзката.",
             q4: "Мога ли да използвам един акаунт на 2 устройства?",
             a4: "Да. Всеки акаунт може да бъде отворен едновременно на до 2 устройства (телефон, таблет, лаптоп). При опит за вход от трето устройство ще се покаже съобщение.",
             q5: "Има ли абонамент?",
-            a5: "Не. Плащате веднъж за сензорите и приложението – няма месечен абонамент или скрити такси."
-        },
-        cases: {
-            title: "Как изглежда Aura у дома",
-            subtitle: "Няколко реални сценария, в които системата работи за теб – дори когато ти не мислиш за нея.",
-            terraceLabel: "Хол с тераса",
-            terraceTitle: "Хол с тераса",
-            terraceDesc: "Сензор на плъзгащата врата към терасата те предупреждава, ако остане отворена след вечеря или ако някой я отвори през нощта, докато семейството спи.",
-            entranceLabel: "Основен вход",
-            entranceTitle: "Основен вход",
-            entranceDesc: "Сензор на входната врата отчита всяко отваряне, докато си на работа. При неочаквано отключване получаваш моментално известие на телефона си.",
-            kidsLabel: "Детска стая",
-            kidsTitle: "Детска стая",
-            kidsDesc: "Сензор на прозореца в детската стая ти дава спокойствие, че прозорецът не остава отворен, когато децата играят вътре или когато навън е студено."
+            a5: "Не. Плащате веднъж за сензорите и приложението – няма месечен абонамент или скрити такси.",
+            q6: "Как да инсталирам сензора у дома и да получавам известия на телефона?",
+            a6: "1) Регистрирай се или влез в приложението Aura на телефона си. 2) Поставете сензора на вратата или прозореца: единият модул на рамката, вторият на отварящата част, така че магнитите да са срещуположно при затваряне. 3) В приложението натисни „Добави сензор“ и следвай стъпките: избери домашния си WiFi (2.4 GHz) и въведи паролата. 4) Дай име на сензора (напр. „Входна врата“, „Прозорец детска“) и запази. 5) Разреши известия за Aura в настройките на телефона (Настройки → Приложения → Aura → Известия). След това при всяко отваряне или затваряне ще получаваш мигновено известие на телефона си."
         },
         stats: {
             title: "Довериха ни се десетки домакинства",
@@ -357,26 +346,15 @@ const translations = {
             q1: "Does it work without WiFi?",
             a1: "Sensors connect to your home WiFi and send data to the app. Without WiFi there is no connection – so a stable home network is required.",
             q2: "How long does the battery last?",
-            a2: "With normal use the battery lasts for months. The exact duration depends on how many alerts you get and the sensor’s deep sleep settings.",
+            a2: "With normal use the battery lasts for months. The battery can be recharged almost for free at home.",
             q3: "What happens if the internet goes down?",
             a3: "Sensors keep state locally, but phone notifications go through the internet. If the connection drops, you’ll get an update once it’s back.",
             q4: "Can I use one account on 2 devices?",
             a4: "Yes. Each account can be used on up to 2 devices at the same time (phone, tablet, laptop). A third device will see a message and cannot sign in.",
             q5: "Is there a subscription?",
-            a5: "No. You pay once for the sensors and app – no monthly subscription or hidden fees."
-        },
-        cases: {
-            title: "What Aura looks like at home",
-            subtitle: "A few real scenarios where the system works for you – even when you're not thinking about it.",
-            terraceLabel: "Living room with terrace",
-            terraceTitle: "Living room with terrace",
-            terraceDesc: "A sensor on the sliding door to the terrace warns you if it stays open after dinner or if someone opens it at night while the family sleeps.",
-            entranceLabel: "Main entrance",
-            entranceTitle: "Main entrance",
-            entranceDesc: "A sensor on the front door logs every opening while you're at work. If it's unlocked unexpectedly, you get an instant notification on your phone.",
-            kidsLabel: "Children's room",
-            kidsTitle: "Children's room",
-            kidsDesc: "A sensor on the window in the kids' room gives you peace of mind that the window isn't left open when the children play inside or when it's cold outside."
+            a5: "No. You pay once for the sensors and app – no monthly subscription or hidden fees.",
+            q6: "How do I install the sensor at home and get notifications on my phone?",
+            a6: "1) Sign up or log in to the Aura app on your phone. 2) Mount the sensor on the door or window: one part on the frame, the other on the opening part, so the magnets face each other when closed. 3) In the app tap \"Add sensor\" and follow the steps: select your home Wi‑Fi (2.4 GHz) and enter the password. 4) Give the sensor a name (e.g. \"Front door\", \"Kids' window\") and save. 5) Enable notifications for Aura in your phone settings (Settings → Apps → Aura → Notifications). After that, you'll get an instant notification on your phone whenever something opens or closes."
         },
         stats: {
             title: "Dozens of households trust us",
@@ -638,26 +616,15 @@ const translations = {
             q1: "Funktioniert es ohne WLAN?",
             a1: "Die Sensoren verbinden sich mit Ihrem WLAN und senden Daten an die App. Ohne WLAN gibt es keine Verbindung – daher ist ein stabiles Netzwerk zu Hause nötig.",
             q2: "Wie lange hält der Akku?",
-            a2: "Bei normaler Nutzung hält der Akku monatelang. Die genaue Dauer hängt von der Anzahl der Meldungen und den Deep-Sleep-Einstellungen ab.",
+            a2: "Bei normaler Nutzung hält der Akku monatelang. Der Akku kann zu Hause nahezu kostenlos aufgeladen werden.",
             q3: "Was passiert, wenn das Internet ausfällt?",
             a3: "Die Sensoren speichern den Zustand lokal, Benachrichtigungen auf dem Handy laufen aber über das Internet. Bei Ausfall erhalten Sie nach Wiederherstellung der Verbindung eine Aktualisierung.",
             q4: "Kann ich ein Konto auf 2 Geräten nutzen?",
             a4: "Ja. Ein Konto kann gleichzeitig auf bis zu 2 Geräten genutzt werden (Handy, Tablet, Laptop). Ein drittes Gerät erhält eine Meldung und kann sich nicht anmelden.",
             q5: "Gibt es ein Abo?",
-            a5: "Nein. Sie zahlen einmal für Sensoren und App – kein monatliches Abo und keine versteckten Gebühren."
-        },
-        cases: {
-            title: "So sieht Aura bei Ihnen aus",
-            subtitle: "Einige reale Szenarien, in denen das System für Sie arbeitet – auch wenn Sie nicht dran denken.",
-            terraceLabel: "Wohnzimmer mit Terrasse",
-            terraceTitle: "Wohnzimmer mit Terrasse",
-            terraceDesc: "Ein Sensor an der Terrassentür warnt Sie, wenn sie nach dem Abendessen offen bleibt oder nachts jemand öffnet, während die Familie schläft.",
-            entranceLabel: "Haupteingang",
-            entranceTitle: "Haupteingang",
-            entranceDesc: "Ein Sensor an der Haustür erfasst jede Öffnung, während Sie arbeiten. Bei unerwartetem Aufschließen erhalten Sie sofort eine Nachricht aufs Handy.",
-            kidsLabel: "Kinderzimmer",
-            kidsTitle: "Kinderzimmer",
-            kidsDesc: "Ein Sensor am Fenster im Kinderzimmer gibt Ihnen die Gewissheit, dass das Fenster nicht offen bleibt, wenn die Kinder drinnen spielen oder es draußen kalt ist."
+            a5: "Nein. Sie zahlen einmal für Sensoren und App – kein monatliches Abo und keine versteckten Gebühren.",
+            q6: "Wie installiere ich den Sensor zu Hause und erhalte Benachrichtigungen auf dem Handy?",
+            a6: "1) Registrieren Sie sich oder melden Sie sich in der Aura-App auf dem Handy an. 2) Bringen Sie den Sensor an Tür oder Fenster an: ein Teil am Rahmen, der andere am beweglichen Teil, sodass die Magnete beim Schließen einander zugewandt sind. 3) Tippen Sie in der App auf „Sensor hinzufügen“ und folgen Sie den Schritten: Wählen Sie Ihr WLAN (2,4 GHz) und geben Sie das Passwort ein. 4) Vergeben Sie einen Namen (z. B. „Haustür“, „Kinderzimmerfenster“) und speichern Sie. 5) Erlauben Sie Benachrichtigungen für Aura in den Handy-Einstellungen (Einstellungen → Apps → Aura → Benachrichtigungen). Danach erhalten Sie sofort eine Benachrichtigung, sobald sich etwas öffnet oder schließt."
         },
         stats: {
             title: "Dutzende Haushalte vertrauen uns",

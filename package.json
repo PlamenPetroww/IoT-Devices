@@ -1,6 +1,7 @@
 {
   "scripts": {
-    "build": "echo No build step for static site"
+    "build": "echo No build step for static site",
+    "start": "node server.js"
   },
   "dependencies": {
     "unhead": "^2.1.12"

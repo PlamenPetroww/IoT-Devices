@@ -172,7 +172,6 @@
               window.location.href = "login.html";
             });
         });
-        4;
         const modeHome = document.getElementById("modeHome");
         const modeAway = document.getElementById("modeAway");
         const statusMsg = document.getElementById("sensorStatusMsg");
@@ -359,7 +358,25 @@
             }
             try {
               var messaging = firebase.messaging();
-              var token = await messaging.getToken({ vapidKey: vapidKey });
+              // Need a registered service worker for background push notifications
+              var swReg = null;
+              if ("serviceWorker" in navigator) {
+                try {
+                  swReg = await navigator.serviceWorker.register(
+                    "/firebase-messaging-sw.js"
+                  );
+                  messaging.useServiceWorker(swReg);
+                } catch (swErr) {
+                  console.warn(
+                    "Service worker registration failed:",
+                    swErr && swErr.message ? swErr.message : swErr
+                  );
+                }
+              }
+              var token = await messaging.getToken({
+                vapidKey: vapidKey,
+                serviceWorkerRegistration: swReg || undefined,
+              });
               if (!token) {
                 pushStatus.textContent = "Неуспешно получаване на токен.";
                 pushStatus.style.display = "block";

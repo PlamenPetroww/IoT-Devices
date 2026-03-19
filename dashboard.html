@@ -152,6 +152,7 @@
                 }
               });
             }
+            });
         function escapeHtml(text) {            const div = document.createElement("div");            div.textContent = text;            return div.innerHTML;        }        function getTintIndexForSensor(nameOrId) {            var s = String(nameOrId || "").trim();            var h = 0;            for (var i = 0; i < s.length; i++) {                h = ((h << 5) - h) + s.charCodeAt(i);                h = h & h;            }            return Math.abs(h) % 4;        }        function getIconForSensor(name) {            var n = String(name || "").toLowerCase().trim();            // Гараж (BG, EN, DE, …) → кола            if (/garaj|garage|гараж|garáž|garaze|garaż/i.test(n)) return "🚗";            // Врата / Door (BG, EN, DE, …), включително задна врата            if (/vrata|врата|door|tür|tuer|porte|entrance|vhod|вход|dver|dveři|puerta|porta|drzwi|doorway|gate|zadna|back|заден/i.test(n)) return "🚪";            // Прозорец / Window (BG, EN, DE, …)            if (/prozorec|прозорец|window|fenster|fenêtre|fenetre|finestra|ventana|okno|janela|predna|preden|предна|преден|front/i.test(n)) return "🪟";            return "📍";        }
     </script>
   </body>

@@ -89,6 +89,52 @@ function forwardToFormspree(body, callback) {
   req.end();
 }
 
+let firebaseAdmin = null;
+let firebaseDb = null;
+try {
+  const saJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+  if (saJson && typeof saJson === "string") {
+    const serviceAccount = JSON.parse(saJson);
+    firebaseAdmin = require("firebase-admin");
+    firebaseAdmin.initializeApp({ credential: firebaseAdmin.credential.cert(serviceAccount) });
+    firebaseDb = firebaseAdmin.database();
+  }
+} catch (e) {
+  console.warn("Firebase Admin not configured (FIREBASE_SERVICE_ACCOUNT_JSON):", e.message);
+}
+
+function sendPushToUser(uid, title, body, callback) {
+  if (!firebaseDb || !firebaseAdmin) {
+    callback(new Error("Firebase not configured"));
+    return;
+  }
+  firebaseDb.ref("users/" + uid + "/pushTokens").once("value", (snap) => {
+    const val = snap.val();
+    if (!val || typeof val !== "object") {
+      callback(null, 0);
+      return;
+    }
+    const tokens = Object.values(val).map((v) => v && v.token).filter(Boolean);
+    if (tokens.length === 0) {
+      callback(null, 0);
+      return;
+    }
+    const messaging = firebaseAdmin.messaging();
+    let sent = 0;
+    const next = (i) => {
+      if (i >= tokens.length) {
+        callback(null, sent);
+        return;
+      }
+      messaging.send({
+        token: tokens[i],
+        notification: { title, body }
+      }).then(() => { sent++; next(i + 1); }).catch(() => { next(i + 1); });
+    };
+    next(0);
+  }, (err) => callback(err));
+}
+
 const server = http.createServer((req, res) => {
   const requestPath = (req.url || "/").split("?")[0];
 
@@ -120,6 +166,46 @@ const server = http.createServer((req, res) => {
         }
         res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
         res.end(JSON.stringify({ success: true }));
+      });
+    });
+    return;
+  }
+
+  if (requestPath === "/api/sensor-event" && req.method === "POST") {
+    setCors(res, req);
+    let body = "";
+    req.on("data", (chunk) => { body += chunk; });
+    req.on("end", () => {
+      let parsed = {};
+      try {
+        parsed = JSON.parse(body || "{}");
+      } catch (e) {
+        res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({ error: "Invalid JSON" }));
+        return;
+      }
+      const uid = parsed.uid || parsed.userId;
+      const deviceId = parsed.deviceId || parsed.sensorId;
+      const state = parsed.state;
+      const deviceName = parsed.deviceName || deviceId || "Сензор";
+      if (!uid) {
+        res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({ error: "Missing uid" }));
+        return;
+      }
+      const isOpen = state === "open" || state === true;
+      const title = "Aura HomeSystems";
+      const bodyText = isOpen
+        ? deviceName + " е отворен(а)."
+        : deviceName + " е затворен(а).";
+      sendPushToUser(uid, title, bodyText, (err, sent) => {
+        if (err) {
+          res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify({ error: err.message }));
+          return;
+        }
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({ success: true, sent }));
       });
     });
     return;

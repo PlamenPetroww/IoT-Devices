@@ -1,5 +1,5 @@
-# Firebase конфигурация – съдържа API ключове, не се комитва
-firebase-config.js
+# Firebase конфигурация за клиента (Firebase/RTDB + VAPID за push)
+# Сложена е в репото, за да не 404-ва на Netlify.
 
 # Локални / временни файлове
 .DS_Store

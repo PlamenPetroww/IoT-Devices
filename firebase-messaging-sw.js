@@ -19,6 +19,15 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 
+// Make this service worker take control of uncontrolled pages ASAP.
+self.addEventListener("install", (event) => {
+  event.waitUntil(self.skipWaiting());
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(self.clients.claim());
+});
+
 firebase.messaging().onBackgroundMessage((payload) => {
   console.log("[firebase-messaging-sw] onBackgroundMessage payload:", payload);
   // Support both notification and data payloads.

@@ -38,3 +38,28 @@ firebase.messaging().onBackgroundMessage((payload) => {
     return null;
   }
 });
+
+// Fallback: handle raw 'push' event in case Firebase background handler
+// doesn't get triggered by the DevTools "Push test message".
+self.addEventListener("push", (event) => {
+  try {
+    const raw = event.data ? event.data.text() : "";
+    let payload = {};
+    try {
+      payload = raw ? JSON.parse(raw) : {};
+    } catch (parseErr) {
+      payload = { raw };
+    }
+
+    const data = payload && payload.data ? payload.data : payload || {};
+    const title = data.title || (payload.notification && payload.notification.title) || "Aura HomeSystems";
+    const body = data.body || (payload.notification && payload.notification.body) || "";
+
+    console.log("[firebase-messaging-sw] raw push fallback payload:", payload);
+
+    const options = { body, icon: "/favicon.png", tag: "aura-push" };
+    event.waitUntil(self.registration.showNotification(title, options));
+  } catch (e) {
+    console.error("[firebase-messaging-sw] push fallback failed:", e);
+  }
+});

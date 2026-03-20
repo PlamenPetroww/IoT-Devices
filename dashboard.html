@@ -365,7 +365,6 @@
                   swReg = await navigator.serviceWorker.register(
                     "/firebase-messaging-sw.js"
                   );
-                  messaging.useServiceWorker(swReg);
                 } catch (swErr) {
                   console.warn(
                     "Service worker registration failed:",

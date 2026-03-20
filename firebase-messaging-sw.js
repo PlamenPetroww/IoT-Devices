@@ -20,8 +20,15 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 
 firebase.messaging().onBackgroundMessage((payload) => {
-  const title = (payload.notification && payload.notification.title) || "Aura HomeSystems";
-  const body = (payload.notification && payload.notification.body) || "";
+  // Support both notification and data payloads.
+  const title =
+    (payload.notification && payload.notification.title) ||
+    (payload.data && payload.data.title) ||
+    "Aura HomeSystems";
+  const body =
+    (payload.notification && payload.notification.body) ||
+    (payload.data && payload.data.body) ||
+    "";
   const options = { body, icon: "/favicon.png" };
   return self.registration.showNotification(title, options);
 });

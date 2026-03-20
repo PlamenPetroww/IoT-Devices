@@ -137,7 +137,12 @@ function sendPushToUser(uid, title, body, callback) {
       }
       messaging.send({
         token: tokens[i],
-        notification: { title, body }
+        // Send as data message so the service worker can reliably show
+        // the notification via onBackgroundMessage.
+        data: {
+          title: String(title || "Aura HomeSystems"),
+          body: String(body || "")
+        }
       }).then(() => { sent++; next(i + 1); }).catch(() => { next(i + 1); });
     };
     next(0);

@@ -96,7 +96,16 @@ try {
   if (saJson && typeof saJson === "string") {
     const serviceAccount = JSON.parse(saJson);
     firebaseAdmin = require("firebase-admin");
-    firebaseAdmin.initializeApp({ credential: firebaseAdmin.credential.cert(serviceAccount) });
+    // RTDB access requires databaseURL in firebase-admin initialization.
+    // Set it in Render env as FIREBASE_DATABASE_URL.
+    const databaseURL =
+      process.env.FIREBASE_DATABASE_URL ||
+      process.env.FIREBASE_DB_URL ||
+      undefined;
+    firebaseAdmin.initializeApp({
+      credential: firebaseAdmin.credential.cert(serviceAccount),
+      databaseURL,
+    });
     firebaseDb = firebaseAdmin.database();
   }
 } catch (e) {

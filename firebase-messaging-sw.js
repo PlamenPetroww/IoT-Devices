@@ -20,6 +20,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 
 firebase.messaging().onBackgroundMessage((payload) => {
+  console.log("[firebase-messaging-sw] onBackgroundMessage payload:", payload);
   // Support both notification and data payloads.
   const title =
     (payload.notification && payload.notification.title) ||
@@ -29,6 +30,11 @@ firebase.messaging().onBackgroundMessage((payload) => {
     (payload.notification && payload.notification.body) ||
     (payload.data && payload.data.body) ||
     "";
-  const options = { body, icon: "/favicon.png" };
-  return self.registration.showNotification(title, options);
+  const options = { body, icon: "/favicon.png", tag: "aura-push" };
+  try {
+    return self.registration.showNotification(title, options);
+  } catch (e) {
+    console.error("[firebase-messaging-sw] showNotification failed:", e);
+    return null;
+  }
 });

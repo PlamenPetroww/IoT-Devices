@@ -372,6 +372,21 @@
                   );
                 }
               }
+              // Ensure the SW controls this page instance.
+              // Sometimes controller stays null until the next reload after activation.
+              if (
+                swReg &&
+                "serviceWorker" in navigator &&
+                !navigator.serviceWorker.controller
+              ) {
+                // Prevent infinite reload loops.
+                if (!sessionStorage.getItem("swReloadedOnce")) {
+                  sessionStorage.setItem("swReloadedOnce", "1");
+                  await navigator.serviceWorker.ready;
+                  window.location.reload();
+                  return;
+                }
+              }
               // Foreground handler (when dashboard tab is open and focused).
               // Background notifications are handled by firebase-messaging-sw.js.
               if (messaging && messaging.onMessage) {

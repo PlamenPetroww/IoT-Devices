@@ -10,7 +10,9 @@ const ALLOWED_ORIGINS = [
   "https://aurahomesystems.eu",
   "https://www.aurahomesystems.eu",
   "http://localhost:8888",
-  "http://127.0.0.1:8888"
+  "http://127.0.0.1:8888",
+  "http://localhost:3000",
+  "http://127.0.0.1:3000"
 ];
 
 const MIME_TYPES = {
@@ -240,6 +242,24 @@ const server = http.createServer((req, res) => {
       return;
     }
 
+    // Same as Netlify "Pretty URLs": /login -> login.html, /register -> register.html
+    if (path.extname(normalizedPath) === "") {
+      const htmlCandidate = safeJoin(ROOT, normalizedPath + ".html");
+      if (htmlCandidate) {
+        fs.stat(htmlCandidate, (htmlErr, htmlStats) => {
+          if (!htmlErr && htmlStats.isFile()) {
+            sendFile(res, htmlCandidate);
+            return;
+          }
+          sendIndexFallback();
+        });
+        return;
+      }
+    }
+
+    sendIndexFallback();
+
+    function sendIndexFallback() {
     const fallbackPath = path.join(ROOT, "index.html");
     fs.stat(fallbackPath, (fallbackErr, fallbackStats) => {
       if (!fallbackErr && fallbackStats.isFile()) {
@@ -250,6 +270,7 @@ const server = http.createServer((req, res) => {
       res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
       res.end("Not found");
     });
+    }
   });
 });
 

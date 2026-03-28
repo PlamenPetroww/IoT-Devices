@@ -3,6 +3,31 @@
   command = "echo Static site"
   publish = "."
 
+# HTTP → HTTPS и каноничен домейн (Lighthouse „redirects HTTP to HTTPS“)
+[[redirects]]
+  from = "http://aurahomesystems.eu/*"
+  to = "https://aurahomesystems.eu/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "http://www.aurahomesystems.eu/*"
+  to = "https://aurahomesystems.eu/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "https://www.aurahomesystems.eu/*"
+  to = "https://aurahomesystems.eu/:splat"
+  status = 301
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains"
+
 # Опционално: пренасочване за SPA (ако ползваш router)
 # [[redirects]]
 #   from = "/*"

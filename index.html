@@ -155,7 +155,7 @@
                     </div>
                     <div class="push-notification push-notification-alert" role="presentation">
                       <div class="push-notification-icon" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22c4 0 5-2 5-6v-1a7 7 0 0 0-14 0v1c0 4 1 6 5 6z"/><circle cx="12" cy="5" r="2"/></svg>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 22c4 0 5-2 5-6v-1a7 7 0 0 0-14 0v1c0 4 1 6 5 6z"/><circle cx="12" cy="5" r="2"/></svg>
                       </div>
                       <div class="push-notification-content">
                         <div class="push-notification-header">
@@ -282,12 +282,15 @@
               <article class="product-card">
                 <div class="product-icon product-icon-door" aria-hidden="true">
                   <svg
+                    width="48"
+                    height="48"
                     viewBox="0 0 48 48"
                     fill="none"
                     stroke="currentColor"
                     stroke-width="1.8"
                     stroke-linecap="round"
                     stroke-linejoin="round"
+                    aria-hidden="true"
                   >
                     <rect x="6" y="4" width="26" height="40" rx="2" />
                     <line x1="32" y1="4" x2="32" y2="44" />
@@ -303,12 +306,15 @@
               <article class="product-card">
                 <div class="product-icon product-icon-app" aria-hidden="true">
                   <svg
+                    width="48"
+                    height="48"
                     viewBox="0 0 48 48"
                     fill="none"
                     stroke="currentColor"
                     stroke-width="1.8"
                     stroke-linecap="round"
                     stroke-linejoin="round"
+                    aria-hidden="true"
                   >
                     <rect x="12" y="4" width="24" height="40" rx="4" />
                     <line x1="20" y1="8" x2="28" y2="8" />
@@ -893,17 +899,7 @@
           <form id="buyPanelForm" class="buy-panel-form">
             <input type="hidden" name="_subject" value="Direct order" />
             <input type="hidden" name="orderType" value="direct" />
-            <label class="form-label form-label-shipping-zone">
-              <span class="form-label-text" data-i18n="buyPanel.shippingCountryLabel">Държава / регион за доставка</span>
-              <select id="buyShippingZone" class="form-input form-select" aria-describedby="buySummaryDeliveryEstimate">
-                <option value="" data-i18n="buyPanel.shippingZoneChoose">Изберете</option>
-                <option value="BG" data-i18n="buyPanel.shippingZone_BG">България</option>
-                <option value="EU" data-i18n="buyPanel.shippingZone_EU">ЕС (други страни)</option>
-                <option value="UK_CH_NO" data-i18n="buyPanel.shippingZone_UK_CH_NO">Обединено кралство / Швейцария / Норвегия</option>
-                <option value="US_CA" data-i18n="buyPanel.shippingZone_US_CA">САЩ / Канада</option>
-                <option value="WORLD" data-i18n="buyPanel.shippingZone_WORLD">Останал свят</option>
-              </select>
-            </label>
+            <input type="hidden" id="buyShippingZone" value="" />
             <label class="form-label form-label-shipping-method" id="buyShippingMethodWrap" style="display: none;">
               <span class="form-label-text" data-i18n="buyPanel.shippingMethodLabel">Начин на доставка</span>
               <select id="buyShippingMethod" class="form-input form-select">
@@ -992,6 +988,7 @@
                 <label class="form-label">
                   <span class="form-label-text" data-i18n="buyPanel.paymentMethod">Начин на плащане</span>
                   <select
+                    id="buyPaymentMethod"
                     name="paymentMethod"
                     class="form-input form-select"
                     required
@@ -1015,20 +1012,67 @@
                     placeholder="@user или телефон"
                   />
                 </label>
+                <p class="buy-panel-play-note" data-i18n="buyPanel.playStoreCountriesNote">
+                  Доставка само в държави, в които Google Play е наличен (приложението е активно там).
+                </p>
                 <label class="form-label">
-                  <span class="form-label-text" data-i18n="form.deliveryAddress"
-                    >Адрес за доставка</span
+                  <span class="form-label-text" data-i18n="buyPanel.deliveryCountryLabel"
+                    >Държава за доставка</span
+                  >
+                  <select
+                    id="buyDeliveryCountry"
+                    name="deliveryCountry"
+                    class="form-input form-select"
+                    required
+                    autocomplete="country"
+                  >
+                    <option value="" data-i18n="buyPanel.shippingZoneChoose">Изберете</option>
+                  </select>
+                </label>
+                <label class="form-label">
+                  <span class="form-label-text" data-i18n="buyPanel.deliveryCityLabel">Град</span>
+                  <input
+                    type="text"
+                    name="deliveryCity"
+                    id="buyDeliveryCity"
+                    class="form-input"
+                    required
+                    maxlength="120"
+                    autocomplete="address-level2"
+                    data-i18n-placeholder="buyPanel.deliveryCityPlaceholder"
+                    placeholder="град"
+                  />
+                </label>
+                <label class="form-label">
+                  <span class="form-label-text" data-i18n="buyPanel.deliveryPostalLabel">Пощенски код</span>
+                  <input
+                    type="text"
+                    name="deliveryPostalCode"
+                    id="buyDeliveryPostal"
+                    class="form-input"
+                    maxlength="20"
+                    autocomplete="postal-code"
+                    data-i18n-placeholder="buyPanel.deliveryPostalPlaceholder"
+                    placeholder="пощ. код"
+                  />
+                </label>
+                <label class="form-label">
+                  <span class="form-label-text" data-i18n="buyPanel.deliveryStreetLabel"
+                    >Адрес (улица, номер, блок)</span
                   >
                   <input
                     type="text"
-                    name="deliveryAddress"
+                    name="deliveryStreet"
+                    id="buyDeliveryStreet"
                     class="form-input"
                     required
-                    maxlength="300"
-                    data-i18n-placeholder="form.deliveryAddressPlaceholder"
-                    placeholder="град, адрес, пощенски код"
+                    maxlength="240"
+                    autocomplete="street-address"
+                    data-i18n-placeholder="buyPanel.deliveryStreetPlaceholder"
+                    placeholder="ул., №, ет., ап."
                   />
                 </label>
+                <input type="hidden" name="deliveryAddress" id="buyDeliveryAddressCombined" value="" />
                 <label class="form-label">
                   <span class="form-label-text" data-i18n="form.phone"
                     >Телефон</span
@@ -1058,6 +1102,11 @@
               </div>
             </div>
             <p id="buyPanelStatus" class="form-status" aria-live="polite"></p>
+            <div
+              id="buyRevolutPayMount"
+              class="buy-revolut-pay-mount"
+              hidden
+            ></div>
             <button
               type="submit"
               class="cta-primary-link cta-submit"

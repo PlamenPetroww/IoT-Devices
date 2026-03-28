@@ -58,3 +58,9 @@
 - functions/index.js – използва Realtime Database (pendingInquiries), не Firestore. submitInquiry записва и изпраща имейл за потвърждение; confirmInquiry маркира и изпраща към теб.
 - confirm-inquiry.html – страницата, която се отваря при клик на линка; вика confirmInquiry и показва резултата.
 - inquiry-config.js – тук задаваш INQUIRY_FUNCTIONS_BASE_URL.
+
+--- Локален server.js (имейл „потвърждение на поръчка“ за direct order) ---
+- При `npm start` / `node server.js` ключът се чете от средата или от файл `.env` в корена на проекта (вече е в .gitignore).
+- В `.env` добавете поне: RESEND_API_KEY=re_...
+- По желание: RESEND_FROM_EMAIL=имейл@верифициран-домейн (иначе по подразбиране е onboarding@resend.dev; на безплатния план често може да се праща само към верифициран получател).
+- Ако ключът липсва, в конзолата на сървъра ще има предупреждение `[Resend] Пропускаме имейл до клиента` – UI пак може да покаже успех, защото Formspree е минал.

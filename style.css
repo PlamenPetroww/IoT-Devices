@@ -2442,6 +2442,29 @@ main {
     min-height: 100px;
 }
 
+.buy-panel-play-note {
+    margin: 0 0 10px;
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--text-muted, rgba(255, 255, 255, 0.72));
+}
+
+.buy-revolut-pay-mount {
+    margin-top: 8px;
+    width: 100%;
+    max-width: 320px;
+    min-height: 48px;
+    align-self: center;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: center;
+}
+
+.buy-revolut-pay-mount[hidden] {
+    display: none !important;
+}
+
 .cta-submit {
     margin-top: 8px;
     cursor: pointer;

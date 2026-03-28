@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="bg">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Изтриване на акаунт – Aura HomeSystems</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Постоянно изтриване на вашия Aura HomeSystems акаунт и свързаните данни."
+    />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="stylesheet" href="auth.css" />
+  </head>
+  <body class="auth-page">
+    <div class="auth-box delete-account-box">
+      <h1>Aura HomeSystems</h1>
+      <p class="subtitle">Изтриване на акаунт</p>
+
+      <div id="stateLoggedOut" class="delete-account-state" style="display: none">
+        <p class="delete-account-info">
+          За да изтриете акаунта си, влезте с имейл и парола. След това ще
+          потвърдите изтриването на тази страница.
+        </p>
+        <p class="auth-links">
+          <a href="login.html?next=delete-account.html">Вход</a>
+          ·
+          <a href="register.html">Регистрация</a>
+        </p>
+      </div>
+
+      <div id="stateLoggedIn" class="delete-account-state" style="display: none">
+        <div class="delete-account-warning" role="alert">
+          <strong>Внимание:</strong> това действие е <strong>необратимо</strong>.
+          Ще бъдат изтрити акаунтът ви, данните в таблото (сензори, история, push
+          токени) и няма да можете да ги възстановите.
+        </div>
+        <p class="delete-account-email">
+          Влезли сте като: <strong id="deleteEmail"></strong>
+        </p>
+        <form id="deleteForm" class="auth-form" autocomplete="off">
+          <div id="deleteError" class="auth-error"></div>
+          <label for="confirmPassword">Парола (за потвърждение)</label>
+          <input
+            type="password"
+            id="confirmPassword"
+            name="confirmPassword"
+            required
+            minlength="6"
+            autocomplete="current-password"
+            placeholder="••••••••"
+          />
+          <button type="submit" id="deleteSubmitBtn" class="btn-delete-account">
+            Постоянно изтриване на акаунта
+          </button>
+        </form>
+      </div>
+
+      <p class="auth-links">
+        <a href="index.html">← Към началната страница</a>
+      </p>
+      <p class="auth-footer">
+        <a href="privacy.html">Политика за поверителност</a>
+        ·
+        <a href="impressum.html">Импресум</a>
+      </p>
+    </div>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script>
+      const auth = firebase.auth();
+      const db = firebase.database();
+      const stateOut = document.getElementById("stateLoggedOut");
+      const stateIn = document.getElementById("stateLoggedIn");
+      const errorEl = document.getElementById("deleteError");
+      const form = document.getElementById("deleteForm");
+
+      function showError(msg) {
+        errorEl.textContent = msg || "";
+        errorEl.classList.toggle("visible", !!msg);
+      }
+
+      auth.onAuthStateChanged(function (user) {
+        if (!user) {
+          stateOut.style.display = "block";
+          stateIn.style.display = "none";
+          return;
+        }
+        stateOut.style.display = "none";
+        stateIn.style.display = "block";
+        document.getElementById("deleteEmail").textContent = user.email || "";
+      });
+
+      form.addEventListener("submit", async function (e) {
+        e.preventDefault();
+        showError("");
+        const user = auth.currentUser;
+        if (!user) {
+          showError("Няма активна сесия. Влезте отново.");
+          return;
+        }
+        const password = document.getElementById("confirmPassword").value;
+        if (!password) {
+          showError("Въведете паролата си.");
+          return;
+        }
+        if (
+          !window.confirm(
+            "Сигурни ли сте? Акаунтът и всички данни ще бъдат изтрити завинаги.",
+          )
+        ) {
+          return;
+        }
+        const btn = document.getElementById("deleteSubmitBtn");
+        btn.disabled = true;
+        btn.textContent = "Изтриване...";
+        try {
+          const cred = firebase.auth.EmailAuthProvider.credential(
+            user.email,
+            password,
+          );
+          await user.reauthenticateWithCredential(cred);
+          await db.ref("users/" + user.uid).remove();
+          await user.delete();
+          window.location.href = "index.html?accountDeleted=1";
+        } catch (err) {
+          if (
+            err.code === "auth/wrong-password" ||
+            err.code === "auth/invalid-credential"
+          ) {
+            showError("Грешна парола.");
+          } else if (err.code === "auth/requires-recent-login") {
+            showError(
+              "От съображения за сигурност влезте отново и опитайте пак.",
+            );
+          } else {
+            showError(err.message || "Грешка при изтриване.");
+          }
+          btn.disabled = false;
+          btn.textContent = "Постоянно изтриване на акаунта";
+        }
+      });
+    </script>
+  </body>
+</html>

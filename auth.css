@@ -43,6 +43,32 @@
     color: #e5e7eb;
 }
 
+.auth-field-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 6px;
+}
+
+.auth-field-row label {
+    margin-bottom: 0;
+}
+
+.auth-forgot-link {
+    flex-shrink: 0;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #f9fafb;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.auth-forgot-link:hover {
+    text-decoration: underline;
+    color: #fff;
+}
+
 .auth-form input {
     width: 100%;
     padding: 12px 14px;
@@ -100,6 +126,21 @@
 }
 
 .auth-error.visible {
+    display: block;
+}
+
+.auth-success {
+    margin-bottom: 16px;
+    padding: 10px 12px;
+    background: rgba(34, 197, 94, 0.12);
+    border: 1px solid rgba(34, 197, 94, 0.45);
+    border-radius: 8px;
+    color: #bbf7d0;
+    font-size: 0.9rem;
+    display: none;
+}
+
+.auth-success.visible {
     display: block;
 }
 
@@ -273,6 +314,68 @@
 
 .logout-btn:hover {
     background: rgba(248, 113, 113, 0.25);
+}
+
+.dashboard-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.delete-account-link {
+    font-size: 0.85rem;
+    color: #94a3b8;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.delete-account-link:hover {
+    color: #fecaca;
+    text-decoration: underline;
+}
+
+.delete-account-box .delete-account-info,
+.delete-account-box .delete-account-email {
+    font-size: 0.9rem;
+    color: #9ca3af;
+    line-height: 1.5;
+    margin: 0 0 16px;
+}
+
+.delete-account-warning {
+    padding: 12px 14px;
+    margin-bottom: 16px;
+    background: rgba(248, 113, 113, 0.12);
+    border: 1px solid rgba(248, 113, 113, 0.45);
+    border-radius: 10px;
+    color: #fecaca;
+    font-size: 0.88rem;
+    line-height: 1.45;
+}
+
+.btn-delete-account {
+    width: 100%;
+    padding: 14px;
+    margin-top: 8px;
+    border: 1px solid rgba(248, 113, 113, 0.6);
+    border-radius: 10px;
+    background: rgba(185, 28, 28, 0.35);
+    color: #fecaca;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, filter 0.2s;
+}
+
+.btn-delete-account:hover:not(:disabled) {
+    background: rgba(185, 28, 28, 0.5);
+    filter: brightness(1.05);
+}
+
+.btn-delete-account:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 .mode-card {

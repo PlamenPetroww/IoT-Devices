@@ -41,6 +41,27 @@
 Страници:
 - login.html   – Вход (имейл + парола)
 - register.html – Регистрация (създаване на профил)
+- reset-password.html – Смяна на парола от линка в имейла (нова парола + потвърждение)
 - dashboard.html – Табло след вход: режим У дома / Навън и списък сензори. Бутон „Изход“.
 
 От главната страница (index.html) връзката „Вход“ в навигацията води до login.html.
+
+6. Имейл „Забравена парола“ (password reset) – английски текст + две полета за парола
+   - Писмото изпраща Firebase. В login.html преди изпращане се задава languageCode = „en“, за да е текстът в имейла на английски.
+   - Линкът в имейла трябва да отваря reset-password.html с параметри mode=resetPassword и oobCode=… Затова в Firebase Console:
+     Authentication → Templates → Password reset → редактиране (молив)
+     → „Customize action URL“ / поле за Action URL: пълният адрес към reset-password.html, напр.:
+       https://aurahomesystems.eu/reset-password.html
+     (за локален тест временно може http://localhost:3000/reset-password.html – шаблонът позволява един URL; за production върнете production адреса.)
+   - В същия шаблон изберете език English за съдържанието на имейла, ако има избор.
+   - В кода sendPasswordResetEmail подава същия handler URL (reset-password.html) чрез actionCodeSettings.url – доменът трябва да е в Authorized domains.
+   - Authentication → Settings → Authorized domains: localhost, вашият production домейн и др.
+   - Ако Action URL остане по подразбиране, линкът отваря страницата на Firebase с едно поле за парола – нашата reset-password.html няма да се ползва.
+   - Проверете „Спам“; при липса на писмо – тест от Authentication → Users → Reset password.
+   - Защита „Email enumeration“: при грешен имейл понякога няма писмо, но няма и ясна грешка – ползвайте точния имейл от Users.
+
+   Линкът в спам не се отваря с клик, но работи при копиране в браузър
+   - Това не е грешка в сайта: в папка „Спам“/„Нежелана поща“ много клиенти (Gmail, Outlook, Yahoo) изключват активните линкове. Кликът „не прави нищо“; копирането на пълния URL в Chrome/Firefox работи.
+   - Решения: маркирайте подателя като „Не е спам“ / преместете писмото във входящи и опитайте отново; или винаги копирайте линка.
+   - Action URL в шаблона трябва да е пълен адрес с https:// и домейна ви (не относителен път), напр. https://aurahomesystems.eu/reset-password.html
+   - В редактора на същия шаблон (Password reset) добавете под бутона абзац с видим пълен линк за копиране, напр. текст: „If the button does not work, copy this link:“ и на следния ред само %LINK% (Firebase замества с реалния URL). Така при блокиран клик в спам потребителят копира адреса от текста.

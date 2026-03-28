@@ -4,8 +4,8 @@
  * (от Firebase Console → Project settings → Your apps).
  */
 importScripts(
-  "https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js",
-  "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js"
+  "https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js",
+  "https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-compat.js"
 );
 
 const firebaseConfig = {
@@ -29,7 +29,6 @@ self.addEventListener("activate", (event) => {
 });
 
 firebase.messaging().onBackgroundMessage((payload) => {
-  console.log("[firebase-messaging-sw] onBackgroundMessage payload:", payload);
   // Support both notification and data payloads.
   const title =
     (payload.notification && payload.notification.title) ||
@@ -63,8 +62,6 @@ self.addEventListener("push", (event) => {
     const data = payload && payload.data ? payload.data : payload || {};
     const title = data.title || (payload.notification && payload.notification.title) || "Aura HomeSystems";
     const body = data.body || (payload.notification && payload.notification.body) || "";
-
-    console.log("[firebase-messaging-sw] raw push fallback payload:", payload);
 
     const options = { body, icon: "/favicon.png", tag: "aura-push" };
     event.waitUntil(self.registration.showNotification(title, options));

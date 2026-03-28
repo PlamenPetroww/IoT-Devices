@@ -26,6 +26,36 @@ function escapeHtml(s) {
         .replace(/"/g, "&quot;");
 }
 
+function directOrderSummaryListHtml(data) {
+    const q = escapeHtml((data.quantity || "").toString().trim());
+    const pm = escapeHtml((data.paymentMethod || "").toString().trim());
+    const addr = escapeHtml((data.deliveryAddress || "").toString().trim());
+    const phone = escapeHtml((data.phone || "").toString().trim());
+    const rev = data.revolutId ? escapeHtml(String(data.revolutId).trim()) : "";
+    return `
+    <ul style="margin:12px 0;padding-left:20px;line-height:1.6">
+      <li><strong>Брой сензори:</strong> ${q || "—"}</li>
+      <li><strong>Начин на плащане:</strong> ${pm || "—"}</li>
+      ${rev ? `<li><strong>Revolut:</strong> ${rev}</li>` : ""}
+      <li><strong>Адрес за доставка:</strong> ${addr || "—"}</li>
+      ${phone ? `<li><strong>Телефон:</strong> ${phone}</li>` : ""}
+    </ul>`;
+}
+
+function customerDirectOrderConfirmationEmailHtml(data) {
+    return `<!DOCTYPE html>
+<html lang="bg">
+<head><meta charset="UTF-8" /></head>
+<body style="font-family:system-ui,sans-serif;line-height:1.55;color:#1a1a1a;max-width:560px">
+  <p>Здравейте,</p>
+  <p>Поръчката ви до <strong>${escapeHtml(SITE_NAME)}</strong> е <strong>потвърдена</strong>. Резюме:</p>
+  ${directOrderSummaryListHtml(data)}
+  <p>Ще се свържем с вас при необходимост относно плащане и изпращане.</p>
+  <p>Поздрави,<br/><strong>${escapeHtml(SITE_NAME)}</strong></p>
+</body>
+</html>`;
+}
+
 function confirmHtml(success, message, baseUrl) {
     const title = success ? "Потвърдено" : "Грешка";
     const color = success ? "#22c55e" : "#f97373";
@@ -102,17 +132,25 @@ export const submitInquiry = onRequest(
             return;
         }
 
+        const isDirect = String(orderType || "").trim() === "direct";
+        const orderPendingBlock = isDirect
+            ? `<p><strong>Вашата директна поръчка</strong> (ще влезе в сила след потвърждение на имейла):</p>${directOrderSummaryListHtml(payload)}`
+            : "";
+
         try {
             await resend.emails.send({
                 from: FROM_EMAIL,
                 to: email.trim(),
-                subject: `Потвърдете запитването си – ${SITE_NAME}`,
+                subject: isDirect
+                    ? `Потвърдете поръчката си – ${SITE_NAME}`
+                    : `Потвърдете запитването си – ${SITE_NAME}`,
                 html: `
                   <p>Здравейте,</p>
-                  <p>Получихме вашето запитване до ${SITE_NAME}. Моля, потвърдете имейла си като кликнете на линка по-долу:</p>
+                  <p>Получихме вашето ${isDirect ? "поръчка" : "запитване"} до ${SITE_NAME}. Моля, потвърдете имейла си като кликнете на линка по-долу:</p>
                   <p><a href="${confirmUrl}">${confirmUrl}</a></p>
-                  <p>След потвърждението ние ще получим вашето съобщение и ще ви отговорим.</p>
-                  <p>Ако не сте изпращали запитване, просто игнорирайте този имейл.</p>
+                  ${orderPendingBlock}
+                  <p>След потвърждението ние ще получим вашето съобщение${isDirect ? " и ще обработим поръчката" : ""} и ще се свържем при нужда.</p>
+                  <p>Ако не сте изпращали ${isDirect ? "поръчка" : "запитване"}, просто игнорирайте този имейл.</p>
                   <p>Поздрави,<br/>${SITE_NAME}</p>
                 `,
             });
@@ -187,6 +225,18 @@ export const confirmInquiry = onRequest(
                 });
             } catch (e) {
                 console.error("Resend forward error", e);
+            }
+            if (data.orderType === "direct" && data.email) {
+                try {
+                    await resend.emails.send({
+                        from: FROM_EMAIL,
+                        to: String(data.email).trim(),
+                        subject: `Вашата поръчка е потвърдена – ${SITE_NAME}`,
+                        html: customerDirectOrderConfirmationEmailHtml(data),
+                    });
+                } catch (e) {
+                    console.error("Resend customer order confirmation error", e);
+                }
             }
         }
 

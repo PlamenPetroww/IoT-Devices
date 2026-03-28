@@ -24,6 +24,25 @@
     box-sizing: border-box;
 }
 
+.skip-link {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    z-index: 10000;
+    padding: 12px 20px;
+    background: #022c22;
+    color: #bbf7d0;
+    font-weight: 600;
+    text-decoration: none;
+    border-radius: 0 0 10px 10px;
+}
+
+.skip-link:focus {
+    left: 12px;
+    outline: 2px solid #4ade80;
+    outline-offset: 2px;
+}
+
 body {
     margin: 0;
     min-height: 100vh;
@@ -31,6 +50,11 @@ body {
     background: radial-gradient(circle at top, #1f2937 0, #020617 55%, #000 100%);
     color: var(--text);
     overflow-x: hidden;
+}
+
+#main-content:focus {
+    outline: 2px solid var(--accent-strong);
+    outline-offset: 4px;
 }
 
 .page {

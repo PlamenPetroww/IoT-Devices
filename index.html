@@ -3,11 +3,18 @@
   <head>
     <meta charset="UTF-8" />
     <title>Aura HomeSystems</title>
+    <meta
+      name="description"
+      content="Aura HomeSystems – безжични сензори за прозорци и врати, push известия и приложение. Защита на дома, когато никой не е вкъщи."
+    />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/png" href="favicon.png" />
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
+    <a href="#main-content" class="skip-link" data-i18n="a11y.skipToContent"
+      >Към основното съдържание</a
+    >
     <div class="page">
       <header class="site-header">
         <div class="logo">Aura <span>Home</span>Systems</div>
@@ -111,7 +118,7 @@
         </nav>
         <div class="menu-backdrop" id="menuBackdrop" aria-hidden="true"></div>
       </header>
-      <main>
+      <main id="main-content" tabindex="-1">
         <section id="hero" class="hero">
           <div class="hero-text">
             <p class="eyebrow" data-i18n="hero.eyebrow">
@@ -953,8 +960,17 @@
               </div>
               <div class="buy-panel-payment">
                 <div class="buy-panel-quantity">
-                  <span class="form-label-text" data-i18n="buyPanel.quantity">Брой</span>
-                  <div class="quantity-stepper">
+                  <span
+                    class="form-label-text"
+                    id="buyQtyLabel"
+                    data-i18n="buyPanel.quantity"
+                    >Брой</span
+                  >
+                  <div
+                    class="quantity-stepper"
+                    role="group"
+                    aria-labelledby="buyQtyLabel"
+                  >
                     <button
                       type="button"
                       class="quantity-btn"
@@ -973,6 +989,7 @@
                       max="99"
                       value="1"
                       readonly
+                      aria-labelledby="buyQtyLabel"
                     />
                     <button
                       type="button"

@@ -1,6 +1,8 @@
 const translations = {
     bg: {
         nav: { problem: "Проблем", solution: "Решение", product: "Продукт", advantages: "Предимства", compatibility: "Съвместимост", pricing: "Цени", faq: "FAQ", stats: "Резултати", cta: "Започни", login: "Вход", register: "Регистрация", more: "Още" },
+        a11y: { skipToContent: "Към основното съдържание" },
+        seo: { metaDescription: "Aura HomeSystems – безжични сензори за прозорци и врати, push известия и приложение. Защита на дома, когато никой не е вкъщи." },
         hero: {
             eyebrow: "Когато никой не е у дома...",
             title: "Aura HomeSystems пази дома ти, когато е празен.",
@@ -289,6 +291,8 @@ const translations = {
     },
     en: {
         nav: { problem: "Problem", solution: "Solution", product: "Product", advantages: "Advantages", compatibility: "Compatibility", pricing: "Pricing", faq: "FAQ", stats: "Results", cta: "Get started", login: "Login", register: "Register", more: "More" },
+        a11y: { skipToContent: "Skip to main content" },
+        seo: { metaDescription: "Aura HomeSystems – wireless window and door sensors, push alerts and mobile app. Protect your home when nobody is there." },
         hero: {
             eyebrow: "When nobody's home...",
             title: "Aura HomeSystems keeps your home safe when it's empty.",
@@ -577,6 +581,8 @@ const translations = {
     },
     de: {
         nav: { problem: "Problem", solution: "Lösung", product: "Produkt", advantages: "Vorteile", compatibility: "Kompatibilität", pricing: "Preise", faq: "FAQ", stats: "Ergebnisse", cta: "Loslegen", login: "Anmelden", register: "Registrieren", more: "Mehr" },
+        a11y: { skipToContent: "Zum Hauptinhalt springen" },
+        seo: { metaDescription: "Aura HomeSystems – drahtlose Fenster- und Türsensoren, Push-Benachrichtigungen und App. Schutz für Ihr Zuhause, wenn niemand da ist." },
         hero: {
             eyebrow: "Wenn niemand zu Hause ist...",
             title: "Aura HomeSystems schützt Ihr Zuhause, wenn es leer steht.",

@@ -2,6 +2,12 @@ function applyLanguage(lang) {
     if (!translations[lang]) lang = "bg";
     document.documentElement.lang = lang === "de" ? "de" : lang === "en" ? "en" : "bg";
 
+    const metaDesc = document.querySelector('meta[name="description"]');
+    if (metaDesc) {
+        const md = getTranslation(lang, "seo.metaDescription");
+        if (md && md !== "seo.metaDescription") metaDesc.setAttribute("content", md);
+    }
+
     document.querySelectorAll("[data-i18n]").forEach((el) => {
         const key = el.getAttribute("data-i18n");
         const t = getTranslation(lang, key);

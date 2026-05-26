@@ -42,8 +42,8 @@ function loadShippingZones() {
   }
 }
 
-const UNIT_PRICE_EUR = 69;
-const BUNDLES = { 1: 69, 3: 189, 5: 299 };
+const UNIT_PRICE_EUR = 59;
+const BUNDLES = { 1: 59, 3: 159, 5: 249 };
 const BGN_TO_EUR = 1.95583;
 
 function getTotalForQtyOrder(q) {
@@ -242,6 +242,108 @@ function sendResendEmail(apiKey, payloadObj, callback) {
   req.end();
 }
 
+const PASSWORD_RESET_CONTINUE_URL =
+  process.env.PASSWORD_RESET_CONTINUE_URL || "https://aurahomesystems.eu/reset-password.html";
+
+function buildPasswordResetEmail(lang, resetLink) {
+  const safeLink = escapeHtmlEmail(resetLink);
+  const templates = {
+    bg: {
+      subject: "Нова парола – Aura HomeSystems",
+      html:
+        "<!DOCTYPE html><html lang=\"bg\"><head><meta charset=\"UTF-8\"></head>" +
+        "<body style=\"font-family:system-ui,sans-serif;line-height:1.55;color:#1a1a1a;max-width:560px\">" +
+        "<p>Здравейте,</p>" +
+        "<p>Поискахте смяна на парола за <strong>Aura HomeSystems</strong>.</p>" +
+        "<p><a href=\"" + safeLink + "\" style=\"display:inline-block;padding:12px 20px;background:#22c55e;color:#022c22;text-decoration:none;border-radius:8px;font-weight:600\">Задайте нова парола</a></p>" +
+        "<p style=\"font-size:0.9rem;color:#555\">Ако бутонът не работи, копирайте линка:<br><a href=\"" + safeLink + "\">" + safeLink + "</a></p>" +
+        "<p style=\"font-size:0.85rem;color:#777\">Ако не сте поискали това, игнорирайте имейла.</p>" +
+        "</body></html>",
+    },
+    en: {
+      subject: "Reset your password – Aura HomeSystems",
+      html:
+        "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"></head>" +
+        "<body style=\"font-family:system-ui,sans-serif;line-height:1.55;color:#1a1a1a;max-width:560px\">" +
+        "<p>Hello,</p>" +
+        "<p>You requested a password reset for <strong>Aura HomeSystems</strong>.</p>" +
+        "<p><a href=\"" + safeLink + "\" style=\"display:inline-block;padding:12px 20px;background:#22c55e;color:#022c22;text-decoration:none;border-radius:8px;font-weight:600\">Set a new password</a></p>" +
+        "<p style=\"font-size:0.9rem;color:#555\">If the button does not work, copy this link:<br><a href=\"" + safeLink + "\">" + safeLink + "</a></p>" +
+        "<p style=\"font-size:0.85rem;color:#777\">If you did not request this, you can ignore this email.</p>" +
+        "</body></html>",
+    },
+    de: {
+      subject: "Passwort zurücksetzen – Aura HomeSystems",
+      html:
+        "<!DOCTYPE html><html lang=\"de\"><head><meta charset=\"UTF-8\"></head>" +
+        "<body style=\"font-family:system-ui,sans-serif;line-height:1.55;color:#1a1a1a;max-width:560px\">" +
+        "<p>Guten Tag,</p>" +
+        "<p>Sie haben ein neues Passwort für <strong>Aura HomeSystems</strong> angefordert.</p>" +
+        "<p><a href=\"" + safeLink + "\" style=\"display:inline-block;padding:12px 20px;background:#22c55e;color:#022c22;text-decoration:none;border-radius:8px;font-weight:600\">Neues Passwort festlegen</a></p>" +
+        "<p style=\"font-size:0.9rem;color:#555\">Falls der Button nicht funktioniert, kopieren Sie den Link:<br><a href=\"" + safeLink + "\">" + safeLink + "</a></p>" +
+        "<p style=\"font-size:0.85rem;color:#777\">Wenn Sie das nicht angefordert haben, ignorieren Sie diese E-Mail.</p>" +
+        "</body></html>",
+    },
+  };
+  return templates[lang] || templates.bg;
+}
+
+function handlePasswordResetRequest(email, lang, callback) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!firebaseAdmin || !apiKey) {
+    callback(new Error("PASSWORD_RESET_NOT_CONFIGURED"));
+    return;
+  }
+  const emailNorm = String(email || "").trim().toLowerCase();
+  if (!emailNorm || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNorm)) {
+    callback(new Error("INVALID_EMAIL"));
+    return;
+  }
+  const auth = firebaseAdmin.auth();
+  const mailLang = lang === "en" || lang === "de" ? lang : "bg";
+  auth
+    .getUserByEmail(emailNorm)
+    .then(() =>
+      auth.generatePasswordResetLink(emailNorm, {
+        url: PASSWORD_RESET_CONTINUE_URL,
+        handleCodeInApp: false,
+      })
+    )
+    .then((link) => {
+      const content = buildPasswordResetEmail(mailLang, link);
+      const fromAddr = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
+      sendResendEmail(
+        apiKey,
+        {
+          from: fromAddr,
+          to: [emailNorm],
+          subject: content.subject,
+          html: content.html,
+        },
+        (err, status, body) => {
+          if (err) {
+            callback(err);
+            return;
+          }
+          if (status && status >= 400) {
+            console.error("[Resend] Password reset HTTP:", status, body || "");
+            callback(new Error("RESEND_SEND_FAILED"));
+            return;
+          }
+          console.log("[Resend] Password reset email sent to", emailNorm);
+          callback(null, true);
+        }
+      );
+    })
+    .catch((err) => {
+      if (err && err.code === "auth/user-not-found") {
+        callback(null, true);
+        return;
+      }
+      callback(err);
+    });
+}
+
 function maybeSendCustomerOrderConfirmation(parsed) {
   const key = process.env.RESEND_API_KEY;
   if (!key) {
@@ -312,12 +414,35 @@ function forwardToFormspree(body, callback) {
   req.end();
 }
 
+function parseServiceAccountJson(raw) {
+  if (!raw || typeof raw !== "string") return null;
+  let s = raw.trim();
+  if (
+    (s.startsWith('"') && s.endsWith('"')) ||
+    (s.startsWith("'") && s.endsWith("'"))
+  ) {
+    s = s.slice(1, -1).trim();
+  }
+  try {
+    return JSON.parse(s);
+  } catch (e1) {
+    return JSON.parse(s.replace(/\\n/g, "\n"));
+  }
+}
+
 let firebaseAdmin = null;
 let firebaseDb = null;
 try {
   const saJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-  if (saJson && typeof saJson === "string") {
-    const serviceAccount = JSON.parse(saJson);
+  if (saJson && typeof saJson === "string" && saJson.trim()) {
+    const serviceAccount = parseServiceAccountJson(saJson);
+    if (
+      serviceAccount &&
+      serviceAccount.private_key &&
+      typeof serviceAccount.private_key === "string"
+    ) {
+      serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, "\n");
+    }
     firebaseAdmin = require("firebase-admin");
     // RTDB access requires databaseURL in firebase-admin initialization.
     // Set it in Render env as FIREBASE_DATABASE_URL.
@@ -330,9 +455,35 @@ try {
       databaseURL,
     });
     firebaseDb = firebaseAdmin.database();
+  } else {
+    console.warn("[Aura] FIREBASE_SERVICE_ACCOUNT_JSON not set");
   }
 } catch (e) {
-  console.warn("Firebase Admin not configured (FIREBASE_SERVICE_ACCOUNT_JSON):", e.message);
+  console.warn("[Aura] Firebase Admin not configured:", e.message);
+}
+
+function logStartupConfig() {
+  const hasResend = !!(
+    process.env.RESEND_API_KEY && String(process.env.RESEND_API_KEY).trim()
+  );
+  const hasFirebaseJson = !!(
+    process.env.FIREBASE_SERVICE_ACCOUNT_JSON &&
+    String(process.env.FIREBASE_SERVICE_ACCOUNT_JSON).trim()
+  );
+  console.log(
+    "[Aura] password-reset ready:",
+    !!(firebaseAdmin && hasResend)
+  );
+  console.log(
+    "[Aura] firebase admin:",
+    !!firebaseAdmin,
+    hasFirebaseJson ? "(JSON present)" : "(JSON missing)"
+  );
+  console.log(
+    "[Aura] resend:",
+    hasResend ? "configured" : "missing RESEND_API_KEY"
+  );
+  console.log("[Aura] diagnostics: GET /api/health");
 }
 
 function sendPushToUser(uid, title, body, callback) {
@@ -504,6 +655,65 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  if (requestPath === "/api/health" && req.method === "GET") {
+    setCors(res, req);
+    const hasResend = !!(
+      process.env.RESEND_API_KEY && String(process.env.RESEND_API_KEY).trim()
+    );
+    res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+    res.end(
+      JSON.stringify({
+        ok: true,
+        passwordResetReady: !!(firebaseAdmin && hasResend),
+        firebaseAdmin: !!firebaseAdmin,
+        resend: hasResend,
+        passwordResetRoute: true,
+      })
+    );
+    return;
+  }
+
+  if (requestPath === "/api/password-reset" && req.method === "POST") {
+    setCors(res, req);
+    let body = "";
+    req.on("data", (chunk) => {
+      body += chunk;
+    });
+    req.on("end", () => {
+      let parsed = {};
+      try {
+        parsed = JSON.parse(body || "{}");
+      } catch (e) {
+        res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({ error: "Invalid JSON" }));
+        return;
+      }
+      const email = parsed.email;
+      const lang = String(parsed.lang || "bg").toLowerCase();
+      handlePasswordResetRequest(email, lang, (err) => {
+        if (err && err.message === "INVALID_EMAIL") {
+          res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify({ error: "Invalid email" }));
+          return;
+        }
+        if (err && err.message === "PASSWORD_RESET_NOT_CONFIGURED") {
+          res.writeHead(503, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify({ error: "Password reset service not configured" }));
+          return;
+        }
+        if (err) {
+          console.error("[password-reset]", err.message || err);
+          res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify({ error: "Send failed" }));
+          return;
+        }
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({ success: true }));
+      });
+    });
+    return;
+  }
+
   if (requestPath === "/api/sensor-event" && req.method === "POST") {
     setCors(res, req);
     let body = "";
@@ -593,4 +803,5 @@ const server = http.createServer((req, res) => {
 
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  logStartupConfig();
 });

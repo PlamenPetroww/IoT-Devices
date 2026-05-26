@@ -2,19 +2,27 @@
 <html lang="bg">
   <head>
     <meta charset="UTF-8" />
+    <script src="app-mode.js"></script>
     <title>Вход – Aura HomeSystems</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Aura Home" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
     <link rel="stylesheet" href="auth.css" />
   </head>
   <body class="auth-page">
     <div class="auth-box">
       <h1>Aura HomeSystems</h1>
-      <p class="subtitle">Вход в таблото</p>
+      <p class="subtitle" data-i18n="auth.loginSubtitle">Вход в таблото</p>
       <form id="loginForm" class="auth-form">
         <div id="loginError" class="auth-error"></div>
         <div id="loginSuccess" class="auth-success"></div>
-        <label for="email">Имейл</label>
+        <label for="email" data-i18n="auth.email">Имейл</label>
         <input
           type="email"
           id="email"
@@ -24,11 +32,14 @@
           placeholder="you@example.com"
         />
         <div class="auth-field-row">
-          <label for="password">Парола</label>
-          <a href="#" class="auth-forgot-link" id="forgotPasswordLink"
+          <label for="password" data-i18n="auth.password">Парола</label>
+          <a href="#" class="auth-forgot-link" id="forgotPasswordLink" data-i18n="auth.forgotPassword"
             >Забравена парола?</a
           >
         </div>
+        <p class="auth-hint" data-i18n="auth.forgotPasswordHint">
+          Въведете имейла си в полето по-горе, после натиснете „Забравена парола?“.
+        </p>
         <input
           type="password"
           id="password"
@@ -37,30 +48,45 @@
           autocomplete="current-password"
           placeholder="••••••••"
         />
-        <button type="submit" id="submitBtn">Вход</button>
+        <button type="submit" id="submitBtn" data-i18n="auth.submitLogin">Вход</button>
       </form>
       <p class="auth-links">
-        Нямате профил? <a href="register.html">Регистрация</a><br />
-        <a href="index.html">← Обратно към сайта</a>
+        <span data-i18n="auth.noAccount">Нямате профил?</span>
+        <a href="register.html" data-i18n="nav.register">Регистрация</a><br />
+        <a href="index.html" data-i18n="auth.backToSite">← Обратно към сайта</a>
       </p>
       <p class="auth-footer">
-        <a href="delete-account.html">Изтриване на акаунт</a> ·
-        <a href="impressum.html">Импресум</a> ·
-        <a href="privacy.html">Политика за поверителност</a>
+        <a href="delete-account.html" data-i18n="auth.deleteAccount">Изтриване на акаунт</a> ·
+        <a href="impressum.html" data-i18n="footer.impressum">Импресум</a> ·
+        <a href="privacy.html" data-i18n="footer.privacy">Политика за поверителност</a>
       </p>
     </div>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+    <script src="translations.js"></script>
+    <script src="auth-i18n.js"></script>
+    <script src="auth-reset.js"></script>
+    <script src="inquiry-config.js"></script>
     <script src="firebase-config.js"></script>
     <script>
+      if (window.AuraAuthReset && AuraAuthReset.redirectToResetPageIfCodePresent()) {
+        /* пренасочване към reset-password.html */
+      }
+      initAuthI18n("login");
       const form = document.getElementById("loginForm");
       const errorEl = document.getElementById("loginError");
       const successEl = document.getElementById("loginSuccess");
       const submitBtn = document.getElementById("submitBtn");
+      const forgotLink = document.getElementById("forgotPasswordLink");
       const auth = firebase.auth();
       const db = firebase.database();
-      auth.languageCode = "bg";
+      auth.languageCode = firebaseAuthLang();
+      auth.onAuthStateChanged(function (user) {
+        if (user && window.AuraAppMode && AuraAppMode.isPlayApp()) {
+          window.location.replace("dashboard.html");
+        }
+      });
       function showError(msg) {
         errorEl.textContent = msg || "";
         errorEl.classList.toggle("visible", !!msg);
@@ -77,58 +103,89 @@
           errorEl.classList.remove("visible");
         }
       }
-      /** Страница с две полета за нова парола; 127.0.0.1 → localhost за Authorized domains. */
-      function getPasswordResetHandlerUrl() {
-        const page = new URL(window.location.href);
-        if (page.hostname === "127.0.0.1" || page.hostname === "::1") {
-          page.hostname = "localhost";
-        }
-        return new URL("reset-password.html", page.href).href;
-      }
-      const forgotLink = document.getElementById("forgotPasswordLink");
       forgotLink.addEventListener("click", async (e) => {
         e.preventDefault();
         const email = document.getElementById("email").value.trim();
         showError("");
         showSuccess("");
         if (!email) {
-          showError(
-            "Въведете имейла си по-горе – на него ще изпратим линк за нова парола.",
-          );
+          showError(authT("auth.errEnterEmailForReset"));
           document.getElementById("email").focus();
           return;
         }
-        const prevText = forgotLink.textContent;
         forgotLink.style.pointerEvents = "none";
-        forgotLink.textContent = "Изпращане…";
-        const prevLang = auth.languageCode;
-        auth.languageCode = "en";
+        forgotLink.textContent = authT("auth.sending");
+        auth.languageCode = firebaseAuthLang();
         try {
-          const handlerUrl = getPasswordResetHandlerUrl();
-          await auth.sendPasswordResetEmail(email, {
-            url: handlerUrl,
-            handleCodeInApp: false,
-          });
-          showSuccess(
-            "Ако адресът е регистриран, ще получите имейл на английски. В „Спам“ често линковете не се отварят с клик – преместете писмото във входящи или копирайте пълния URL в браузър. След отваряне въведете новата парола два пъти. Action URL в Firebase → Templates → Password reset: пълен https://…/reset-password.html; в шаблона добавете ред с %LINK% за копиране (AUTH_SETUP.txt).",
-          );
+          const apiBase =
+            typeof window.INQUIRY_FUNCTIONS_BASE_URL === "string"
+              ? window.INQUIRY_FUNCTIONS_BASE_URL.replace(/\/$/, "")
+              : "";
+          let sentViaApi = false;
+          if (apiBase) {
+            try {
+              const res = await fetch(apiBase + "/api/password-reset", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email: email, lang: getAuraLang() }),
+              });
+              const contentType = res.headers.get("content-type") || "";
+              const isJson = contentType.includes("application/json");
+              if (res.ok && isJson) {
+                const data = await res.json().catch(() => ({}));
+                if (data && data.success) {
+                  sentViaApi = true;
+                  showSuccess(authT("auth.resetEmailSentResend"));
+                } else {
+                  throw new Error(
+                    (data && data.error) || "Invalid password-reset response"
+                  );
+                }
+              } else if (res.status === 503) {
+                // Не пращаме към Firebase, защото в този случай това води до "фалшиво успех" без реални имейли.
+                showError(authT("auth.resetServiceNotConfigured"));
+                return;
+              } else {
+                const data = isJson ? await res.json().catch(() => ({})) : {};
+                throw new Error(
+                  (data && data.error) ||
+                    (res.ok ? "Server missing /api/password-reset (push server.js to Render)" : "API " + res.status)
+                );
+              }
+            } catch (apiErr) {
+              console.warn("[Aura] password-reset API:", apiErr);
+              showError(authT("auth.resetServiceNotConfigured"));
+              return;
+            }
+          }
+          if (!sentViaApi) {
+            const handlerUrl = AuraAuthReset.getPasswordResetHandlerUrl();
+            await auth.sendPasswordResetEmail(email, {
+              url: handlerUrl,
+              handleCodeInApp: false,
+            });
+            showSuccess(authT("auth.resetEmailSent"));
+          }
         } catch (err) {
           if (err.code === "auth/user-not-found")
-            showError("Няма регистрация с този имейл.");
+            showError(authT("auth.errUserNotFound"));
           else if (err.code === "auth/invalid-email")
-            showError("Невалиден имейл.");
+            showError(authT("auth.errInvalidEmail"));
           else if (
             err.code === "auth/unauthorized-continue-uri" ||
             err.code === "auth/invalid-continue-uri"
           )
-            showError(
-              "Доменът на тази страница не е в списъка „Authorized domains“ в Firebase (Authentication → Settings). Добавете го и опитайте отново.",
-            );
-          else showError(err.message || "Неуспешно изпращане. Опитайте отново.");
+            showError(authT("auth.errUnauthorizedDomain"));
+          else if (err.code === "auth/operation-not-allowed")
+            showError(authT("auth.errOperationNotAllowed"));
+          else {
+            console.error("[Aura] sendPasswordResetEmail:", err.code, err.message);
+            showError(err.message || authT("auth.errResetFailed"));
+          }
         } finally {
-          auth.languageCode = prevLang || "bg";
+          auth.languageCode = firebaseAuthLang();
           forgotLink.style.pointerEvents = "";
-          forgotLink.textContent = prevText;
+          forgotLink.textContent = authT("auth.forgotPassword");
         }
       });
       function getOrCreateDeviceId() {
@@ -159,7 +216,7 @@
         showError("");
         showSuccess("");
         submitBtn.disabled = true;
-        submitBtn.textContent = "Вход...";
+        submitBtn.textContent = authT("auth.submittingLogin");
         try {
           const cred = await auth.signInWithEmailAndPassword(email, password);
           const user = cred.user;
@@ -170,11 +227,9 @@
           const knownIds = Object.keys(sessions);
           if (!sessions[deviceId] && knownIds.length >= 2) {
             await auth.signOut();
-            showError(
-              "Този акаунт може да се ползва на до 2 устройства. Ако искаш да влезеш от ново устройство, излез от някое от останалите.",
-            );
+            showError(authT("auth.errSessionLimit"));
             submitBtn.disabled = false;
-            submitBtn.textContent = "Вход";
+            submitBtn.textContent = authT("auth.submitLogin");
             return;
           }
           await sessionsRef.child(deviceId).set({
@@ -190,17 +245,17 @@
           window.location.href = target;
         } catch (err) {
           if (err.code === "auth/user-not-found")
-            showError("Няма потребител с този имейл.");
+            showError(authT("auth.errNoUser"));
           else if (
             err.code === "auth/wrong-password" ||
             err.code === "auth/invalid-credential"
           )
-            showError("Грешна парола или имейл.");
+            showError(authT("auth.errWrongPassword"));
           else if (err.code === "auth/invalid-email")
-            showError("Невалиден имейл.");
-          else showError(err.message || "Грешка при вход.");
+            showError(authT("auth.errInvalidEmail"));
+          else showError(err.message || authT("auth.errLoginFailed"));
           submitBtn.disabled = false;
-          submitBtn.textContent = "Вход";
+          submitBtn.textContent = authT("auth.submitLogin");
         }
       });
     </script>

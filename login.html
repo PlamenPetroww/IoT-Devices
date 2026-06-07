@@ -245,6 +245,7 @@
             lastSeen: firebase.database.ServerValue.TIMESTAMP,
             userAgent: navigator.userAgent || "",
           });
+          await db.ref("userEmailKeys/" + user.uid).set(getSafeEmail(user.email));
           const params = new URLSearchParams(window.location.search);
           const next = params.get("next");
           const allowedNext = ["delete-account.html", "dashboard.html"];

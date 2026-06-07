@@ -275,10 +275,15 @@
           if (window.AuraPush && !AuraPush.requestAwayModeWithPush()) return;
           db.ref(userPath).update({ systemEnabled: true });
         });
-        AuraPush.init({ userPath: userPath, db: db });
         const devicesList = document.getElementById("devicesList");
         const historyRef = db.ref(userPath + "/history");
-        db.ref(userPath + "/devices").on("value", (snap) => {
+        function showDevicesError(msg) {
+          devicesList.innerHTML =
+            '<p class="devices-empty">' + msg + "</p>";
+        }
+        db.ref(userPath + "/devices").on(
+          "value",
+          (snap) => {
           const data = snap.val();
           if (!data || typeof data !== "object") {
             devicesList.innerHTML =
@@ -356,7 +361,16 @@
               return `                    <div class="device-item ${tintClass}">                        <span class="device-name-wrap"><span class="sensor-icon" aria-hidden="true">${icon}</span><span class="name">${escapeHtml(dev.name)}</span>${lastSeenHtml}</span>                        <span class="device-right">                            ${powerHtml}                            <span class="status ${dev.status}">${dev.status === "open" ? "Отворено" : "Затворено"}</span>                        </span>                    </div>                `;
             })
             .join("");
+        },
+        (err) => {
+          console.error("[dashboard] devices read failed:", err);
+          showDevicesError(
+            "Няма достъп до сензорите. Излезте и влезте отново. Ако проблемът остане — обновете Firebase Database Rules (виж firebase-database-rules.json)."
+          );
         });
+        if (window.AuraPush) {
+          AuraPush.init({ userPath: userPath, db: db }).catch(function () {});
+        }
         let historyLimit = 3;
         let historyData = [];
         historyRef

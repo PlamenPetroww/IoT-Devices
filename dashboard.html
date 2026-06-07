@@ -2,43 +2,71 @@
 <html lang="bg">
   <head>
     <meta charset="UTF-8" />
+    <script src="app-mode.js"></script>
     <title>Табло – Aura HomeSystems</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Aura Home" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
     <link rel="stylesheet" href="auth.css" />
   </head>
 
   <body class="dashboard-page">
     <header class="dashboard-header">
-      <div class="dashboard-brand">
-        <a
-          href="index.html"
-          class="dashboard-brand-link"
-          aria-label="Обратно към началната страница"
-        >
-          <h1>Aura HomeSystems</h1>
-        </a>
-        <p class="user-email" id="userEmail"></p>
-        <button
-          type="button"
-          id="showUidBtn"
-          class="show-uid-btn"
-          aria-label="Покажи UID за Arduino"
-        >
-          UID за Arduino
-        </button>
-        <p class="user-uid-hint" id="userUidHint" style="display: none">
-          <small>UID за Arduino: <code id="userUid"></code></small>
-        </p>
+      <div class="dashboard-header-start">
+        <p class="user-email" id="userEmail" title=""></p>
       </div>
-      <div class="dashboard-header-actions">
-        <a href="delete-account.html" class="delete-account-link"
-          >Изтриване на акаунт</a
+      <div class="dashboard-header-center">
+        <a
+          href="dashboard.html"
+          class="dashboard-brand-link"
+          aria-label="Табло Aura HomeSystems"
         >
-        <a href="login.html" id="logoutBtn" class="logout-btn">Изход</a>
+          <h1>Aura <span class="brand-accent">Home</span>Systems</h1>
+        </a>
+      </div>
+      <div class="dashboard-header-end">
+        <div class="header-account-menu">
+          <button
+            type="button"
+            class="header-menu-btn"
+            id="headerMenuBtn"
+            aria-expanded="false"
+            aria-haspopup="true"
+            aria-controls="headerMenuDropdown"
+            aria-label="Меню акаунт"
+          >
+            <span aria-hidden="true">⋯</span>
+          </button>
+          <div
+            id="headerMenuDropdown"
+            class="header-menu-dropdown"
+            role="menu"
+            hidden
+          >
+            <a
+              href="delete-account.html"
+              class="header-menu-item header-menu-item--danger"
+              role="menuitem"
+              >Изтриване на акаунт</a
+            >
+            <a
+              href="login.html"
+              id="logoutBtn"
+              class="header-menu-item"
+              role="menuitem"
+              >Изход</a
+            >
+          </div>
+        </div>
       </div>
     </header>
-    <main class="dashboard-layout">
+    <main class="dashboard-layout" id="dashboardMain">
       <section class="dashboard-top">
         <div class="devices-card">
           <h2>Вашите сензори</h2>
@@ -81,28 +109,6 @@
             </ul>
           </div>
         </aside>
-        <aside class="dashboard-notifications">
-          <div class="mode-card">
-            <h2>Push известия</h2>
-            <p>
-              Получавайте известия на телефона/таблета при отваряне на врата или
-              прозорец.
-            </p>
-            <button
-              type="button"
-              id="enablePushBtn"
-              class="mode-btn"
-              style="margin-top: 8px"
-            >
-              Включи известия
-            </button>
-            <p
-              id="pushStatus"
-              class="sensor-status-msg"
-              style="margin-top: 8px; display: none"
-            ></p>
-          </div>
-        </aside>
         <aside class="dashboard-mode">
           <div class="mode-card">
             <h2>Режим на системата</h2>
@@ -110,6 +116,7 @@
               Когато системата е „Навън“, сензорите се следят и получавате
               известия. В режим „Аз съм у дома“ системата е изключена.
             </p>
+            <p id="pushChip" class="push-chip" hidden>✓ Известията са активни на този телефон</p>
             <div class="mode-buttons">
               <button type="button" id="modeHome" class="mode-btn active">
                 🏠 У дома
@@ -133,11 +140,65 @@
       <span class="footer-sep">·</span>
       <a href="delete-account.html">Изтриване на акаунт</a>
     </footer>
+    <div
+      id="pushOverlay"
+      class="dashboard-blur-overlay"
+      hidden
+      aria-hidden="true"
+    >
+      <div
+        id="pushOnboardingDialog"
+        class="push-dialog"
+        role="alertdialog"
+        aria-labelledby="pushOnboardingTitle"
+        aria-describedby="pushOnboardingDesc"
+      >
+        <h3 id="pushOnboardingTitle">Известия при отваряне</h3>
+        <p id="pushOnboardingDesc">
+          Искате ли да получавате сигнал на телефона, когато врата или прозорец
+          се отвори?
+        </p>
+        <p id="pushDialogHint" class="push-dialog-hint" hidden></p>
+        <div class="push-dialog-actions push-dialog-actions--row">
+          <button type="button" id="pushOverlayYes" class="push-dialog-btn yes">
+            Да
+          </button>
+          <button type="button" id="pushOverlayNo" class="push-dialog-btn no">
+            Не
+          </button>
+        </div>
+      </div>
+      <div
+        id="pushAwayDialog"
+        class="push-dialog"
+        role="dialog"
+        aria-labelledby="pushAwayTitle"
+        hidden
+      >
+        <h3 id="pushAwayTitle">Известия в режим „Навън“</h3>
+        <p>
+          За сигнал на телефона при отваряне включете известията. Можете и само
+          да активирате следенето без push.
+        </p>
+        <div class="push-dialog-actions">
+          <button type="button" id="pushAwayEnable" class="push-dialog-btn yes">
+            Да, включи известия
+          </button>
+          <button type="button" id="pushAwaySkip" class="push-dialog-btn secondary">
+            Само „Навън“ без push
+          </button>
+          <button type="button" id="pushAwayCancel" class="push-dialog-btn no">
+            Отказ
+          </button>
+        </div>
+      </div>
+    </div>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-compat.js"></script>
     <script src="firebase-config.js"></script>
+    <script src="push-notifications.js"></script>
     <script>
       const auth = firebase.auth();
       const db = firebase.database();
@@ -154,24 +215,35 @@
           window.location.href = "login.html";
           return;
         }
-        document.getElementById("userEmail").textContent = user.email;
-        const userPath = "users/" + user.uid;
-        document.getElementById("userUid").textContent = user.uid;
-        document.getElementById("userUidHint").style.display = "none";
-        document
-          .getElementById("showUidBtn")
-          .addEventListener("click", function () {
-            var hint = document.getElementById("userUidHint");
-            var btn = document.getElementById("showUidBtn");
-            if (hint.style.display === "none") {
-              hint.style.display = "block";
-              btn.textContent = "Скрий UID";
-            } else {
-              hint.style.display = "none";
-              btn.textContent = "UID за Arduino";
-            }
+        var emailEl = document.getElementById("userEmail");
+        emailEl.textContent = user.email;
+        emailEl.title = user.email;
+        const userPath = "users/" + getSafeEmail(user.email);
+        var headerMenuBtn = document.getElementById("headerMenuBtn");
+        var headerMenuDropdown = document.getElementById("headerMenuDropdown");
+        function closeHeaderMenu() {
+          if (!headerMenuBtn || !headerMenuDropdown) return;
+          headerMenuDropdown.hidden = true;
+          headerMenuBtn.setAttribute("aria-expanded", "false");
+        }
+        function toggleHeaderMenu() {
+          if (!headerMenuBtn || !headerMenuDropdown) return;
+          var open = headerMenuDropdown.hidden;
+          headerMenuDropdown.hidden = !open;
+          headerMenuBtn.setAttribute("aria-expanded", open ? "true" : "false");
+        }
+        if (headerMenuBtn && headerMenuDropdown) {
+          headerMenuBtn.addEventListener("click", function (e) {
+            e.stopPropagation();
+            toggleHeaderMenu();
           });
+          document.addEventListener("click", closeHeaderMenu);
+          headerMenuDropdown.addEventListener("click", function (e) {
+            e.stopPropagation();
+          });
+        }
         document.getElementById("logoutBtn").addEventListener("click", (e) => {
+          closeHeaderMenu();
           auth
             .signOut()
             .catch(() => {})
@@ -200,15 +272,17 @@
           db.ref(userPath).update({ systemEnabled: false });
         });
         modeAway.addEventListener("click", () => {
+          if (window.AuraPush && !AuraPush.requestAwayModeWithPush()) return;
           db.ref(userPath).update({ systemEnabled: true });
         });
+        AuraPush.init({ userPath: userPath, db: db });
         const devicesList = document.getElementById("devicesList");
         const historyRef = db.ref(userPath + "/history");
         db.ref(userPath + "/devices").on("value", (snap) => {
           const data = snap.val();
           if (!data || typeof data !== "object") {
             devicesList.innerHTML =
-              '<p class="devices-empty">Все още няма регистрирани сензори. Включи режим „Навън“ и след малко тук ще се появят устройствата от Arduino.</p>';
+              '<p class="devices-empty">Все още няма сензори. Настройте ESP с имейл <strong>' + (user.email || "") + '</strong> (WiFi <strong>AuraHomeSystems_Setup</strong> → 192.168.4.1), после се <a href="register.html">регистрирайте</a> с <strong>същия имейл</strong> и парола.</p>';
             return;
           }
           const devices = Object.entries(data).map(([id, d]) => ({
@@ -224,11 +298,19 @@
           }));
           function formatLastSeen(ms) {
             if (ms == null || typeof ms !== "number") return "";
+            if (ms > 1e12) {
+              return new Date(ms).toLocaleString("bg-BG", {
+                day: "2-digit",
+                month: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
+              });
+            }
             var sec = Math.floor(ms / 1000);
             var min = Math.floor(ms / 60000);
-            if (ms < 60000) return "millis: " + sec + " s";
-            if (ms < 3600000) return "millis: " + min + " min";
-            return "millis: " + Math.floor(ms / 3600000) + " h";
+            if (ms < 60000) return "uptime: " + sec + " s";
+            if (ms < 3600000) return "uptime: " + min + " min";
+            return "uptime: " + Math.floor(ms / 3600000) + " h";
           }
           const nameCount = {};
           devices.forEach(function (dev) {
@@ -336,108 +418,6 @@
             renderHistory();
           });
         });
-        var enablePushBtn = document.getElementById("enablePushBtn");
-        var pushStatus = document.getElementById("pushStatus");
-        if (enablePushBtn && pushStatus) {
-          enablePushBtn.addEventListener("click", async function () {
-            if (!("Notification" in window) || !firebase.messaging) {
-              pushStatus.textContent = "Браузърът не поддържа push известия.";
-              pushStatus.style.display = "block";
-              return;
-            }
-            var permission = Notification.permission;
-            if (permission === "default")
-              permission = await Notification.requestPermission();
-            if (permission !== "granted") {
-              pushStatus.textContent = "Известията са отказани.";
-              pushStatus.style.display = "block";
-              return;
-            }
-            var vapidKey =
-              window.FIREBASE_VAPID_KEY ||
-              (typeof firebaseConfig !== "undefined" &&
-                firebaseConfig.vapidKey);
-            if (!vapidKey) {
-              pushStatus.textContent =
-                "Добавете FIREBASE_VAPID_KEY в firebase-config.js (от Cloud Messaging → Web Push certificates)";
-              pushStatus.style.display = "block";
-              return;
-            }
-            try {
-              var messaging = firebase.messaging();
-              // Need a registered service worker for background push notifications
-              var swReg = null;
-              if ("serviceWorker" in navigator) {
-                try {
-                  swReg = await navigator.serviceWorker.register(
-                    "/firebase-messaging-sw.js"
-                  );
-                } catch (swErr) {
-                  console.warn(
-                    "Service worker registration failed:",
-                    swErr && swErr.message ? swErr.message : swErr
-                  );
-                }
-              }
-              // Ensure the SW controls this page instance.
-              // Sometimes controller stays null until the next reload after activation.
-              if (
-                swReg &&
-                "serviceWorker" in navigator &&
-                !navigator.serviceWorker.controller
-              ) {
-                // Prevent infinite reload loops.
-                if (!sessionStorage.getItem("swReloadedOnce")) {
-                  sessionStorage.setItem("swReloadedOnce", "1");
-                  await navigator.serviceWorker.ready;
-                  window.location.reload();
-                  return;
-                }
-              }
-              // Foreground handler (when dashboard tab is open and focused).
-              // Background notifications are handled by firebase-messaging-sw.js.
-              if (messaging && messaging.onMessage) {
-                messaging.onMessage(function (payload) {
-                  try {
-                    var title =
-                      (payload && payload.data && payload.data.title) ||
-                      "Aura HomeSystems";
-                    var body =
-                      (payload && payload.data && payload.data.body) || "";
-                    if ("Notification" in window && Notification.permission === "granted") {
-                      new Notification(title, { body: body, icon: "/favicon.png" });
-                    }
-                  } catch (err) {
-                    console.warn("[dashboard] Foreground notification failed:", err);
-                  }
-                });
-              }
-              var token = await messaging.getToken({
-                vapidKey: vapidKey,
-                serviceWorkerRegistration: swReg || undefined,
-              });
-              if (!token) {
-                pushStatus.textContent = "Неуспешно получаване на токен.";
-                pushStatus.style.display = "block";
-                return;
-              }
-              await db
-                .ref(userPath + "/pushTokens")
-                .push({
-                  token: token,
-                  createdAt: firebase.database.ServerValue.TIMESTAMP,
-                });
-              pushStatus.textContent = "Готово. Ще получавате push известия.";
-              pushStatus.style.display = "block";
-              enablePushBtn.textContent = "Известията са включени";
-              enablePushBtn.disabled = true;
-            } catch (e) {
-              pushStatus.textContent =
-                "Грешка: " + (e.message || "неуспешна регистрация");
-              pushStatus.style.display = "block";
-            }
-          });
-        }
         function escapeHtml(text) {
           const div = document.createElement("div");
           div.textContent = text;

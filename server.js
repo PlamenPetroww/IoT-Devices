@@ -346,6 +346,14 @@ function buildWelcomeEmail(lang, resetLink) {
   return templates[lang] || templates.bg;
 }
 
+function normalizeEmailKey(email) {
+  return String(email || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\./g, "-")
+    .replace(/@/g, "_at_");
+}
+
 function handleDeviceLinkRequest(body, callback) {
   if (!firebaseAdmin) {
     callback(new Error("DEVICE_LINK_NOT_CONFIGURED"));
@@ -356,79 +364,19 @@ function handleDeviceLinkRequest(body, callback) {
     callback(new Error("INVALID_EMAIL"));
     return;
   }
-  const deviceName = String(body.deviceName || body.device_name || "").trim().slice(0, 64);
-  const mac = String(body.mac || "").trim().slice(0, 32);
-  const lang = String(body.lang || "bg").toLowerCase();
-  const mailLang = lang === "en" || lang === "de" ? lang : "bg";
+  const userKey = normalizeEmailKey(emailNorm);
   const auth = firebaseAdmin.auth();
-
-  const finish = (uid, created) => {
-    const updates = { email: emailNorm };
-    if (deviceName) updates.lastDeviceName = deviceName;
-    if (mac) updates.lastDeviceMac = mac;
-    if (created) updates.createdViaSensorSetup = true;
-    if (firebaseDb) {
-      firebaseDb.ref("users/" + uid).update(updates, () => {
-        callback(null, { uid, created: !!created });
-      });
-    } else {
-      callback(null, { uid, created: !!created });
-    }
-  };
-
   auth
     .getUserByEmail(emailNorm)
-    .then((user) => finish(user.uid, false))
+    .then((user) => {
+      callback(null, { userKey, uid: user.uid, registered: true });
+    })
     .catch((err) => {
-      if (!err || err.code !== "auth/user-not-found") {
-        callback(err);
+      if (err && err.code === "auth/user-not-found") {
+        callback(null, { userKey, registered: false });
         return;
       }
-      const tempPassword = crypto.randomBytes(24).toString("base64url");
-      auth
-        .createUser({
-          email: emailNorm,
-          password: tempPassword,
-          emailVerified: false,
-        })
-        .then((user) => {
-          const apiKey = process.env.RESEND_API_KEY;
-          if (!apiKey) {
-            finish(user.uid, true);
-            return;
-          }
-          auth
-            .generatePasswordResetLink(emailNorm, {
-              url: PASSWORD_RESET_CONTINUE_URL,
-              handleCodeInApp: false,
-            })
-            .then((link) => {
-              const content = buildWelcomeEmail(mailLang, link);
-              const fromAddr = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
-              sendResendEmail(
-                apiKey,
-                {
-                  from: fromAddr,
-                  to: [emailNorm],
-                  subject: content.subject,
-                  html: content.html,
-                },
-                (sendErr, status) => {
-                  if (sendErr || (status && status >= 400)) {
-                    console.warn("[device-link] Welcome email failed for", emailNorm);
-                  } else {
-                    console.log("[device-link] Welcome email sent to", emailNorm);
-                  }
-                  finish(user.uid, true);
-                }
-              );
-            })
-            .catch((linkErr) => {
-              console.warn("[device-link] Password link failed:", linkErr.message || linkErr);
-              finish(user.uid, true);
-            });
-        })
-        .catch((createErr) => callback(createErr));
+      callback(err);
     });
 }
 
@@ -631,12 +579,12 @@ function logStartupConfig() {
   console.log("[Aura] diagnostics: GET /api/health");
 }
 
-function sendPushToUser(uid, title, body, callback) {
+function sendPushToUser(userKey, title, body, callback) {
   if (!firebaseDb || !firebaseAdmin) {
     callback(new Error("Firebase not configured"));
     return;
   }
-  firebaseDb.ref("users/" + uid + "/pushTokens").once("value", (snap) => {
+  firebaseDb.ref("users/" + userKey + "/pushTokens").once("value", (snap) => {
     const val = snap.val();
     if (!val || typeof val !== "object") {
       callback(null, 0);
@@ -916,13 +864,17 @@ const server = http.createServer((req, res) => {
         res.end(JSON.stringify({ error: "Invalid JSON" }));
         return;
       }
-      const uid = parsed.uid || parsed.userId;
+      const userKey =
+        parsed.userKey ||
+        parsed.uid ||
+        parsed.userId ||
+        (parsed.email ? normalizeEmailKey(parsed.email) : "");
       const deviceId = parsed.deviceId || parsed.sensorId;
       const state = parsed.state;
       const deviceName = parsed.deviceName || deviceId || "Сензор";
-      if (!uid) {
+      if (!userKey) {
         res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
-        res.end(JSON.stringify({ error: "Missing uid" }));
+        res.end(JSON.stringify({ error: "Missing userKey" }));
         return;
       }
       const isOpen = state === "open" || state === true;
@@ -930,7 +882,7 @@ const server = http.createServer((req, res) => {
       const bodyText = isOpen
         ? deviceName + " е отворен(а)."
         : deviceName + " е затворен(а).";
-      sendPushToUser(uid, title, bodyText, (err, sent) => {
+      sendPushToUser(userKey, title, bodyText, (err, sent) => {
         if (err) {
           res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
           res.end(JSON.stringify({ error: err.message }));

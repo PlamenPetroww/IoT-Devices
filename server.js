@@ -584,7 +584,10 @@ function sendPushToUser(userKey, title, body, callback) {
     callback(new Error("Firebase not configured"));
     return;
   }
-  firebaseDb.ref("users/" + userKey + "/pushTokens").once("value", (snap) => {
+  firebaseDb.ref("users/" + userKey + "/settings/alertSoundEnabled").once("value", (settingSnap) => {
+    const playSound = settingSnap.val() !== false;
+    const playFlag = playSound ? "1" : "0";
+    firebaseDb.ref("users/" + userKey + "/pushTokens").once("value", (snap) => {
     const val = snap.val();
     if (!val || typeof val !== "object") {
       callback(null, 0);
@@ -602,17 +605,46 @@ function sendPushToUser(userKey, title, body, callback) {
         callback(null, sent);
         return;
       }
-      messaging.send({
-        token: tokens[i],
-        // Send as data message so the service worker can reliably show
-        // the notification via onBackgroundMessage.
-        data: {
-          title: String(title || "Aura HomeSystems"),
-          body: String(body || "")
-        }
-      }).then(() => { sent++; next(i + 1); }).catch(() => { next(i + 1); });
+      const titleStr = String(title || "Aura HomeSystems");
+      const bodyStr = String(body || "");
+      const androidNotification = playSound ? { sound: "default" } : { defaultSound: false };
+      messaging
+        .send({
+          token: tokens[i],
+          notification: { title: titleStr, body: bodyStr },
+          data: { title: titleStr, body: bodyStr, playSound: playFlag },
+          webpush: {
+            headers: { Urgency: "high" },
+            notification: {
+              title: titleStr,
+              body: bodyStr,
+              icon: "https://aurahomesystems.eu/favicon.png",
+              silent: !playSound,
+            },
+          },
+          android: {
+            priority: "high",
+            notification: androidNotification,
+          },
+          apns: {
+            payload: {
+              aps: {
+                sound: playSound ? "default" : undefined,
+              },
+            },
+          },
+        })
+        .then(() => {
+          sent++;
+          next(i + 1);
+        })
+        .catch((e) => {
+          console.warn("[FCM] send failed:", e && e.message ? e.message : e);
+          next(i + 1);
+        });
     };
     next(0);
+  }, (err) => callback(err));
   }, (err) => callback(err));
 }
 
@@ -888,6 +920,7 @@ const server = http.createServer((req, res) => {
           res.end(JSON.stringify({ error: err.message }));
           return;
         }
+        console.log("[sensor-event]", userKey, "sent:", sent);
         res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
         res.end(JSON.stringify({ success: true, sent }));
       });

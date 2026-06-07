@@ -1,7 +1,5 @@
 /**
- * Service worker за Firebase Cloud Messaging (push известия).
- * Замени firebaseConfig по-долу със същите стойности като в firebase-config.js
- * (от Firebase Console → Project settings → Your apps).
+ * Firebase Cloud Messaging – push известия (отделен от /sw.js заради PWA Builder).
  */
 importScripts(
   "https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js",
@@ -19,7 +17,6 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 
-// Make this service worker take control of uncontrolled pages ASAP.
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
 });
@@ -29,16 +26,23 @@ self.addEventListener("activate", (event) => {
 });
 
 firebase.messaging().onBackgroundMessage((payload) => {
-  // Support both notification and data payloads.
+  const data = (payload && payload.data) || {};
+  const playSound = data.playSound !== "0";
   const title =
     (payload.notification && payload.notification.title) ||
-    (payload.data && payload.data.title) ||
+    data.title ||
     "Aura HomeSystems";
   const body =
     (payload.notification && payload.notification.body) ||
-    (payload.data && payload.data.body) ||
+    data.body ||
     "";
-  const options = { body, icon: "/favicon.png", tag: "aura-push" };
+  const options = {
+    body,
+    icon: "/favicon.png",
+    tag: "aura-push",
+    silent: !playSound,
+    vibrate: playSound ? [180, 90, 180] : [],
+  };
   try {
     return self.registration.showNotification(title, options);
   } catch (e) {
@@ -47,8 +51,6 @@ firebase.messaging().onBackgroundMessage((payload) => {
   }
 });
 
-// Fallback: handle raw 'push' event in case Firebase background handler
-// doesn't get triggered by the DevTools "Push test message".
 self.addEventListener("push", (event) => {
   try {
     const raw = event.data ? event.data.text() : "";
@@ -60,10 +62,23 @@ self.addEventListener("push", (event) => {
     }
 
     const data = payload && payload.data ? payload.data : payload || {};
-    const title = data.title || (payload.notification && payload.notification.title) || "Aura HomeSystems";
-    const body = data.body || (payload.notification && payload.notification.body) || "";
+    const playSound = data.playSound !== "0";
+    const title =
+      data.title ||
+      (payload.notification && payload.notification.title) ||
+      "Aura HomeSystems";
+    const body =
+      data.body ||
+      (payload.notification && payload.notification.body) ||
+      "";
 
-    const options = { body, icon: "/favicon.png", tag: "aura-push" };
+    const options = {
+      body,
+      icon: "/favicon.png",
+      tag: "aura-push",
+      silent: !playSound,
+      vibrate: playSound ? [180, 90, 180] : [],
+    };
     event.waitUntil(self.registration.showNotification(title, options));
   } catch (e) {
     console.error("[firebase-messaging-sw] push fallback failed:", e);

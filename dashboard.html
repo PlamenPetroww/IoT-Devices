@@ -117,6 +117,11 @@
               известия. В режим „Аз съм у дома“ системата е изключена.
             </p>
             <p id="pushChip" class="push-chip" hidden>✓ Известията са активни на този телефон</p>
+            <label class="alert-sound-toggle" id="alertSoundToggleWrap" hidden>
+              <input type="checkbox" id="alertSoundToggle" checked />
+              <span class="alert-sound-toggle-ui" aria-hidden="true"></span>
+              <span class="alert-sound-toggle-label">Звук при известия</span>
+            </label>
             <div class="mode-buttons">
               <button type="button" id="modeHome" class="mode-btn active">
                 🏠 У дома
@@ -370,6 +375,21 @@
         });
         if (window.AuraPush) {
           AuraPush.init({ userPath: userPath, db: db }).catch(function () {});
+        }
+        var alertSoundToggle = document.getElementById("alertSoundToggle");
+        var alertSoundToggleWrap = document.getElementById("alertSoundToggleWrap");
+        var alertSoundRef = db.ref(userPath + "/settings/alertSoundEnabled");
+        if (alertSoundToggle) {
+          alertSoundRef.on("value", function (snap) {
+            var val = snap.val();
+            alertSoundToggle.checked = val !== false;
+            if (alertSoundToggleWrap) {
+              alertSoundToggleWrap.hidden = false;
+            }
+          });
+          alertSoundToggle.addEventListener("change", function () {
+            alertSoundRef.set(alertSoundToggle.checked);
+          });
         }
         let historyLimit = 3;
         let historyData = [];

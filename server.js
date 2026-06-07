@@ -2,6 +2,7 @@ const http = require("http");
 const https = require("https");
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 
 /** Local dev: optional `.env` in project root (already in .gitignore). Does not override real env vars. */
 function loadEnvFile() {
@@ -31,6 +32,20 @@ function loadEnvFile() {
 loadEnvFile();
 
 const REVOLUT_API_VERSION = process.env.REVOLUT_API_VERSION || "2024-09-01";
+
+/** Strip accidental "sandbox " prefix from pasted Revolut keys. */
+function sanitizeRevolutKey(key) {
+  if (!key || typeof key !== "string") return "";
+  return key.trim().replace(/^sandbox\s+/i, "");
+}
+
+function getRevolutSecretKey() {
+  return sanitizeRevolutKey(process.env.REVOLUT_API_SECRET_KEY);
+}
+
+function getRevolutPublicKey() {
+  return sanitizeRevolutKey(process.env.REVOLUT_API_PUBLIC_KEY);
+}
 
 function loadShippingZones() {
   try {
@@ -79,7 +94,7 @@ function computeExpectedAmountMinor(quantity, shippingZone, shippingMethod, zone
 }
 
 function revolutCreateOrder(payloadObj, callback) {
-  const secret = process.env.REVOLUT_API_SECRET_KEY;
+  const secret = getRevolutSecretKey();
   const base = (process.env.REVOLUT_API_URL || "").replace(/\/$/, "");
   if (!secret || !base) {
     callback(new Error("REVOLUT_NOT_CONFIGURED"));
@@ -288,6 +303,135 @@ function buildPasswordResetEmail(lang, resetLink) {
   return templates[lang] || templates.bg;
 }
 
+function buildWelcomeEmail(lang, resetLink) {
+  const safeLink = escapeHtmlEmail(resetLink);
+  const templates = {
+    bg: {
+      subject: "Вашият сензор е готов – Aura HomeSystems",
+      html:
+        "<!DOCTYPE html><html lang=\"bg\"><head><meta charset=\"UTF-8\"></head>" +
+        "<body style=\"font-family:system-ui,sans-serif;line-height:1.55;color:#1a1a1a;max-width:560px\">" +
+        "<p>Здравейте,</p>" +
+        "<p>Настроихте сензор Aura HomeSystems с този имейл. Създадохме акаунт за вас.</p>" +
+        "<p><a href=\"" + safeLink + "\" style=\"display:inline-block;padding:12px 20px;background:#22c55e;color:#022c22;text-decoration:none;border-radius:8px;font-weight:600\">Задайте парола и влезте</a></p>" +
+        "<p style=\"font-size:0.9rem;color:#555\">След това отворете <a href=\"https://aurahomesystems.eu/login.html\">aurahomesystems.eu</a> и вижте сензора в таблото.</p>" +
+        "<p style=\"font-size:0.85rem;color:#777\">Ако не сте настройвали сензор, игнорирайте имейла.</p>" +
+        "</body></html>",
+    },
+    en: {
+      subject: "Your sensor is ready – Aura HomeSystems",
+      html:
+        "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"></head>" +
+        "<body style=\"font-family:system-ui,sans-serif;line-height:1.55;color:#1a1a1a;max-width:560px\">" +
+        "<p>Hello,</p>" +
+        "<p>Your Aura HomeSystems sensor was set up with this email. We created an account for you.</p>" +
+        "<p><a href=\"" + safeLink + "\" style=\"display:inline-block;padding:12px 20px;background:#22c55e;color:#022c22;text-decoration:none;border-radius:8px;font-weight:600\">Set password and sign in</a></p>" +
+        "<p style=\"font-size:0.9rem;color:#555\">Then open <a href=\"https://aurahomesystems.eu/login.html\">aurahomesystems.eu</a> to see your sensor.</p>" +
+        "<p style=\"font-size:0.85rem;color:#777\">If you did not set up a sensor, you can ignore this email.</p>" +
+        "</body></html>",
+    },
+    de: {
+      subject: "Ihr Sensor ist bereit – Aura HomeSystems",
+      html:
+        "<!DOCTYPE html><html lang=\"de\"><head><meta charset=\"UTF-8\"></head>" +
+        "<body style=\"font-family:system-ui,sans-serif;line-height:1.55;color:#1a1a1a;max-width:560px\">" +
+        "<p>Guten Tag,</p>" +
+        "<p>Ihr Aura HomeSystems Sensor wurde mit dieser E-Mail eingerichtet. Wir haben ein Konto für Sie erstellt.</p>" +
+        "<p><a href=\"" + safeLink + "\" style=\"display:inline-block;padding:12px 20px;background:#22c55e;color:#022c22;text-decoration:none;border-radius:8px;font-weight:600\">Passwort festlegen und anmelden</a></p>" +
+        "<p style=\"font-size:0.9rem;color:#555\">Öffnen Sie danach <a href=\"https://aurahomesystems.eu/login.html\">aurahomesystems.eu</a>, um Ihren Sensor zu sehen.</p>" +
+        "<p style=\"font-size:0.85rem;color:#777\">Wenn Sie keinen Sensor eingerichtet haben, ignorieren Sie diese E-Mail.</p>" +
+        "</body></html>",
+    },
+  };
+  return templates[lang] || templates.bg;
+}
+
+function handleDeviceLinkRequest(body, callback) {
+  if (!firebaseAdmin) {
+    callback(new Error("DEVICE_LINK_NOT_CONFIGURED"));
+    return;
+  }
+  const emailNorm = String(body.email || "").trim().toLowerCase();
+  if (!emailNorm || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNorm)) {
+    callback(new Error("INVALID_EMAIL"));
+    return;
+  }
+  const deviceName = String(body.deviceName || body.device_name || "").trim().slice(0, 64);
+  const mac = String(body.mac || "").trim().slice(0, 32);
+  const lang = String(body.lang || "bg").toLowerCase();
+  const mailLang = lang === "en" || lang === "de" ? lang : "bg";
+  const auth = firebaseAdmin.auth();
+
+  const finish = (uid, created) => {
+    const updates = { email: emailNorm };
+    if (deviceName) updates.lastDeviceName = deviceName;
+    if (mac) updates.lastDeviceMac = mac;
+    if (created) updates.createdViaSensorSetup = true;
+    if (firebaseDb) {
+      firebaseDb.ref("users/" + uid).update(updates, () => {
+        callback(null, { uid, created: !!created });
+      });
+    } else {
+      callback(null, { uid, created: !!created });
+    }
+  };
+
+  auth
+    .getUserByEmail(emailNorm)
+    .then((user) => finish(user.uid, false))
+    .catch((err) => {
+      if (!err || err.code !== "auth/user-not-found") {
+        callback(err);
+        return;
+      }
+      const tempPassword = crypto.randomBytes(24).toString("base64url");
+      auth
+        .createUser({
+          email: emailNorm,
+          password: tempPassword,
+          emailVerified: false,
+        })
+        .then((user) => {
+          const apiKey = process.env.RESEND_API_KEY;
+          if (!apiKey) {
+            finish(user.uid, true);
+            return;
+          }
+          auth
+            .generatePasswordResetLink(emailNorm, {
+              url: PASSWORD_RESET_CONTINUE_URL,
+              handleCodeInApp: false,
+            })
+            .then((link) => {
+              const content = buildWelcomeEmail(mailLang, link);
+              const fromAddr = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
+              sendResendEmail(
+                apiKey,
+                {
+                  from: fromAddr,
+                  to: [emailNorm],
+                  subject: content.subject,
+                  html: content.html,
+                },
+                (sendErr, status) => {
+                  if (sendErr || (status && status >= 400)) {
+                    console.warn("[device-link] Welcome email failed for", emailNorm);
+                  } else {
+                    console.log("[device-link] Welcome email sent to", emailNorm);
+                  }
+                  finish(user.uid, true);
+                }
+              );
+            })
+            .catch((linkErr) => {
+              console.warn("[device-link] Password link failed:", linkErr.message || linkErr);
+              finish(user.uid, true);
+            });
+        })
+        .catch((createErr) => callback(createErr));
+    });
+}
+
 function handlePasswordResetRequest(email, lang, callback) {
   const apiKey = process.env.RESEND_API_KEY;
   if (!firebaseAdmin || !apiKey) {
@@ -474,6 +618,7 @@ function logStartupConfig() {
     "[Aura] password-reset ready:",
     !!(firebaseAdmin && hasResend)
   );
+  console.log("[Aura] device-link ready:", !!firebaseAdmin);
   console.log(
     "[Aura] firebase admin:",
     !!firebaseAdmin,
@@ -538,7 +683,7 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
     res.end(
       JSON.stringify({
-        publicKey: process.env.REVOLUT_API_PUBLIC_KEY || "",
+        publicKey: getRevolutPublicKey(),
         mode:
           String(process.env.REVOLUT_CHECKOUT_MODE || "prod").toLowerCase() === "sandbox"
             ? "sandbox"
@@ -608,6 +753,11 @@ const server = http.createServer((req, res) => {
             const msg =
               (revolutJson && (revolutJson.message || revolutJson.error || revolutJson.description)) ||
               "Order creation failed";
+            if (statusCode === 401) {
+              console.error("[Revolut] Authentication failed – check REVOLUT_API_SECRET_KEY (sandbox sk_... without 'sandbox ' prefix) and REVOLUT_API_URL");
+            } else {
+              console.error("[Revolut] Create order failed:", statusCode, msg);
+            }
             res.writeHead(statusCode >= 400 ? statusCode : 502, {
               "Content-Type": "application/json; charset=utf-8",
             });
@@ -665,6 +815,7 @@ const server = http.createServer((req, res) => {
       JSON.stringify({
         ok: true,
         passwordResetReady: !!(firebaseAdmin && hasResend),
+        deviceLinkReady: !!firebaseAdmin,
         firebaseAdmin: !!firebaseAdmin,
         resend: hasResend,
         passwordResetRoute: true,
@@ -709,6 +860,44 @@ const server = http.createServer((req, res) => {
         }
         res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
         res.end(JSON.stringify({ success: true }));
+      });
+    });
+    return;
+  }
+
+  if (requestPath === "/api/device-link" && req.method === "POST") {
+    let body = "";
+    req.on("data", (chunk) => {
+      body += chunk;
+    });
+    req.on("end", () => {
+      let parsed = {};
+      try {
+        parsed = JSON.parse(body || "{}");
+      } catch (e) {
+        res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({ error: "Invalid JSON" }));
+        return;
+      }
+      handleDeviceLinkRequest(parsed, (err, result) => {
+        if (err && err.message === "INVALID_EMAIL") {
+          res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify({ error: "Invalid email" }));
+          return;
+        }
+        if (err && err.message === "DEVICE_LINK_NOT_CONFIGURED") {
+          res.writeHead(503, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify({ error: "Device link service not configured" }));
+          return;
+        }
+        if (err) {
+          console.error("[device-link]", err.message || err);
+          res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify({ error: "Device link failed" }));
+          return;
+        }
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify(result));
       });
     });
     return;

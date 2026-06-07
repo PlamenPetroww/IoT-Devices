@@ -228,8 +228,10 @@
         try {
           const cred = await auth.signInWithEmailAndPassword(email, password);
           const user = cred.user;
+          const emailKey = getSafeEmail(user.email);
+          await db.ref("userEmailKeys/" + user.uid).set(emailKey);
           const deviceId = getOrCreateDeviceId();
-          const sessionsRef = db.ref("users/" + getSafeEmail(user.email) + "/sessions");
+          const sessionsRef = db.ref("users/" + emailKey + "/sessions");
           const snap = await sessionsRef.once("value");
           const sessions = snap.val() || {};
           const knownIds = Object.keys(sessions);
@@ -245,7 +247,6 @@
             lastSeen: firebase.database.ServerValue.TIMESTAMP,
             userAgent: navigator.userAgent || "",
           });
-          await db.ref("userEmailKeys/" + user.uid).set(getSafeEmail(user.email));
           const params = new URLSearchParams(window.location.search);
           const next = params.get("next");
           const allowedNext = ["delete-account.html", "dashboard.html"];

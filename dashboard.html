@@ -16,7 +16,7 @@
     <link rel="stylesheet" href="auth.css" />
   </head>
 
-  <body class="dashboard-page">
+  <body class="dashboard-page" data-i18n-page="dashboard">
     <header class="dashboard-header">
       <div class="dashboard-header-start">
         <p class="user-email" id="userEmail" title=""></p>
@@ -26,6 +26,7 @@
           href="dashboard.html"
           class="dashboard-brand-link"
           aria-label="Табло Aura HomeSystems"
+          data-i18n-aria="dashboard.brandAria"
         >
           <h1>Aura <span class="brand-accent">Home</span>Systems</h1>
         </a>
@@ -40,6 +41,7 @@
             aria-haspopup="true"
             aria-controls="headerMenuDropdown"
             aria-label="Меню акаунт"
+            data-i18n-aria="dashboard.menuAria"
           >
             <span aria-hidden="true">⋯</span>
           </button>
@@ -53,6 +55,7 @@
               href="delete-account.html"
               class="header-menu-item header-menu-item--danger"
               role="menuitem"
+              data-i18n="dashboard.deleteAccount"
               >Изтриване на акаунт</a
             >
             <a
@@ -60,6 +63,7 @@
               id="logoutBtn"
               class="header-menu-item"
               role="menuitem"
+              data-i18n="dashboard.logout"
               >Изход</a
             >
           </div>
@@ -69,7 +73,7 @@
     <main class="dashboard-layout" id="dashboardMain">
       <section class="dashboard-top">
         <div class="devices-card">
-          <h2>Вашите сензори</h2>
+          <h2 data-i18n="dashboard.sensorsTitle">Вашите сензори</h2>
           <div
             id="duplicateNamesWarning"
             class="duplicate-names-warning"
@@ -77,19 +81,19 @@
             role="alert"
           ></div>
           <div id="devicesList">
-            <p class="devices-empty">Зареждане...</p>
+            <p class="devices-empty" data-i18n="dashboard.loading">Зареждане...</p>
           </div>
         </div>
       </section>
       <div class="dashboard-bottom">
         <aside class="dashboard-history">
           <div class="history-card">
-            <h2>История</h2>
-            <p class="history-desc">
+            <h2 data-i18n="dashboard.historyTitle">История</h2>
+            <p class="history-desc" data-i18n="dashboard.historyDesc">
               Последни промени отворено/затворено по сензорите.
             </p>
             <div class="history-controls">
-              <span>Покажи:</span>
+              <span data-i18n="dashboard.historyShow">Покажи:</span>
               <button
                 type="button"
                 class="history-limit-btn active"
@@ -105,28 +109,28 @@
               </button>
             </div>
             <ul id="historyList" class="history-list">
-              <li class="history-empty">Няма записи в историята.</li>
+              <li class="history-empty" data-i18n="dashboard.historyEmpty">Няма записи в историята.</li>
             </ul>
           </div>
         </aside>
         <aside class="dashboard-mode">
           <div class="mode-card">
-            <h2>Режим на системата</h2>
-            <p>
+            <h2 data-i18n="dashboard.modeTitle">Режим на системата</h2>
+            <p data-i18n="dashboard.modeDesc">
               Когато системата е „Навън“, сензорите се следят и получавате
               известия. В режим „Аз съм у дома“ системата е изключена.
             </p>
-            <p id="pushChip" class="push-chip" hidden>✓ Известията са активни на този телефон</p>
+            <p id="pushChip" class="push-chip" hidden data-i18n="dashboard.pushActive">✓ Известията са активни на този телефон</p>
             <label class="alert-sound-toggle" id="alertSoundToggleWrap" hidden>
               <input type="checkbox" id="alertSoundToggle" checked />
               <span class="alert-sound-toggle-ui" aria-hidden="true"></span>
-              <span class="alert-sound-toggle-label">Звук при известия</span>
+              <span class="alert-sound-toggle-label" data-i18n="dashboard.alertSound">Звук при известия</span>
             </label>
             <div class="mode-buttons">
-              <button type="button" id="modeHome" class="mode-btn active">
+              <button type="button" id="modeHome" class="mode-btn active" data-i18n="dashboard.modeHome">
                 🏠 У дома
               </button>
-              <button type="button" id="modeAway" class="mode-btn danger">
+              <button type="button" id="modeAway" class="mode-btn danger" data-i18n="dashboard.modeAway">
                 🛡️ Навън
               </button>
             </div>
@@ -138,12 +142,12 @@
       </div>
     </main>
     <footer class="dashboard-footer">
-      <a href="index.html" class="back-home">← Обратно към сайта</a>
-      <span class="footer-sep">·</span> <a href="impressum.html">Импресум</a>
+      <a href="index.html" class="back-home" data-i18n="auth.backToSite">← Обратно към сайта</a>
+      <span class="footer-sep">·</span> <a href="impressum.html" data-i18n="footer.impressum">Импресум</a>
       <span class="footer-sep">·</span>
-      <a href="privacy.html">Политика за поверителност</a>
+      <a href="privacy.html" data-i18n="footer.privacy">Политика за поверителност</a>
       <span class="footer-sep">·</span>
-      <a href="delete-account.html">Изтриване на акаунт</a>
+      <a href="delete-account.html" data-i18n="dashboard.deleteAccount">Изтриване на акаунт</a>
     </footer>
     <div
       id="pushOverlay"
@@ -158,17 +162,17 @@
         aria-labelledby="pushOnboardingTitle"
         aria-describedby="pushOnboardingDesc"
       >
-        <h3 id="pushOnboardingTitle">Известия при отваряне</h3>
-        <p id="pushOnboardingDesc">
+        <h3 id="pushOnboardingTitle" data-i18n="dashboard.pushOnboardingTitle">Известия при отваряне</h3>
+        <p id="pushOnboardingDesc" data-i18n="dashboard.pushOnboardingDesc">
           Искате ли да получавате сигнал на телефона, когато врата или прозорец
           се отвори?
         </p>
         <p id="pushDialogHint" class="push-dialog-hint" hidden></p>
         <div class="push-dialog-actions push-dialog-actions--row">
-          <button type="button" id="pushOverlayYes" class="push-dialog-btn yes">
+          <button type="button" id="pushOverlayYes" class="push-dialog-btn yes" data-i18n="dashboard.pushYes">
             Да
           </button>
-          <button type="button" id="pushOverlayNo" class="push-dialog-btn no">
+          <button type="button" id="pushOverlayNo" class="push-dialog-btn no" data-i18n="dashboard.pushNo">
             Не
           </button>
         </div>
@@ -180,19 +184,19 @@
         aria-labelledby="pushAwayTitle"
         hidden
       >
-        <h3 id="pushAwayTitle">Известия в режим „Навън“</h3>
-        <p>
+        <h3 id="pushAwayTitle" data-i18n="dashboard.pushAwayTitle">Известия в режим „Навън“</h3>
+        <p data-i18n="dashboard.pushAwayDesc">
           За сигнал на телефона при отваряне включете известията. Можете и само
           да активирате следенето без push.
         </p>
         <div class="push-dialog-actions">
-          <button type="button" id="pushAwayEnable" class="push-dialog-btn yes">
+          <button type="button" id="pushAwayEnable" class="push-dialog-btn yes" data-i18n="dashboard.pushAwayEnable">
             Да, включи известия
           </button>
-          <button type="button" id="pushAwaySkip" class="push-dialog-btn secondary">
+          <button type="button" id="pushAwaySkip" class="push-dialog-btn secondary" data-i18n="dashboard.pushAwaySkip">
             Само „Навън“ без push
           </button>
-          <button type="button" id="pushAwayCancel" class="push-dialog-btn no">
+          <button type="button" id="pushAwayCancel" class="push-dialog-btn no" data-i18n="dashboard.pushAwayCancel">
             Отказ
           </button>
         </div>
@@ -202,9 +206,12 @@
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-compat.js"></script>
+    <script src="translations.js"></script>
+    <script src="auth-i18n.js"></script>
     <script src="firebase-config.js"></script>
     <script src="push-notifications.js"></script>
     <script>
+      initAuthI18n("dashboard");
       const auth = firebase.auth();
       const db = firebase.database();
       function getSafeEmail(email) {
@@ -266,8 +273,8 @@
           statusMsg.className =
             "sensor-status-msg " + (isAway ? "away" : "home");
           statusMsg.textContent = isAway
-            ? "🛡️ Сензорите са активирани. Получавате известия при отваряне."
-            : "🏠 Сензорите са изключени (режим „Аз съм у дома“).";
+            ? authT("dashboard.statusAway")
+            : authT("dashboard.statusHome");
         }
         db.ref(userPath + "/systemEnabled").on("value", (snap) => {
           const val = snap.val();
@@ -292,7 +299,7 @@
           const data = snap.val();
           if (!data || typeof data !== "object") {
             devicesList.innerHTML =
-              '<p class="devices-empty">Все още няма сензори. Настройте ESP с имейл <strong>' + (user.email || "") + '</strong> (WiFi <strong>AuraHomeSystems_Setup</strong> → 192.168.4.1), после се <a href="register.html">регистрирайте</a> с <strong>същия имейл</strong> и парола.</p>';
+              '<p class="devices-empty">' + authT("dashboard.noSensorsHtml", { email: user.email || "" }) + "</p>";
             return;
           }
           const devices = Object.entries(data).map(([id, d]) => ({
@@ -309,7 +316,7 @@
           function formatLastSeen(ms) {
             if (ms == null || typeof ms !== "number") return "";
             if (ms > 1e12) {
-              return new Date(ms).toLocaleString("bg-BG", {
+              return new Date(ms).toLocaleString(auraDateLocale(), {
                 day: "2-digit",
                 month: "2-digit",
                 hour: "2-digit",
@@ -332,10 +339,9 @@
           });
           const warningEl = document.getElementById("duplicateNamesWarning");
           if (duplicateNames.length > 0) {
-            warningEl.innerHTML =
-              '⚠️ Два или повече сензора имат еднакви имена ("' +
-              escapeHtml(duplicateNames.join('", "')) +
-              '"). Сменете името при конфигурацията на всяко устройство (WiFi Manager на ESP), за да не се презаписват данните във Firebase.';
+            warningEl.innerHTML = authT("dashboard.duplicateNamesWarning", {
+              names: escapeHtml(duplicateNames.join('", "')),
+            });
             warningEl.style.display = "block";
           } else {
             warningEl.style.display = "none";
@@ -350,7 +356,11 @@
                 dev.battery === -1
               ) {
                 powerHtml =
-                  '<span class="device-power no-battery" title="Няма включена батерия">⚠ Няма батерия</span>';
+                  '<span class="device-power no-battery" title="' +
+                  escapeHtml(authT("dashboard.noBatteryTitle")) +
+                  '">' +
+                  escapeHtml(authT("dashboard.noBattery")) +
+                  "</span>";
               } else if (dev.battery != null && dev.battery >= 0) {
                 powerHtml = `<span class="device-battery">${dev.battery}%</span>`;
               }
@@ -359,19 +369,19 @@
               const icon = getIconForSensor(dev.name || dev.id);
               const lastSeenHtml =
                 dev.lastSeen != null
-                  ? '<span class="device-last-seen" title="Последна активност (lastSeen)">' +
+                  ? '<span class="device-last-seen" title="' +
+                    escapeHtml(authT("dashboard.lastSeenTitle")) +
+                    '">' +
                     formatLastSeen(dev.lastSeen) +
                     "</span>"
                   : "";
-              return `                    <div class="device-item ${tintClass}">                        <span class="device-name-wrap"><span class="sensor-icon" aria-hidden="true">${icon}</span><span class="name">${escapeHtml(dev.name)}</span>${lastSeenHtml}</span>                        <span class="device-right">                            ${powerHtml}                            <span class="status ${dev.status}">${dev.status === "open" ? "Отворено" : "Затворено"}</span>                        </span>                    </div>                `;
+              return `                    <div class="device-item ${tintClass}">                        <span class="device-name-wrap"><span class="sensor-icon" aria-hidden="true">${icon}</span><span class="name">${escapeHtml(dev.name)}</span>${lastSeenHtml}</span>                        <span class="device-right">                            ${powerHtml}                            <span class="status ${dev.status}">${dev.status === "open" ? escapeHtml(authT("dashboard.statusOpen")) : escapeHtml(authT("dashboard.statusClosed"))}</span>                        </span>                    </div>                `;
             })
             .join("");
         },
         (err) => {
           console.error("[dashboard] devices read failed:", err);
-          showDevicesError(
-            "Няма достъп до сензорите. Излезте и влезте отново. Ако проблемът остане — обновете Firebase Database Rules (виж firebase-database-rules.json)."
-          );
+          showDevicesError(authT("dashboard.devicesError"));
         });
         if (window.AuraPush) {
           AuraPush.init({ userPath: userPath, db: db }).catch(function () {});
@@ -419,13 +429,13 @@
           const slice = historyData.slice(-limit).reverse();
           if (slice.length === 0) {
             listEl.innerHTML =
-              '<li class="history-empty">Няма записи в историята.</li>';
+              '<li class="history-empty">' + escapeHtml(authT("dashboard.historyEmpty")) + "</li>";
             return;
           }
           listEl.innerHTML = slice
             .map((entry) => {
               const date = new Date(entry.timestamp);
-              const timeStr = date.toLocaleString("bg-BG", {
+              const timeStr = date.toLocaleString(auraDateLocale(), {
                 day: "2-digit",
                 month: "2-digit",
                 year: "numeric",
@@ -433,7 +443,10 @@
                 minute: "2-digit",
                 second: "2-digit",
               });
-              const label = entry.status === "open" ? "Отворено" : "Затворено";
+              const label =
+                entry.status === "open"
+                  ? authT("dashboard.statusOpen")
+                  : authT("dashboard.statusClosed");
               const htint =
                 "history-tint-" +
                 getTintIndexForSensor(entry.deviceName || entry.deviceId);

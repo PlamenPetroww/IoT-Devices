@@ -146,7 +146,7 @@
     opts = opts || {};
     if (!isSupported()) {
       state.status = "unsupported";
-      state.message = "Браузърът не поддържа push известия.";
+      state.message = (global.authT && global.authT("push.unsupported")) || "Push not supported.";
       notify();
       return false;
     }
@@ -155,7 +155,8 @@
     if (!vapidKey) {
       state.status = "error";
       state.message =
-        "Липсва FIREBASE_VAPID_KEY в firebase-config.js (Firebase → Cloud Messaging).";
+        (global.authT && global.authT("push.noVapid")) ||
+        "FIREBASE_VAPID_KEY missing.";
       notify();
       return false;
     }
@@ -167,7 +168,7 @@
     }
     if (permission !== "granted") {
       state.status = "denied";
-      state.message = "Известията са изключени в настройките на телефона.";
+      state.message = (global.authT && global.authT("push.denied")) || "Notifications denied.";
       notify();
       return false;
     }
@@ -198,7 +199,7 @@
 
       if (!token) {
         state.status = "error";
-        state.message = "Неуспешно получаване на токен за известия.";
+        state.message = (global.authT && global.authT("push.tokenFailed")) || "Token failed.";
         notify();
         return false;
       }
@@ -218,7 +219,12 @@
       return true;
     } catch (e) {
       state.status = "error";
-      state.message = "Грешка: " + (e.message || "неуспешна регистрация");
+      state.message =
+        (global.authT &&
+          global.authT("push.registerError", {
+            message: e.message || "registration failed",
+          })) ||
+        "Error: " + (e.message || "registration failed");
       notify();
       return false;
     }

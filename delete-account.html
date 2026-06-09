@@ -19,35 +19,36 @@
     <link rel="apple-touch-icon" href="/icons/icon-192.png" />
     <link rel="stylesheet" href="auth.css" />
   </head>
-  <body class="auth-page">
+  <body class="auth-page" data-i18n-page="delete">
     <div class="auth-box delete-account-box">
       <h1>Aura HomeSystems</h1>
-      <p class="subtitle">Изтриване на акаунт</p>
+      <p class="subtitle" data-i18n="deleteAccount.subtitle">Изтриване на акаунт</p>
 
       <div id="stateLoggedOut" class="delete-account-state" style="display: none">
-        <p class="delete-account-info">
+        <p class="delete-account-info" data-i18n="deleteAccount.loggedOutInfo">
           За да изтриете акаунта си, влезте с имейл и парола. След това ще
           потвърдите изтриването на тази страница.
         </p>
         <p class="auth-links">
-          <a href="login.html?next=delete-account.html">Вход</a>
+          <a href="login.html?next=delete-account.html" data-i18n="deleteAccount.login">Вход</a>
           ·
-          <a href="register.html">Регистрация</a>
+          <a href="register.html" data-i18n="deleteAccount.register">Регистрация</a>
         </p>
       </div>
 
       <div id="stateLoggedIn" class="delete-account-state" style="display: none">
-        <div class="delete-account-warning" role="alert">
+        <div class="delete-account-warning" role="alert" data-i18n-html="deleteAccount.warningHtml">
           <strong>Внимание:</strong> това действие е <strong>необратимо</strong>.
           Ще бъдат изтрити акаунтът ви, данните в таблото (сензори, история, push
           токени) и няма да можете да ги възстановите.
         </div>
         <p class="delete-account-email">
-          Влезли сте като: <strong id="deleteEmail"></strong>
+          <span data-i18n="deleteAccount.loggedInAs">Влезли сте като:</span>
+          <strong id="deleteEmail"></strong>
         </p>
         <form id="deleteForm" class="auth-form" autocomplete="off">
           <div id="deleteError" class="auth-error"></div>
-          <label for="confirmPassword">Парола (за потвърждение)</label>
+          <label for="confirmPassword" data-i18n="deleteAccount.passwordLabel">Парола (за потвърждение)</label>
           <input
             type="password"
             id="confirmPassword"
@@ -55,34 +56,39 @@
             required
             minlength="6"
             autocomplete="current-password"
+            data-i18n-placeholder="auth.passwordPlaceholder"
             placeholder="••••••••"
           />
-          <button type="submit" id="deleteSubmitBtn" class="btn-delete-account">
+          <button type="submit" id="deleteSubmitBtn" class="btn-delete-account" data-i18n="deleteAccount.submit">
             Постоянно изтриване на акаунта
           </button>
         </form>
       </div>
 
       <p class="auth-links">
-        <a href="index.html">← Към началната страница</a>
+        <a href="index.html" data-i18n="deleteAccount.backHome">← Към началната страница</a>
       </p>
       <p class="auth-footer">
-        <a href="privacy.html">Политика за поверителност</a>
+        <a href="privacy.html" data-i18n="footer.privacy">Политика за поверителност</a>
         ·
-        <a href="impressum.html">Импресум</a>
+        <a href="impressum.html" data-i18n="footer.impressum">Импресум</a>
       </p>
     </div>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+    <script src="translations.js"></script>
+    <script src="auth-i18n.js"></script>
     <script src="firebase-config.js"></script>
     <script>
+      initAuthI18n("delete");
       const auth = firebase.auth();
       const db = firebase.database();
       const stateOut = document.getElementById("stateLoggedOut");
       const stateIn = document.getElementById("stateLoggedIn");
       const errorEl = document.getElementById("deleteError");
       const form = document.getElementById("deleteForm");
+      const deleteSubmitBtn = document.getElementById("deleteSubmitBtn");
 
       function showError(msg) {
         errorEl.textContent = msg || "";
@@ -114,24 +120,19 @@
         showError("");
         const user = auth.currentUser;
         if (!user) {
-          showError("Няма активна сесия. Влезте отново.");
+          showError(authT("deleteAccount.errNoSession"));
           return;
         }
         const password = document.getElementById("confirmPassword").value;
         if (!password) {
-          showError("Въведете паролата си.");
+          showError(authT("deleteAccount.errEnterPassword"));
           return;
         }
-        if (
-          !window.confirm(
-            "Сигурни ли сте? Акаунтът и всички данни ще бъдат изтрити завинаги.",
-          )
-        ) {
+        if (!window.confirm(authT("deleteAccount.confirmDelete"))) {
           return;
         }
-        const btn = document.getElementById("deleteSubmitBtn");
-        btn.disabled = true;
-        btn.textContent = "Изтриване...";
+        deleteSubmitBtn.disabled = true;
+        deleteSubmitBtn.textContent = authT("deleteAccount.submitting");
         try {
           const cred = firebase.auth.EmailAuthProvider.credential(
             user.email,
@@ -146,16 +147,14 @@
             err.code === "auth/wrong-password" ||
             err.code === "auth/invalid-credential"
           ) {
-            showError("Грешна парола.");
+            showError(authT("deleteAccount.errWrongPassword"));
           } else if (err.code === "auth/requires-recent-login") {
-            showError(
-              "От съображения за сигурност влезте отново и опитайте пак.",
-            );
+            showError(authT("deleteAccount.errRecentLogin"));
           } else {
-            showError(err.message || "Грешка при изтриване.");
+            showError(err.message || authT("deleteAccount.errFailed"));
           }
-          btn.disabled = false;
-          btn.textContent = "Постоянно изтриване на акаунта";
+          deleteSubmitBtn.disabled = false;
+          deleteSubmitBtn.textContent = authT("deleteAccount.submit");
         }
       });
     </script>

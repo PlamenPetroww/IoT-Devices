@@ -2,31 +2,40 @@
 <html lang="bg">
   <head>
     <meta charset="UTF-8" />
-    <title>Aura HomeSystems</title>
+    <script src="app-mode.js"></script>
+    <title>Aura HomeSystems – умни сензори за врати и прозорци | smart home</title>
     <meta
       name="description"
-      content="Aura HomeSystems – безжични сензори за прозорци и врати, push известия и приложение. Защита на дома, когато никой не е вкъщи."
+      content="Безжични WiFi сензори за врати и прозорци с мобилно приложение и push известия. Smart home защита у дома – монтаж без кабели, без месечен абонамент."
     />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="canonical" href="https://aurahomesystems.eu/" />
+    <link rel="alternate" hreflang="bg" href="https://aurahomesystems.eu/?lang=bg" />
+    <link rel="alternate" hreflang="en" href="https://aurahomesystems.eu/?lang=en" />
+    <link rel="alternate" hreflang="de" href="https://aurahomesystems.eu/?lang=de" />
+    <link rel="alternate" hreflang="x-default" href="https://aurahomesystems.eu/" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Aura HomeSystems" />
-    <meta property="og:title" content="Aura HomeSystems" />
+    <meta property="og:title" content="Aura HomeSystems – сензори за врати и прозорци" />
     <meta
       property="og:description"
-      content="Aura HomeSystems – безжични сензори за прозорци и врати, push известия и приложение. Защита на дома, когато никой не е вкъщи."
+      content="Умни сензори за smart home: мигновени известия на телефона при отваряне на врата или прозорец. WiFi, приложение, без абонамент."
     />
     <meta property="og:url" content="https://aurahomesystems.eu/" />
     <meta property="og:locale" content="bg_BG" />
     <meta
       property="og:image"
-      content="https://aurahomesystems.eu/favicon.png"
+      content="https://aurahomesystems.eu/icons/icon-512.png"
     />
-    <meta name="twitter:card" content="summary" />
-    <meta name="twitter:title" content="Aura HomeSystems" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Aura HomeSystems – smart home сензори" />
     <meta
       name="twitter:description"
-      content="Безжични сензори за прозорци и врати, известия на телефона. Защита на дома."
+      content="Сензори за врати и прозорци с push известия. Защита на дома в реално време."
+    />
+    <meta
+      name="twitter:image"
+      content="https://aurahomesystems.eu/icons/icon-512.png"
     />
     <script type="application/ld+json">
       {
@@ -37,22 +46,72 @@
             "@id": "https://aurahomesystems.eu/#organization",
             "name": "Aura HomeSystems",
             "url": "https://aurahomesystems.eu/",
-            "logo": "https://aurahomesystems.eu/favicon.png",
-            "description": "Безжични сензори за прозорци и входни врати с мобилно приложение и push известия."
+            "logo": "https://aurahomesystems.eu/icons/icon-512.png",
+            "description": "Безжични WiFi сензори за прозорци и входни врати с мобилно приложение и push известия – smart home защита."
           },
           {
             "@type": "WebSite",
             "@id": "https://aurahomesystems.eu/#website",
             "url": "https://aurahomesystems.eu/",
             "name": "Aura HomeSystems",
-            "description": "Aura HomeSystems – умни сензори за дома с известия в реално време.",
+            "description": "Умни сензори за врати и прозорци с известия в реално време – smart home без абонамент.",
             "publisher": { "@id": "https://aurahomesystems.eu/#organization" },
             "inLanguage": ["bg", "en", "de"]
+          },
+          {
+            "@type": "Product",
+            "name": "Aura HomeSystems Door & Window Sensor",
+            "description": "Безжичен WiFi сензор за врати и прозорци с мобилно приложение и push известия.",
+            "brand": { "@type": "Brand", "name": "Aura HomeSystems" },
+            "category": "Smart Home Security Sensor",
+            "offers": {
+              "@type": "Offer",
+              "price": "59.00",
+              "priceCurrency": "EUR",
+              "availability": "https://schema.org/InStock",
+              "url": "https://aurahomesystems.eu/"
+            }
+          },
+          {
+            "@type": "FAQPage",
+            "mainEntity": [
+              {
+                "@type": "Question",
+                "name": "Работи ли без WiFi?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Сензорите се свързват с домашния ви WiFi и изпращат данни до приложението. Без WiFi няма връзка – затова е нужна стабилна мрежа у дома."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Как да инсталирам сензора у дома и да получавам известия на телефона?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Регистрирай се в приложението Aura, монтирай сензора на врата или прозореца, настрой WiFi през AuraHomeSystems_Setup и включи push известия. Пълно ръководство: https://aurahomesystems.eu/installation.html"
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Има ли абонамент?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Не. Плащате веднъж за сензорите и приложението – няма месечен абонамент или скрити такси."
+                }
+              }
+            ]
           }
         ]
       }
     </script>
     <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Aura Home" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
@@ -413,36 +472,212 @@
               <li data-i18n-html="advantages.personalAccount">
                 Персонален акаунт. Данните са само ваши.
               </li>
-              <li data-i18n-html="advantages.easyInstall">
-                Самоинсталация. Без майстори и кабели.
-              </li>
               <li data-i18n-html="advantages.longBattery">
                 Месеци на батерия без подзареждане.
+              </li>
+              <li data-i18n-html="advantages.usbRecharge">
+                Батериите могат да се презареждат с обикновено USB-C зарядно.
               </li>
             </ul>
           </div>
         </section>
-        <section id="compatibility" class="section section-compatibility">
+        <section id="pricing" class="section section-pricing">
           <div class="section-content">
-            <h2 data-i18n="compatibility.title">Съвместимост</h2>
-            <p class="section-subtitle" data-i18n="compatibility.subtitle">
-              Приложението и сензорите работят с обичайните изисквания за
-              устройство и мрежа.
+            <h2 data-i18n="pricing.title">Изберете пакет за сигурност</h2>
+            <p class="section-subtitle" data-i18n="pricing.subtitle">
+              Без абонамент. Моментални известия.
             </p>
-            <ul class="compatibility-list">
-              <li>
-                <span class="compatibility-icon" aria-hidden="true">📱</span>
-                <strong data-i18n="compatibility.ios">iOS 14+</strong>
-              </li>
-              <li>
-                <span class="compatibility-icon" aria-hidden="true">📱</span>
-                <strong data-i18n="compatibility.android">Android 8+</strong>
-              </li>
-              <li>
-                <span class="compatibility-icon" aria-hidden="true">📶</span>
-                <strong data-i18n="compatibility.wifi">WiFi 2.4 GHz</strong>
-              </li>
-            </ul>
+            <div class="pricing-grid">
+              <article class="pricing-card">
+                <span class="pricing-card-name" data-i18n="pricing.pack1Name"
+                  >Basis</span
+                >
+                <h3 class="pricing-card-title" data-i18n="pricing.pack1Title">
+                  1 сензор
+                </h3>
+                <p class="pricing-card-price">59.00&nbsp;€</p>
+                <p class="pricing-card-desc" data-i18n="pricing.pack1Desc">
+                  Идеален за една врата, прозорец или гараж.
+                </p>
+                <button
+                  type="button"
+                  class="pricing-card-btn cta-primary-link"
+                  data-pack="1"
+                  data-i18n="pricing.choose"
+                >
+                  Избери
+                </button>
+              </article>
+              <article class="pricing-card pricing-card-popular">
+                <span class="pricing-badge" data-i18n="pricing.mostPopular"
+                  >Най-популярен</span
+                >
+                <span class="pricing-card-name" data-i18n="pricing.pack3Name"
+                  >Standard</span
+                >
+                <h3 class="pricing-card-title" data-i18n="pricing.pack3Title">
+                  3 сензора
+                </h3>
+                <p class="pricing-card-price">159.00&nbsp;€</p>
+                <p class="pricing-card-desc" data-i18n="pricing.pack3Desc">
+                  Покрийте основните входни точки у дома.
+                </p>
+                <button
+                  type="button"
+                  class="pricing-card-btn cta-primary-link"
+                  data-pack="3"
+                  data-i18n="pricing.choose"
+                >
+                  Избери
+                </button>
+              </article>
+              <article class="pricing-card pricing-card-value">
+                <span
+                  class="pricing-badge pricing-badge-value"
+                  data-i18n="pricing.bestValue"
+                  >Най-изгоден</span
+                >
+                <span class="pricing-card-name" data-i18n="pricing.pack5Name"
+                  >Advanced</span
+                >
+                <h3 class="pricing-card-title" data-i18n="pricing.pack5Title">
+                  5 сензора
+                </h3>
+                <p class="pricing-card-price">249.00&nbsp;€</p>
+                <p class="pricing-card-desc" data-i18n="pricing.pack5Desc">
+                  Пълна защита за дом, офис или Airbnb.
+                </p>
+                <button
+                  type="button"
+                  class="pricing-card-btn cta-primary-link"
+                  data-pack="5"
+                  data-i18n="pricing.choose"
+                >
+                  Избери
+                </button>
+              </article>
+            </div>
+            <p class="pricing-note" data-i18n="pricing.deviceNote">
+              * Всеки акаунт може да бъде използван едновременно на до 2
+              устройства (например телефон и лаптоп).
+            </p>
+          </div>
+        </section>
+        <section id="cta" class="section section-cta">
+          <div class="section-content">
+            <h2 data-i18n="cta.title">Готов ли си да защитиш дома си?</h2>
+            <div class="cta-actions">
+              <button
+                type="button"
+                class="cta-primary-link cta-buy-btn"
+                id="openBuyPanelBtn"
+                data-i18n="cta.buyDirect"
+              >
+                Купи директно
+              </button>
+              <span class="cta-actions-sep" data-i18n="cta.or">или</span>
+            </div>
+            <p class="cta-inquiry-label" data-i18n="cta.inquiryLabel">Изпрати запитване</p>
+            <form
+              id="contactForm"
+              class="contact-form"
+              action="#"
+              method="post"
+            >
+              <label class="form-label">
+                <span class="form-label-text" data-i18n="form.title"
+                  >Заглавие</span
+                >
+                <input
+                  type="text"
+                  name="_subject"
+                  class="form-input"
+                  required
+                  maxlength="120"
+                  placeholder="напр. Запитване за сензори"
+                  data-i18n-placeholder="form.titlePlaceholder"
+                />
+              </label>
+              <label class="form-label">
+                <span class="form-label-text" data-i18n="form.message"
+                  >Съобщение</span
+                >
+                <textarea
+                  name="message"
+                  class="form-input form-textarea"
+                  required
+                  rows="4"
+                  placeholder="Напишете вашето съобщение..."
+                  data-i18n-placeholder="form.messagePlaceholder"
+                ></textarea>
+              </label>
+              <label class="form-label">
+                <span class="form-label-text" data-i18n="form.sensorsTotal"
+                  >Сензори – общо брой (по избор)</span
+                >
+                <div class="quantity-stepper">
+                  <button
+                    type="button"
+                    class="quantity-btn"
+                    id="formSensorsTotalMinus"
+                    aria-label="Намали"
+                  >
+                    −
+                  </button>
+                  <input
+                    type="number"
+                    name="sensorsTotal"
+                    id="formSensorsTotalInput"
+                    class="form-input quantity-input form-input-number"
+                    min="0"
+                    max="99"
+                    value="0"
+                  />
+                  <button
+                    type="button"
+                    class="quantity-btn"
+                    id="formSensorsTotalPlus"
+                    aria-label="Увеличи"
+                  >
+                    +
+                  </button>
+                </div>
+              </label>
+              <label class="form-label">
+                <span class="form-label-text" data-i18n="form.phone"
+                  >Телефон</span
+                >
+                <input
+                  type="tel"
+                  name="phone"
+                  class="form-input"
+                  placeholder="+359 888 123 456"
+                  data-i18n-placeholder="form.phonePlaceholder"
+                />
+              </label>
+              <label class="form-label">
+                <span class="form-label-text" data-i18n="form.email"
+                  >Имейл</span
+                >
+                <input
+                  type="email"
+                  name="_replyto"
+                  class="form-input"
+                  required
+                  placeholder="your@email.com"
+                  data-i18n-placeholder="form.emailPlaceholder"
+                />
+              </label>
+              <p id="formStatus" class="form-status" aria-live="polite"></p>
+              <button
+                type="submit"
+                class="cta-primary-link cta-submit"
+                id="formSubmitBtn"
+                data-i18n="form.submit"
+              >
+                Изпрати запитване
+              </button>
+            </form>
           </div>
         </section>
         <section id="stats" class="section section-stats">
@@ -538,88 +773,6 @@
                 </footer>
               </blockquote>
             </div>
-          </div>
-        </section>
-        <section id="pricing" class="section section-pricing">
-          <div class="section-content">
-            <h2 data-i18n="pricing.title">Изберете пакет за сигурност</h2>
-            <p class="section-subtitle" data-i18n="pricing.subtitle">
-              Без абонамент. Моментални известия.
-            </p>
-            <div class="pricing-grid">
-              <article class="pricing-card">
-                <span class="pricing-card-name" data-i18n="pricing.pack1Name"
-                  >Basis</span
-                >
-                <h3 class="pricing-card-title" data-i18n="pricing.pack1Title">
-                  1 сензор
-                </h3>
-                <p class="pricing-card-price">69&nbsp;€</p>
-                <p class="pricing-card-desc" data-i18n="pricing.pack1Desc">
-                  Идеален за една врата, прозорец или гараж.
-                </p>
-                <button
-                  type="button"
-                  class="pricing-card-btn cta-primary-link"
-                  data-pack="1"
-                  data-i18n="pricing.choose"
-                >
-                  Избери
-                </button>
-              </article>
-              <article class="pricing-card pricing-card-popular">
-                <span class="pricing-badge" data-i18n="pricing.mostPopular"
-                  >Най-популярен</span
-                >
-                <span class="pricing-card-name" data-i18n="pricing.pack3Name"
-                  >Standard</span
-                >
-                <h3 class="pricing-card-title" data-i18n="pricing.pack3Title">
-                  3 сензора
-                </h3>
-                <p class="pricing-card-price">189&nbsp;€</p>
-                <p class="pricing-card-desc" data-i18n="pricing.pack3Desc">
-                  Покрийте основните входни точки у дома.
-                </p>
-                <button
-                  type="button"
-                  class="pricing-card-btn cta-primary-link"
-                  data-pack="3"
-                  data-i18n="pricing.choose"
-                >
-                  Избери
-                </button>
-              </article>
-              <article class="pricing-card pricing-card-value">
-                <span
-                  class="pricing-badge pricing-badge-value"
-                  data-i18n="pricing.bestValue"
-                  >Най-изгоден</span
-                >
-                <span class="pricing-card-name" data-i18n="pricing.pack5Name"
-                  >Advanced</span
-                >
-                <h3 class="pricing-card-title" data-i18n="pricing.pack5Title">
-                  5 сензора
-                </h3>
-                <p class="pricing-card-price">299&nbsp;€</p>
-                <p class="pricing-card-desc" data-i18n="pricing.pack5Desc">
-                  Пълна защита за дом, офис или Airbnb.
-                </p>
-                <button
-                  type="button"
-                  class="pricing-card-btn cta-primary-link"
-                  data-pack="5"
-                  data-i18n="pricing.choose"
-                >
-                  Избери
-                </button>
-              </article>
-            </div>
-            <p class="pricing-note" data-i18n="pricing.deviceNote">
-              * Всеки акаунт може да бъде използван едновременно на до 2
-              устройства (например телефон и лаптоп).
-            </p>
           </div>
         </section>
         <section id="faq" class="section section-faq">
@@ -794,121 +947,27 @@
             </div>
           </div>
         </section>
-        <section id="cta" class="section section-cta">
+        <section id="compatibility" class="section section-compatibility">
           <div class="section-content">
-            <h2 data-i18n="cta.title">Готов ли си да защитиш дома си?</h2>
-            <div class="cta-actions">
-              <button
-                type="button"
-                class="cta-primary-link cta-buy-btn"
-                id="openBuyPanelBtn"
-                data-i18n="cta.buyDirect"
-              >
-                Купи директно
-              </button>
-              <span class="cta-actions-sep" data-i18n="cta.or">или</span>
-            </div>
-            <p class="cta-inquiry-label" data-i18n="cta.inquiryLabel">Изпрати запитване</p>
-            <form
-              id="contactForm"
-              class="contact-form"
-              action="#"
-              method="post"
-            >
-              <label class="form-label">
-                <span class="form-label-text" data-i18n="form.title"
-                  >Заглавие</span
-                >
-                <input
-                  type="text"
-                  name="_subject"
-                  class="form-input"
-                  required
-                  maxlength="120"
-                  placeholder="напр. Запитване за сензори"
-                  data-i18n-placeholder="form.titlePlaceholder"
-                />
-              </label>
-              <label class="form-label">
-                <span class="form-label-text" data-i18n="form.message"
-                  >Съобщение</span
-                >
-                <textarea
-                  name="message"
-                  class="form-input form-textarea"
-                  required
-                  rows="4"
-                  placeholder="Напишете вашето съобщение..."
-                  data-i18n-placeholder="form.messagePlaceholder"
-                ></textarea>
-              </label>
-              <label class="form-label">
-                <span class="form-label-text" data-i18n="form.sensorsTotal"
-                  >Сензори – общо брой (по избор)</span
-                >
-                <div class="quantity-stepper">
-                  <button
-                    type="button"
-                    class="quantity-btn"
-                    id="formSensorsTotalMinus"
-                    aria-label="Намали"
-                  >
-                    −
-                  </button>
-                  <input
-                    type="number"
-                    name="sensorsTotal"
-                    id="formSensorsTotalInput"
-                    class="form-input quantity-input form-input-number"
-                    min="0"
-                    max="99"
-                    value="0"
-                  />
-                  <button
-                    type="button"
-                    class="quantity-btn"
-                    id="formSensorsTotalPlus"
-                    aria-label="Увеличи"
-                  >
-                    +
-                  </button>
-                </div>
-              </label>
-              <label class="form-label">
-                <span class="form-label-text" data-i18n="form.phone"
-                  >Телефон</span
-                >
-                <input
-                  type="tel"
-                  name="phone"
-                  class="form-input"
-                  placeholder="+359 888 123 456"
-                  data-i18n-placeholder="form.phonePlaceholder"
-                />
-              </label>
-              <label class="form-label">
-                <span class="form-label-text" data-i18n="form.email"
-                  >Имейл</span
-                >
-                <input
-                  type="email"
-                  name="_replyto"
-                  class="form-input"
-                  required
-                  placeholder="your@email.com"
-                  data-i18n-placeholder="form.emailPlaceholder"
-                />
-              </label>
-              <p id="formStatus" class="form-status" aria-live="polite"></p>
-              <button
-                type="submit"
-                class="cta-primary-link cta-submit"
-                id="formSubmitBtn"
-                data-i18n="form.submit"
-              >
-                Изпрати запитване
-              </button>
-            </form>
+            <h2 data-i18n="compatibility.title">Съвместимост</h2>
+            <p class="section-subtitle" data-i18n="compatibility.subtitle">
+              Приложението и сензорите работят с обичайните изисквания за
+              устройство и мрежа.
+            </p>
+            <ul class="compatibility-list">
+              <li>
+                <span class="compatibility-icon" aria-hidden="true">📱</span>
+                <strong data-i18n="compatibility.ios">iOS 14+</strong>
+              </li>
+              <li>
+                <span class="compatibility-icon" aria-hidden="true">📱</span>
+                <strong data-i18n="compatibility.android">Android 8+</strong>
+              </li>
+              <li>
+                <span class="compatibility-icon" aria-hidden="true">📶</span>
+                <strong data-i18n="compatibility.wifi">WiFi 2.4 GHz</strong>
+              </li>
+            </ul>
           </div>
         </section>
       </main>
@@ -941,7 +1000,7 @@
           </p>
           <div class="buy-panel-price-row">
             <span class="buy-panel-price-label" data-i18n="buyPanel.priceLabel">Цена за 1 сензор</span>
-            <span class="buy-panel-price">69&nbsp;€</span>
+            <span class="buy-panel-price">59.00&nbsp;€</span>
           </div>
           <p class="buy-panel-note" data-i18n="buyPanel.shippingNote">
             Цената не включва доставка – разходите за куриер са за сметка на
@@ -975,7 +1034,7 @@
                     <span
                       class="buy-summary-value buy-summary-value-num"
                       id="buySummaryUnitPrice"
-                      >69 €</span
+                      >59.00 €</span
                     >
                   </li>
                   <li class="buy-summary-row">
@@ -983,7 +1042,7 @@
                     <span
                       class="buy-summary-value buy-summary-value-num"
                       id="buySummarySubtotal"
-                      >69 €</span
+                      >59.00 €</span
                     >
                   </li>
                   <li class="buy-summary-row">
@@ -997,7 +1056,7 @@
                     <span
                       class="buy-summary-value buy-summary-value-num"
                       id="buySummaryTotal"
-                      >69 €</span
+                      >59.00 €</span
                     >
                   </li>
                 </ul>
@@ -1055,10 +1114,11 @@
                     required
                   >
                     <option value="" data-i18n="buyPanel.payChoose">Изберете</option>
-                    <option value="stripe">Stripe</option>
-                    <option value="revolut">Revolut</option>
+                    <option value="card" data-i18n="buyPanel.payCardOnly">Банкова карта</option>
+                    <option value="revolut" data-i18n="buyPanel.payRevolutOnly">Revolut</option>
                   </select>
                 </label>
+                <p id="buyPayHint" class="buy-panel-play-note" hidden></p>
                 <label
                   class="form-label"
                   id="revolutField"
@@ -1101,7 +1161,7 @@
                     maxlength="120"
                     autocomplete="address-level2"
                     data-i18n-placeholder="buyPanel.deliveryCityPlaceholder"
-                    placeholder="град"
+                    placeholder="напр. София"
                   />
                 </label>
                 <label class="form-label">
@@ -1163,6 +1223,27 @@
               </div>
             </div>
             <p id="buyPanelStatus" class="form-status" aria-live="polite"></p>
+            <label class="form-label" id="cardholderField" style="display: none">
+              <span class="form-label-text" data-i18n="buyPanel.cardholderName">Име на картодържателя</span>
+              <input
+                type="text"
+                name="cardholderName"
+                id="buyCardholderName"
+                class="form-input"
+                autocomplete="cc-name"
+                maxlength="80"
+                data-i18n-placeholder="buyPanel.cardholderPlaceholder"
+                placeholder="Име Фамилия (както на картата)"
+              />
+            </label>
+            <div
+              id="buyCardPayMount"
+              class="buy-revolut-pay-mount buy-card-pay-mount"
+              hidden
+            ></div>
+            <p id="buyCardFieldHint" class="buy-panel-play-note buy-card-field-hint" hidden data-i18n="buyPanel.cardFieldHint">
+              Въведете номер на карта, срок (MM/YY) и CVV в полето по-горе. IBAN не е нужен.
+            </p>
             <div
               id="buyRevolutPayMount"
               class="buy-revolut-pay-mount"
@@ -1191,6 +1272,7 @@
           дома.
         </p>
         <p class="footer-legal">
+          <a href="installation.html" data-i18n="footer.installation">Инсталация на сензори</a> ·
           <a href="impressum.html" data-i18n="footer.impressum">Импресум</a> ·
           <a href="privacy.html" data-i18n="footer.privacy"
             >Политика за поверителност</a

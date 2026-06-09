@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="bg">
+  <head>
+    <meta charset="UTF-8" />
+    <script src="app-mode.js"></script>
+    <title>Инсталация на сензори – Aura HomeSystems</title>
+    <meta
+      name="description"
+      content="Как да монтираш WiFi сензор за врата или прозорец и да получаваш push известия. Smart home стъпка по стъпка – Aura HomeSystems."
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="canonical" href="https://aurahomesystems.eu/installation.html" />
+    <link rel="alternate" hreflang="bg" href="https://aurahomesystems.eu/installation.html?lang=bg" />
+    <link rel="alternate" hreflang="en" href="https://aurahomesystems.eu/installation.html?lang=en" />
+    <link rel="alternate" hreflang="de" href="https://aurahomesystems.eu/installation.html?lang=de" />
+    <link rel="alternate" hreflang="x-default" href="https://aurahomesystems.eu/installation.html" />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#0f172a" />
+    <link rel="stylesheet" href="style.css" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "HowTo",
+        "name": "Инсталация на умни сензори за врати и прозорци",
+        "description": "Стъпка по стъпка монтаж на WiFi smart home сензор с push известия – Aura HomeSystems.",
+        "totalTime": "PT15M",
+        "step": [
+          {
+            "@type": "HowToStep",
+            "name": "Регистрация в приложението",
+            "text": "Регистрирай се с имейл и парола в Aura HomeSystems."
+          },
+          {
+            "@type": "HowToStep",
+            "name": "Монтаж на сензора",
+            "text": "Постави двата модула на рамката и отварящата част на вратата или прозореца."
+          },
+          {
+            "@type": "HowToStep",
+            "name": "WiFi настройка",
+            "text": "Свържи се с AuraHomeSystems_Setup и въведи домашния WiFi 2.4 GHz."
+          },
+          {
+            "@type": "HowToStep",
+            "name": "Push известия",
+            "text": "Включи режим Навън и разреши известия на телефона."
+          }
+        ]
+      }
+    </script>
+    <style>
+      .impressum-header {
+        justify-content: center;
+      }
+      .impressum-header .nav {
+        display: none;
+      }
+      .impressum-header .impressum-logo-wrap {
+        display: flex;
+        justify-content: center;
+        flex: 1;
+      }
+      .impressum-header .lang-dropdown {
+        position: absolute;
+        right: 20px;
+        top: 50%;
+        transform: translateY(-50%);
+      }
+      .installation-page {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 24px 20px 48px;
+      }
+      .installation-page h1 {
+        font-size: 1.5rem;
+        color: var(--accent-strong);
+        margin-bottom: 16px;
+      }
+      .installation-page h2 {
+        font-size: 1.05rem;
+        color: var(--text);
+        margin: 20px 0 8px;
+      }
+      .installation-page p {
+        color: var(--text-muted);
+        font-size: 0.95rem;
+        line-height: 1.65;
+        margin: 0 0 12px;
+      }
+      .installation-cta {
+        display: inline-block;
+        margin-top: 20px;
+        padding: 12px 20px;
+        background: var(--accent);
+        color: #0f172a;
+        font-weight: 700;
+        text-decoration: none;
+        border-radius: 8px;
+      }
+      .installation-back {
+        display: inline-block;
+        margin-top: 28px;
+        color: var(--accent);
+        text-decoration: none;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <header class="site-header impressum-header">
+        <div class="impressum-logo-wrap">
+          <div class="logo">
+            <a href="index.html" style="color: inherit; text-decoration: none"
+              >Aura<span>Home</span>Systems</a
+            >
+          </div>
+        </div>
+        <div class="lang-dropdown">
+          <button
+            type="button"
+            class="lang-dropdown-trigger"
+            aria-haspopup="true"
+            aria-expanded="false"
+            id="langDropdownTrigger"
+          >
+            <span class="lang-flag-icon lang-flag-bg" id="langTriggerFlag"></span>
+            <span class="lang-code" id="langTriggerCode">BG</span>
+            <span class="lang-chevron" aria-hidden="true">▼</span>
+          </button>
+          <div class="lang-dropdown-menu" id="langDropdownMenu" role="menu" hidden>
+            <button type="button" class="lang-option active" data-lang="bg" role="menuitem">
+              <span class="lang-flag-icon lang-flag-bg"></span> BG
+            </button>
+            <button type="button" class="lang-option" data-lang="en" role="menuitem">
+              <span class="lang-flag-icon lang-flag-en"></span> EN
+            </button>
+            <button type="button" class="lang-option" data-lang="de" role="menuitem">
+              <span class="lang-flag-icon lang-flag-de"></span> DE
+            </button>
+          </div>
+        </div>
+      </header>
+      <main class="installation-page">
+        <h1 data-i18n="installation.title">Как да инсталираш умни сензори за врати и прозорци</h1>
+        <p data-i18n="installation.intro">
+          Aura HomeSystems е smart home решение с безжични сензори за входни врати и прозорци.
+        </p>
+        <h2 data-i18n="installation.step1Title">1. Регистрация в приложението</h2>
+        <p data-i18n="installation.step1">Свали приложението...</p>
+        <h2 data-i18n="installation.step2Title">2. Монтаж на сензора</h2>
+        <p data-i18n="installation.step2">Постави сензора...</p>
+        <h2 data-i18n="installation.step3Title">3. WiFi настройка (2.4 GHz)</h2>
+        <p data-i18n="installation.step3">Включи сензора...</p>
+        <h2 data-i18n="installation.step4Title">4. Проверка в таблото</h2>
+        <p data-i18n="installation.step4">Влез в таблото...</p>
+        <h2 data-i18n="installation.step5Title">5. Push известия</h2>
+        <p data-i18n="installation.step5">Включи режим „Навън“...</p>
+        <a href="register.html" class="installation-cta" data-i18n="installation.cta">Към регистрация</a>
+        <br />
+        <a href="index.html" class="installation-back" data-i18n="installation.backLink"
+          >← Обратно към началната страница</a
+        >
+      </main>
+      <footer class="site-footer">
+        <p class="footer-legal">
+          <a href="installation.html" data-i18n="footer.installation">Инсталация на сензори</a> ·
+          <a href="impressum.html" data-i18n="footer.impressum">Импресум</a> ·
+          <a href="privacy.html" data-i18n="footer.privacy">Политика за поверителност</a>
+        </p>
+      </footer>
+    </div>
+    <script src="translations.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

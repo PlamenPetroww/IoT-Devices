@@ -1,12 +1,46 @@
+function isHomePage() {
+    const path = (window.location.pathname || "/").replace(/\/$/, "") || "/";
+    return path === "/" || path.endsWith("/index.html") || path.endsWith("index.html");
+}
+
+function applySeoMeta(lang) {
+    const setMeta = (selector, key, attr) => {
+        const el = document.querySelector(selector);
+        const val = getTranslation(lang, key);
+        if (el && val && val !== key) el.setAttribute(attr, val);
+    };
+
+    if (document.querySelector(".installation-page")) {
+        document.title = getTranslation(lang, "installation.pageTitle") || document.title;
+        setMeta('meta[name="description"]', "installation.metaDescription", "content");
+        return;
+    }
+
+    if (!isHomePage()) return;
+
+    const pageTitle = getTranslation(lang, "seo.pageTitle");
+    if (pageTitle) document.title = pageTitle;
+
+    setMeta('meta[name="description"]', "seo.metaDescription", "content");
+    setMeta('meta[property="og:title"]', "seo.ogTitle", "content");
+    setMeta('meta[property="og:description"]', "seo.ogDescription", "content");
+    setMeta('meta[name="twitter:title"]', "seo.twitterTitle", "content");
+    setMeta('meta[name="twitter:description"]', "seo.twitterDescription", "content");
+
+    const ogLocale = document.querySelector('meta[property="og:locale"]');
+    if (ogLocale) {
+        ogLocale.setAttribute(
+            "content",
+            lang === "de" ? "de_DE" : lang === "en" ? "en_GB" : "bg_BG"
+        );
+    }
+}
+
 function applyLanguage(lang) {
     if (!translations[lang]) lang = "bg";
     document.documentElement.lang = lang === "de" ? "de" : lang === "en" ? "en" : "bg";
 
-    const metaDesc = document.querySelector('meta[name="description"]');
-    if (metaDesc) {
-        const md = getTranslation(lang, "seo.metaDescription");
-        if (md && md !== "seo.metaDescription") metaDesc.setAttribute("content", md);
-    }
+    applySeoMeta(lang);
 
     document.querySelectorAll("[data-i18n]").forEach((el) => {
         const key = el.getAttribute("data-i18n");
@@ -60,7 +94,15 @@ function applyLanguage(lang) {
 
 function initI18n() {
     let lang = "bg";
-    try { lang = localStorage.getItem("aura-lang") || "bg"; } catch (_) {}
+    try {
+        const params = new URLSearchParams(window.location.search);
+        const urlLang = params.get("lang");
+        if (urlLang && translations[urlLang]) {
+            lang = urlLang;
+        } else {
+            lang = localStorage.getItem("aura-lang") || "bg";
+        }
+    } catch (_) {}
     applyLanguage(lang);
 
     const dropdown = document.querySelector(".lang-dropdown");
@@ -488,6 +530,11 @@ function initBuyPanel() {
     function updateOrderButtonState() {
         if (!buySubmitBtn || !shippingZoneSelect) return;
         const zoneId = shippingZoneSelect.value ? shippingZoneSelect.value.trim() : "";
+        if ((cardPayModeActive || revolutPayModeActive) && zoneId) {
+            buySubmitBtn.disabled = false;
+            buySubmitBtn.setAttribute("aria-disabled", "false");
+            return;
+        }
         buySubmitBtn.disabled = !zoneId;
         buySubmitBtn.setAttribute("aria-disabled", zoneId ? "false" : "true");
     }
@@ -497,6 +544,7 @@ function initBuyPanel() {
             syncZoneFromDeliveryCountry();
             if (shippingMethodSelect) shippingMethodSelect.value = "standard";
             updateDeliveryEstimate();
+            scheduleOnlinePayRefresh();
         });
     }
     if (shippingMethodSelect) shippingMethodSelect.addEventListener("change", updateDeliveryEstimate);
@@ -505,27 +553,26 @@ function initBuyPanel() {
         updateDeliveryEstimate();
     });
 
-    const UNIT_PRICE_EUR = 69;
-    const BUNDLES = { 1: 69, 3: 189, 5: 299 };
+    const UNIT_PRICE_EUR = 59;
+    const BUNDLES = { 1: 59, 3: 159, 5: 249 };
 
     function formatPrice(amount) {
         const lang = document.documentElement.lang || "bg";
         const locale = lang === "bg" ? "bg-BG" : lang === "de" ? "de-DE" : "en-US";
         try {
-            return new Intl.NumberFormat(locale, { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount) + " €";
+            return (
+                new Intl.NumberFormat(locale, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                }).format(amount) + " €"
+            );
         } catch (e) {
-            return amount + " €";
+            return Number(amount).toFixed(2) + " €";
         }
     }
 
     function formatPriceCents(amount) {
-        const lang = document.documentElement.lang || "bg";
-        const locale = lang === "bg" ? "bg-BG" : lang === "de" ? "de-DE" : "en-US";
-        try {
-            return new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount) + " €";
-        } catch (e) {
-            return Number(amount).toFixed(2) + " €";
-        }
+        return formatPrice(amount);
     }
 
     function getTotalForQty(q) {
@@ -533,24 +580,69 @@ function initBuyPanel() {
         return q * UNIT_PRICE_EUR;
     }
 
+    let cardPayModeActive = false;
     let revolutPayModeActive = false;
     let revolutConfigCache = undefined;
-    let revolutMountTimer = null;
+    let onlinePayMountTimer = null;
+    let cardFieldInstance = null;
+    let lastCardMountKey = "";
+    const cardMount = document.getElementById("buyCardPayMount");
     const revolutMount = document.getElementById("buyRevolutPayMount");
+    const payHintEl = document.getElementById("buyPayHint");
+    const cardFieldHintEl = document.getElementById("buyCardFieldHint");
+    const cardholderField = document.getElementById("cardholderField");
+    const cardholderInput = document.getElementById("buyCardholderName");
 
     function tBuy(key) {
         const lang = document.documentElement.lang || "bg";
         return typeof getTranslation === "function" ? getTranslation(lang, key) : "";
     }
 
-    function teardownRevolutPay() {
+    function resetSubmitButtonLabel() {
+        if (buySubmitBtn) buySubmitBtn.textContent = tBuy("buyPanel.submit") || "Поръчай";
+    }
+
+    function teardownOnlinePay() {
+        cardPayModeActive = false;
         revolutPayModeActive = false;
+        lastCardMountKey = "";
+        if (cardFieldInstance) {
+            try {
+                cardFieldInstance.destroy();
+            } catch (_) {}
+            cardFieldInstance = null;
+        }
+        if (cardMount) {
+            cardMount.innerHTML = "";
+            cardMount.hidden = true;
+        }
         if (revolutMount) {
             revolutMount.innerHTML = "";
             revolutMount.hidden = true;
         }
-        if (buySubmitBtn) buySubmitBtn.hidden = false;
+        if (cardholderField) cardholderField.style.display = "none";
+        if (cardFieldHintEl) cardFieldHintEl.hidden = true;
+        if (buySubmitBtn) {
+            buySubmitBtn.hidden = false;
+            resetSubmitButtonLabel();
+        }
         updateOrderButtonState();
+    }
+
+    function getCardMountKey() {
+        const q = parseInt(qtyInput && qtyInput.value, 10) || 1;
+        const shipMethod = (shippingMethodSelect && shippingMethodSelect.value) || "standard";
+        return [
+            getCheckoutZoneId(),
+            q,
+            shipMethod,
+            Math.round(getBuyOrderTotalEur() * 100),
+        ].join("|");
+    }
+
+    function tryScheduleCardMountWhenReady() {
+        if (!paymentSelect || paymentSelect.value !== "card") return;
+        scheduleOnlinePayRefresh();
     }
 
     async function fetchRevolutConfig() {
@@ -568,6 +660,52 @@ function initBuyPanel() {
         return revolutConfigCache;
     }
 
+    function getCheckoutZoneId() {
+        return shippingZoneSelect && shippingZoneSelect.value ? shippingZoneSelect.value.trim() : "";
+    }
+
+    function getRevolutAddressMeta() {
+        const countryCode = (deliveryCountrySelect && deliveryCountrySelect.value) || "";
+        const city = (buyForm.querySelector('[name="deliveryCity"]') && buyForm.querySelector('[name="deliveryCity"]').value.trim()) || "";
+        const postcode = (buyForm.querySelector('[name="deliveryPostalCode"]') && buyForm.querySelector('[name="deliveryPostalCode"]').value.trim()) || "";
+        const street = (buyForm.querySelector('[name="deliveryStreet"]') && buyForm.querySelector('[name="deliveryStreet"]').value.trim()) || "";
+        return {
+            countryCode: countryCode,
+            city: city,
+            postcode: postcode,
+            streetLine1: street,
+        };
+    }
+
+    async function createRevolutOrderForCheckout() {
+        const baseRaw = typeof window.INQUIRY_FUNCTIONS_BASE_URL === "string" ? window.INQUIRY_FUNCTIONS_BASE_URL : "";
+        const base = baseRaw.trim().replace(/\/$/, "");
+        if (!base) throw new Error("Backend URL missing");
+        const q = parseInt(qtyInput.value, 10) || 1;
+        const z = getCheckoutZoneId();
+        const shipMethod = (shippingMethodSelect && shippingMethodSelect.value) || "standard";
+        const amountMinor = Math.round(getBuyOrderTotalEur() * 100);
+        const res = await fetch(base + "/api/revolut-order", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                amountMinor: amountMinor,
+                currency: "EUR",
+                quantity: q,
+                shippingZone: z,
+                shippingMethod: shipMethod,
+                description: "Aura HomeSystems — " + q + " sensor(s)",
+            }),
+        });
+        const order = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(order.error || "Order failed");
+        return order.revolutPublicOrderId;
+    }
+
+    async function loadRevolutCheckoutModule() {
+        return import("https://unpkg.com/@revolut/checkout@1.1.25/esm");
+    }
+
     function getBuyOrderTotalEur() {
         if (!qtyInput) return 0;
         let q = parseInt(qtyInput.value, 10);
@@ -580,6 +718,7 @@ function initBuyPanel() {
 
     async function submitBuyPanelOrder(opts) {
         const fromRevolutPay = opts && opts.fromRevolutPay;
+        const fromCardPay = opts && opts.fromCardPay;
         const zoneId = shippingZoneSelect && shippingZoneSelect.value ? shippingZoneSelect.value.trim() : "";
         if (!zoneId) {
             const lang = document.documentElement.lang || "bg";
@@ -598,8 +737,8 @@ function initBuyPanel() {
         }
 
         const origLabel = buySubmitBtn ? buySubmitBtn.textContent : "";
-        if (buySubmitBtn && !revolutPayModeActive) { buySubmitBtn.disabled = true; buySubmitBtn.textContent = "..."; }
-        if (buyStatus && !fromRevolutPay) {
+        if (buySubmitBtn && !revolutPayModeActive && !cardPayModeActive) { buySubmitBtn.disabled = true; buySubmitBtn.textContent = "..."; }
+        if (buyStatus && !fromRevolutPay && !fromCardPay) {
             buyStatus.textContent = "";
             buyStatus.className = "form-status";
         }
@@ -612,6 +751,7 @@ function initBuyPanel() {
         const paymentMethod = (buyForm.querySelector('select[name="paymentMethod"]') && buyForm.querySelector('select[name="paymentMethod"]').value) || "";
         let revolutId = (buyForm.querySelector('input[name="revolutId"]') && buyForm.querySelector('input[name="revolutId"]').value.trim()) || "";
         if (fromRevolutPay) revolutId = "Revolut Pay";
+        if (fromCardPay) revolutId = "Card payment";
         const deliveryAddress = buildCombinedDeliveryAddress();
         const addrHidden = document.getElementById("buyDeliveryAddressCombined");
         if (addrHidden) addrHidden.value = deliveryAddress;
@@ -620,6 +760,7 @@ function initBuyPanel() {
 
         let payMsg = `Direct order: ${quantity} pcs, Payment: ${paymentMethod}, Address: ${deliveryAddress}`;
         if (fromRevolutPay) payMsg += " [Revolut Pay: payment completed]";
+        if (fromCardPay) payMsg += " [Card payment: completed]";
 
         try {
             if (useVerifyFlow) {
@@ -644,7 +785,7 @@ function initBuyPanel() {
                 if (res.ok && data.success) {
                     buyForm.reset();
                     if (qtyInput) qtyInput.value = 1;
-                    teardownRevolutPay();
+                    teardownOnlinePay();
                     closePanel();
                     showSuccessNotification(msgSuccessTitle[lang] || msgSuccessTitle.bg);
                     return true;
@@ -668,7 +809,7 @@ function initBuyPanel() {
                 if (res.ok && (data.ok === true || res.status === 200)) {
                     buyForm.reset();
                     if (qtyInput) qtyInput.value = 1;
-                    teardownRevolutPay();
+                    teardownOnlinePay();
                     closePanel();
                     showSuccessNotification(msgSuccessTitle[lang] || msgSuccessTitle.bg);
                     return true;
@@ -687,22 +828,138 @@ function initBuyPanel() {
             }
             return false;
         } finally {
-            if (buySubmitBtn && !revolutPayModeActive) { buySubmitBtn.disabled = false; buySubmitBtn.textContent = origLabel; }
+            if (buySubmitBtn && !revolutPayModeActive && !cardPayModeActive) { buySubmitBtn.disabled = false; buySubmitBtn.textContent = origLabel; }
         }
     }
 
-    function scheduleRevolutPayRefresh() {
-        if (revolutMountTimer) clearTimeout(revolutMountTimer);
-        revolutMountTimer = setTimeout(function () {
-            doRefreshRevolutPayMount();
+    function scheduleOnlinePayRefresh() {
+        if (onlinePayMountTimer) clearTimeout(onlinePayMountTimer);
+        onlinePayMountTimer = setTimeout(function () {
+            if (!paymentSelect) return;
+            if (paymentSelect.value === "card") doRefreshCardFieldMount();
+            else if (paymentSelect.value === "revolut") doRefreshRevolutPayMount();
         }, 150);
     }
 
+    async function doRefreshCardFieldMount() {
+        if (!paymentSelect || paymentSelect.value !== "card" || !cardMount) return;
+
+        const zoneId = getCheckoutZoneId();
+        if (!zoneId) return;
+
+        if (cardholderField) cardholderField.style.display = "flex";
+        if (cardholderInput) cardholderInput.required = true;
+
+        const cfg = await fetchRevolutConfig();
+        if (!cfg || !cfg.publicKey) {
+            teardownOnlinePay();
+            if (buyStatus) {
+                buyStatus.textContent = tBuy("buyPanel.cardPayUnavailable") || "";
+                buyStatus.className = "form-status form-status-error";
+            }
+            return;
+        }
+
+        if (!buyForm.checkValidity()) {
+            if (cardFieldInstance) {
+                try {
+                    cardFieldInstance.destroy();
+                } catch (_) {}
+                cardFieldInstance = null;
+            }
+            cardPayModeActive = false;
+            if (cardMount) {
+                cardMount.innerHTML = "";
+                cardMount.hidden = true;
+            }
+            if (cardFieldHintEl) cardFieldHintEl.hidden = true;
+            if (buyStatus) {
+                buyStatus.textContent = tBuy("buyPanel.payFillFormFirst") || "";
+                buyStatus.className = "form-status";
+            }
+            resetSubmitButtonLabel();
+            updateOrderButtonState();
+            return;
+        }
+
+        const mountKey = getCardMountKey();
+        if (cardPayModeActive && cardFieldInstance && mountKey === lastCardMountKey) {
+            return;
+        }
+
+        if (cardFieldInstance) {
+            try {
+                cardFieldInstance.destroy();
+            } catch (_) {}
+            cardFieldInstance = null;
+        }
+        cardMount.innerHTML = "";
+        cardPayModeActive = false;
+
+        if (buyStatus) {
+            buyStatus.textContent = "";
+            buyStatus.className = "form-status";
+        }
+
+        try {
+            const orderToken = await createRevolutOrderForCheckout();
+            const mod = await loadRevolutCheckoutModule();
+            const RevolutCheckout = mod.default;
+            const checkoutMode = cfg.mode === "sandbox" ? "sandbox" : "prod";
+            const checkout = await RevolutCheckout(orderToken, checkoutMode);
+            cardFieldInstance = checkout.createCardField({
+                target: cardMount,
+                theme: "light",
+                locale: document.documentElement.lang || "auto",
+                onSuccess: function () {
+                    submitBuyPanelOrder({ fromCardPay: true });
+                },
+                onError: function (err) {
+                    if (buySubmitBtn) buySubmitBtn.disabled = false;
+                    if (buyStatus) {
+                        buyStatus.textContent = (err && err.message) || tBuy("buyPanel.cardPayInitError") || "";
+                        buyStatus.className = "form-status form-status-error";
+                    }
+                },
+                onValidation: function (errors) {
+                    if (!buySubmitBtn) return;
+                    const invalid = Array.isArray(errors) && errors.length > 0;
+                    buySubmitBtn.disabled = invalid;
+                    buySubmitBtn.setAttribute("aria-disabled", invalid ? "true" : "false");
+                },
+            });
+            cardMount.hidden = false;
+            if (cardFieldHintEl) {
+                cardFieldHintEl.hidden = false;
+                cardFieldHintEl.textContent = tBuy("buyPanel.cardFieldHint") || cardFieldHintEl.textContent;
+            }
+            cardPayModeActive = true;
+            lastCardMountKey = mountKey;
+            if (buySubmitBtn) {
+                buySubmitBtn.hidden = false;
+                buySubmitBtn.disabled = false;
+                buySubmitBtn.setAttribute("aria-disabled", "false");
+                buySubmitBtn.textContent = tBuy("buyPanel.payWithCard") || "Плати с карта";
+            }
+        } catch (err) {
+            cardPayModeActive = false;
+            lastCardMountKey = "";
+            if (cardMount) cardMount.hidden = true;
+            if (cardFieldHintEl) cardFieldHintEl.hidden = true;
+            if (buyStatus) {
+                buyStatus.textContent = (err && err.message) || tBuy("buyPanel.cardPayInitError") || "";
+                buyStatus.className = "form-status form-status-error";
+            }
+            resetSubmitButtonLabel();
+            updateOrderButtonState();
+        }
+    }
+
     async function doRefreshRevolutPayMount() {
-        teardownRevolutPay();
+        teardownOnlinePay();
         if (!paymentSelect || paymentSelect.value !== "revolut" || !revolutMount) return;
 
-        const zoneId = shippingZoneSelect && shippingZoneSelect.value ? shippingZoneSelect.value.trim() : "";
+        const zoneId = getCheckoutZoneId();
         if (!zoneId) {
             if (revolutField) revolutField.style.display = "none";
             return;
@@ -711,7 +968,6 @@ function initBuyPanel() {
         const cfg = await fetchRevolutConfig();
         if (!cfg || !cfg.publicKey) {
             if (revolutField) revolutField.style.display = "flex";
-            if (buySubmitBtn) buySubmitBtn.hidden = false;
             if (buyStatus) {
                 buyStatus.textContent = tBuy("buyPanel.revolutPayUnavailable") || "";
                 buyStatus.className = "form-status form-status-error";
@@ -729,14 +985,12 @@ function initBuyPanel() {
         revolutPayModeActive = true;
 
         try {
-            const mod = await import(
-                "https://unpkg.com/@revolut/checkout@1.1.25/esm"
-            );
+            const mod = await loadRevolutCheckoutModule();
             const RevolutCheckout = mod.default;
             const { revolutPay } = await RevolutCheckout.payments({
                 locale: document.documentElement.lang || "en",
                 mode: cfg.mode === "sandbox" ? "sandbox" : "prod",
-                publicToken: cfg.publicKey
+                publicToken: cfg.publicKey,
             });
 
             const returnUrl = function (param) {
@@ -753,37 +1007,16 @@ function initBuyPanel() {
                 mobileRedirectUrls: {
                     success: returnUrl("revolut_success"),
                     failure: returnUrl("revolut_failure"),
-                    cancel: returnUrl("revolut_cancel")
+                    cancel: returnUrl("revolut_cancel"),
                 },
                 createOrder: async function () {
                     if (!buyForm.checkValidity()) {
                         buyForm.reportValidity();
                         throw new Error("validation");
                     }
-                    const baseRaw = typeof window.INQUIRY_FUNCTIONS_BASE_URL === "string" ? window.INQUIRY_FUNCTIONS_BASE_URL : "";
-                    const base = baseRaw.trim().replace(/\/$/, "");
-                    if (!base) throw new Error("Backend URL missing");
-                    const q = parseInt(qtyInput.value, 10) || 1;
-                    const z = shippingZoneSelect && shippingZoneSelect.value ? shippingZoneSelect.value.trim() : "";
-                    const shipMethod = (shippingMethodSelect && shippingMethodSelect.value) || "standard";
-                    const totalEur = getBuyOrderTotalEur();
-                    const amountMinor = Math.round(totalEur * 100);
-                    const res = await fetch(base + "/api/revolut-order", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            amountMinor: amountMinor,
-                            currency: "EUR",
-                            quantity: q,
-                            shippingZone: z,
-                            shippingMethod: shipMethod,
-                            description: "Aura HomeSystems — " + q + " sensor(s)"
-                        })
-                    });
-                    const order = await res.json().catch(() => ({}));
-                    if (!res.ok) throw new Error(order.error || "Order failed");
-                    return { publicId: order.revolutPublicOrderId };
-                }
+                    const publicId = await createRevolutOrderForCheckout();
+                    return { publicId: publicId };
+                },
             };
 
             revolutPay.mount(revolutMount, paymentOptions);
@@ -833,18 +1066,33 @@ function initBuyPanel() {
         const deliveryEur = getDeliveryAmountEur ? getDeliveryAmountEur() : 0;
         const totalWithDelivery = Math.round((total + deliveryEur) * 100) / 100;
         if (summaryTotal) summaryTotal.textContent = formatPriceCents(totalWithDelivery);
-        if (paymentSelect && paymentSelect.value === "revolut") scheduleRevolutPayRefresh();
+        if (paymentSelect && (paymentSelect.value === "revolut" || paymentSelect.value === "card")) {
+            scheduleOnlinePayRefresh();
+        }
     }
 
     function updatePaymentFields() {
         if (!paymentSelect) return;
         const method = paymentSelect.value;
-        if (method !== "revolut") {
-            if (revolutField) revolutField.style.display = "none";
-            teardownRevolutPay();
+        if (revolutField) revolutField.style.display = "none";
+        if (payHintEl) {
+            if (method === "card") {
+                payHintEl.hidden = false;
+                payHintEl.textContent = tBuy("buyPanel.payCardHint") || "";
+            } else if (method === "revolut") {
+                payHintEl.hidden = false;
+                payHintEl.textContent = tBuy("buyPanel.payRevolutHint") || "";
+            } else {
+                payHintEl.hidden = true;
+                payHintEl.textContent = "";
+            }
+        }
+        if (method !== "card" && method !== "revolut") {
+            if (cardholderInput) cardholderInput.required = false;
+            teardownOnlinePay();
             return;
         }
-        scheduleRevolutPayRefresh();
+        scheduleOnlinePayRefresh();
     }
 
     function openPanel() {
@@ -860,7 +1108,7 @@ function initBuyPanel() {
         updatePaymentFields();
     }
     function closePanel() {
-        teardownRevolutPay();
+        teardownOnlinePay();
         overlay.classList.remove("visible");
         panel.classList.remove("visible");
         overlay.setAttribute("aria-hidden", "true");
@@ -900,11 +1148,47 @@ function initBuyPanel() {
     if (paymentSelect) {
         paymentSelect.addEventListener("change", updatePaymentFields);
     }
+    [
+        cardholderInput,
+        buyForm.querySelector('input[name="_replyto"]'),
+        buyForm.querySelector('input[name="deliveryCity"]'),
+        buyForm.querySelector('input[name="deliveryStreet"]'),
+        buyForm.querySelector('input[name="deliveryPostalCode"]'),
+        deliveryCountrySelect,
+    ].forEach(function (el) {
+        if (!el) return;
+        el.addEventListener("blur", tryScheduleCardMountWhenReady);
+    });
 
     buyForm.addEventListener("submit", async (e) => {
         e.preventDefault();
         const paymentMethod = (buyForm.querySelector('select[name="paymentMethod"]') && buyForm.querySelector('select[name="paymentMethod"]').value) || "";
         if (paymentMethod === "revolut" && revolutPayModeActive) {
+            return;
+        }
+        if (paymentMethod === "card" && cardPayModeActive && cardFieldInstance) {
+            if (!buyForm.checkValidity()) {
+                buyForm.reportValidity();
+                return;
+            }
+            const email = (buyForm.querySelector('input[name="_replyto"]') && buyForm.querySelector('input[name="_replyto"]').value.trim()) || "";
+            const name = (cardholderInput && cardholderInput.value.trim()) || "";
+            if (!name) {
+                if (buyStatus) {
+                    buyStatus.textContent = tBuy("buyPanel.cardholderName") || "Cardholder name required";
+                    buyStatus.className = "form-status form-status-error";
+                }
+                if (cardholderInput) cardholderInput.focus();
+                return;
+            }
+            const address = getRevolutAddressMeta();
+            if (buySubmitBtn) buySubmitBtn.disabled = true;
+            cardFieldInstance.submit({
+                name: name,
+                email: email,
+                billingAddress: address,
+                shippingAddress: address,
+            });
             return;
         }
         await submitBuyPanelOrder({});

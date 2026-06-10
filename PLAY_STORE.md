@@ -2,6 +2,13 @@
 
 Този документ описва стъпките да издадеш уеб приложението като Android ап в Google Play.
 
+**Проверка на кода в проекта:** `npm run play:check`  
+(икони, manifest, assetlinks, PWA meta в HTML)
+
+**Package ID (фиксиран):** `com.aurahomesystems.app`  
+**Текстове за Store:** `play-store-listing.txt`  
+**Снимки:** `PLAY_STORE_SCREENSHOTS.md` · банер: `play-store/feature-graphic-1024x500.png`
+
 ---
 
 ## Докато чакаш SSL сертификата (домейнът да стане активен)
@@ -60,9 +67,13 @@
 
 ## Какво е направено в проекта
 
-- **manifest.json** – Web App Manifest за PWA (име, икони, start URL, standalone).
-- **Линк към manifest** в `index.html`, `login.html`, `register.html`, `dashboard.html`.
-- **.well-known/assetlinks.json** – шаблон за Digital Asset Links (задължително за TWA).
+- **manifest.json** – PWA manifest (standalone, икони, `id`, категории).
+- **Линк към manifest** + `theme-color` + Apple touch icon във всички основни HTML страници.
+- **sw.js** – основен service worker (изискван от PWA Builder); зарежда `firebase-messaging-sw.js` за push.
+- **sw.js** – на сървъра (PWA Builder го чете по URL); не се регистрира автоматично от началната страница (за да не блокира pwabuilder.com).
+- **.well-known/assetlinks.json** – Digital Asset Links (попълни SHA-256 след AAB).
+- **netlify.toml** – правилни Content-Type за `manifest.json` и `assetlinks.json`.
+- **delete-account.html** – за изискването на Google Play при акаунти.
 
 ---
 

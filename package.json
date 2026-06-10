@@ -1,7 +1,8 @@
 {
   "scripts": {
     "build": "echo No build step for static site",
-    "start": "node server.js"
+    "start": "node server.js",
+    "play:check": "node scripts/play-prep-check.js"
   },
   "dependencies": {
     "firebase-admin": "^12.0.0",

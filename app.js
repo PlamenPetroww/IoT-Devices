@@ -37,8 +37,8 @@ function applySeoMeta(lang) {
 }
 
 function applyLanguage(lang) {
-    if (!translations[lang]) lang = "bg";
-    document.documentElement.lang = lang === "de" ? "de" : lang === "en" ? "en" : "bg";
+    if (!translations[lang]) lang = "en";
+    document.documentElement.lang = lang === "de" ? "de" : lang === "bg" ? "bg" : "en";
 
     applySeoMeta(lang);
 
@@ -75,7 +75,7 @@ function applyLanguage(lang) {
     if (triggerFlag) {
         triggerFlag.className = "lang-flag-icon lang-flag-" + (lang === "bg" ? "bg" : lang === "en" ? "en" : "de");
     }
-    if (triggerCode) triggerCode.textContent = codes[lang] || codes.bg;
+    if (triggerCode) triggerCode.textContent = codes[lang] || codes.en;
     document.querySelectorAll(".lang-option").forEach((opt) => {
         opt.classList.toggle("active", opt.getAttribute("data-lang") === lang);
     });
@@ -93,14 +93,14 @@ function applyLanguage(lang) {
 }
 
 function initI18n() {
-    let lang = "bg";
+    let lang = "en";
     try {
         const params = new URLSearchParams(window.location.search);
         const urlLang = params.get("lang");
         if (urlLang && translations[urlLang]) {
             lang = urlLang;
         } else {
-            lang = localStorage.getItem("aura-lang") || "bg";
+            lang = localStorage.getItem("aura-lang") || "en";
         }
     } catch (_) {}
     applyLanguage(lang);
@@ -270,7 +270,7 @@ function initContactForm() {
         statusEl.className = "form-status";
 
         const formData = new FormData(form);
-        const lang = document.documentElement.lang || "bg";
+        const lang = document.documentElement.lang || "en";
         const msgSuccess = { bg: "Изпратено! Ще получите отговор на посочения имейл.", en: "Sent! You will get a reply at the email you provided.", de: "Gesendet! Sie erhalten eine Antwort an Ihre E-Mail." };
         const msgError = { bg: "Неуспешно изпращане. Опитайте отново или пишете на solutions.petrov@gmail.com", en: "Send failed. Try again or email solutions.petrov@gmail.com", de: "Senden fehlgeschlagen. Bitte erneut versuchen oder an solutions.petrov@gmail.com schreiben." };
         const msgSuccessTitle = { bg: "Имейлът е изпратен!", en: "Email sent!", de: "E-Mail gesendet!" };
@@ -299,9 +299,9 @@ function initContactForm() {
                     statusEl.textContent = "";
                     statusEl.className = "form-status";
                     form.reset();
-                    showSuccessNotification(msgVerifyTitle[lang] || msgVerifyTitle.bg, msgVerifyText[lang] || msgVerifyText.bg);
+                    showSuccessNotification(msgVerifyTitle[lang] || msgVerifyTitle.en, msgVerifyText[lang] || msgVerifyText.en);
                 } else {
-                    statusEl.textContent = data.error || msgError[lang] || msgError.bg;
+                    statusEl.textContent = data.error || msgError[lang] || msgError.en;
                     statusEl.className = "form-status form-status-error";
                 }
             } else {
@@ -315,14 +315,14 @@ function initContactForm() {
                     statusEl.textContent = "";
                     statusEl.className = "form-status";
                     form.reset();
-                    showSuccessNotification(msgSuccessTitle[lang] || msgSuccessTitle.bg);
+                    showSuccessNotification(msgSuccessTitle[lang] || msgSuccessTitle.en);
                 } else {
-                    statusEl.textContent = msgError[lang] || msgError.bg;
+                    statusEl.textContent = msgError[lang] || msgError.en;
                     statusEl.className = "form-status form-status-error";
                 }
             }
         } catch (err) {
-            statusEl.textContent = msgError[lang] || msgError.bg;
+            statusEl.textContent = msgError[lang] || msgError.en;
             statusEl.className = "form-status form-status-error";
         }
         submitBtn.disabled = false;
@@ -377,7 +377,7 @@ function initBuyPanel() {
         while (sel.options.length > 1) {
             sel.remove(1);
         }
-        const lang = document.documentElement.lang || "bg";
+        const lang = document.documentElement.lang || "en";
         const loc = lang === "bg" ? "bg" : lang === "de" ? "de" : "en";
         let names;
         try {
@@ -412,7 +412,7 @@ function initBuyPanel() {
         const city = (buyForm.querySelector('[name="deliveryCity"]') && buyForm.querySelector('[name="deliveryCity"]').value) || "";
         const postal = (buyForm.querySelector('[name="deliveryPostalCode"]') && buyForm.querySelector('[name="deliveryPostalCode"]').value) || "";
         const street = (buyForm.querySelector('[name="deliveryStreet"]') && buyForm.querySelector('[name="deliveryStreet"]').value) || "";
-        const lang = document.documentElement.lang || "bg";
+        const lang = document.documentElement.lang || "en";
         const loc = lang === "bg" ? "bg" : lang === "de" ? "de" : "en";
         let countryName = "";
         if (countryCode) {
@@ -557,7 +557,7 @@ function initBuyPanel() {
     const BUNDLES = { 1: 59, 3: 159, 5: 249 };
 
     function formatPrice(amount) {
-        const lang = document.documentElement.lang || "bg";
+        const lang = document.documentElement.lang || "en";
         const locale = lang === "bg" ? "bg-BG" : lang === "de" ? "de-DE" : "en-US";
         try {
             return (
@@ -594,12 +594,12 @@ function initBuyPanel() {
     const cardholderInput = document.getElementById("buyCardholderName");
 
     function tBuy(key) {
-        const lang = document.documentElement.lang || "bg";
+        const lang = document.documentElement.lang || "en";
         return typeof getTranslation === "function" ? getTranslation(lang, key) : "";
     }
 
     function resetSubmitButtonLabel() {
-        if (buySubmitBtn) buySubmitBtn.textContent = tBuy("buyPanel.submit") || "Поръчай";
+        if (buySubmitBtn) buySubmitBtn.textContent = tBuy("buyPanel.submit") || "Order";
     }
 
     function teardownOnlinePay() {
@@ -721,9 +721,9 @@ function initBuyPanel() {
         const fromCardPay = opts && opts.fromCardPay;
         const zoneId = shippingZoneSelect && shippingZoneSelect.value ? shippingZoneSelect.value.trim() : "";
         if (!zoneId) {
-            const lang = document.documentElement.lang || "bg";
+            const lang = document.documentElement.lang || "en";
             const msg = { bg: "Изберете държава / регион за доставка.", en: "Please select country / region for delivery.", de: "Bitte wählen Sie Land / Region für die Lieferung." };
-            if (buyStatus) { buyStatus.textContent = msg[lang] || msg.bg; buyStatus.className = "form-status form-status-error"; }
+            if (buyStatus) { buyStatus.textContent = msg[lang] || msg.en; buyStatus.className = "form-status form-status-error"; }
             return false;
         }
         const functionsBase = (typeof window !== "undefined" && window.INQUIRY_FUNCTIONS_BASE_URL) ? window.INQUIRY_FUNCTIONS_BASE_URL.trim() : "";
@@ -743,7 +743,7 @@ function initBuyPanel() {
             buyStatus.className = "form-status";
         }
 
-        const lang = document.documentElement.lang || "bg";
+        const lang = document.documentElement.lang || "en";
         const msgError = { bg: "Неуспешно. Опитайте отново.", en: "Failed. Try again.", de: "Fehlgeschlagen. Bitte erneut versuchen." };
         const msgSuccessTitle = { bg: "Поръчката е изпратена!", en: "Order submitted!", de: "Bestellung gesendet!" };
 
@@ -787,11 +787,11 @@ function initBuyPanel() {
                     if (qtyInput) qtyInput.value = 1;
                     teardownOnlinePay();
                     closePanel();
-                    showSuccessNotification(msgSuccessTitle[lang] || msgSuccessTitle.bg);
+                    showSuccessNotification(msgSuccessTitle[lang] || msgSuccessTitle.en);
                     return true;
                 } else {
                     if (buyStatus) {
-                        buyStatus.textContent = data.error || msgError[lang] || msgError.bg;
+                        buyStatus.textContent = data.error || msgError[lang] || msgError.en;
                         buyStatus.className = "form-status form-status-error";
                     }
                     return false;
@@ -811,11 +811,11 @@ function initBuyPanel() {
                     if (qtyInput) qtyInput.value = 1;
                     teardownOnlinePay();
                     closePanel();
-                    showSuccessNotification(msgSuccessTitle[lang] || msgSuccessTitle.bg);
+                    showSuccessNotification(msgSuccessTitle[lang] || msgSuccessTitle.en);
                     return true;
                 } else {
                     if (buyStatus) {
-                        buyStatus.textContent = msgError[lang] || msgError.bg;
+                        buyStatus.textContent = msgError[lang] || msgError.en;
                         buyStatus.className = "form-status form-status-error";
                     }
                     return false;
@@ -823,7 +823,7 @@ function initBuyPanel() {
             }
         } catch (err) {
             if (buyStatus) {
-                buyStatus.textContent = msgError[lang] || msgError.bg;
+                buyStatus.textContent = msgError[lang] || msgError.en;
                 buyStatus.className = "form-status form-status-error";
             }
             return false;
@@ -939,7 +939,7 @@ function initBuyPanel() {
                 buySubmitBtn.hidden = false;
                 buySubmitBtn.disabled = false;
                 buySubmitBtn.setAttribute("aria-disabled", "false");
-                buySubmitBtn.textContent = tBuy("buyPanel.payWithCard") || "Плати с карта";
+                buySubmitBtn.textContent = tBuy("buyPanel.payWithCard") || "Pay with card";
             }
         } catch (err) {
             cardPayModeActive = false;
@@ -1047,17 +1047,17 @@ function initBuyPanel() {
         const formatted = formatPrice(total);
         const summaryUnitPrice = document.getElementById("buySummaryUnitPrice");
         const summaryPriceLabel = document.getElementById("buySummaryPriceLabel");
-        const lang = document.documentElement.lang || "bg";
+        const lang = document.documentElement.lang || "en";
         const t = typeof getTranslation === "function" ? (key) => getTranslation(lang, key) : () => "";
         if (summaryQty) summaryQty.textContent = String(q);
         if (summaryPriceLabel) {
-            if (q === 1) summaryPriceLabel.textContent = t("buyPanel.summaryPriceLabelUnit") || "Цена за 1 сензор";
-            else if (q === 3) summaryPriceLabel.textContent = t("buyPanel.summaryPriceLabelStandard") || "Standard пакет";
-            else if (q === 5) summaryPriceLabel.textContent = t("buyPanel.summaryPriceLabelAdvanced") || "Advanced пакет";
-            else summaryPriceLabel.textContent = t("buyPanel.summaryPriceLabelMulti") || "Цена";
+            if (q === 1) summaryPriceLabel.textContent = t("buyPanel.summaryPriceLabelUnit") || "Price for 1 sensor";
+            else if (q === 3) summaryPriceLabel.textContent = t("buyPanel.summaryPriceLabelStandard") || "Standard bundle";
+            else if (q === 5) summaryPriceLabel.textContent = t("buyPanel.summaryPriceLabelAdvanced") || "Advanced bundle";
+            else summaryPriceLabel.textContent = t("buyPanel.summaryPriceLabelMulti") || "Price";
         }
         if (summaryUnitPrice) {
-            const br = t("buyPanel.summaryBr") || "бр.";
+            const br = t("buyPanel.summaryBr") || "pcs";
             if (q === 3) summaryUnitPrice.textContent = formatted;
             else if (q === 5) summaryUnitPrice.textContent = formatted;
             else summaryUnitPrice.textContent = formatted + " (" + q + " " + br + ")";
@@ -1247,7 +1247,7 @@ function initHeroSceneRotation() {
     let index = 0;
 
     function applyState() {
-        const lang = document.documentElement.lang || "bg";
+        const lang = document.documentElement.lang || "en";
         const t = typeof getTranslation === "function" ? (k) => getTranslation(lang, k) : () => "";
         const s = states[index];
         rowWindow.classList.toggle("status-open", s.windowOpen);

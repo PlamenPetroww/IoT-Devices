@@ -40,6 +40,8 @@ firebase.messaging().onBackgroundMessage((payload) => {
     body,
     icon: "/favicon.png",
     tag: "aura-push",
+    renotify: true,
+    requireInteraction: true,
     silent: !playSound,
     vibrate: playSound ? [180, 90, 180] : [],
   };
@@ -76,6 +78,8 @@ self.addEventListener("push", (event) => {
       body,
       icon: "/favicon.png",
       tag: "aura-push",
+      renotify: true,
+      requireInteraction: true,
       silent: !playSound,
       vibrate: playSound ? [180, 90, 180] : [],
     };

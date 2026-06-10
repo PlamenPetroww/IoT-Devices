@@ -14,35 +14,37 @@
 #include "driver/gpio.h"
 #endif
 // ========== DEEP SLEEP ==========
-// 1: След всяко изпращане чипът заспива — НЕ изпраща непрекъснато. Нов запис идва при смяна на
-//    магнита (събуждане по GPIO) и/или при heartbeat таймер по-долу (ако е > 0).
-// 0: Винаги буден — изпраща при промяна + периодично батерия (като стар режим за тест).
+// 1: The chip sleeps after every send — it does NOT transmit continuously. A new record comes on a
+//    magnet change (GPIO wakeup) and/or on the heartbeat timer below (if > 0).
+// 0: Always awake — sends on change + periodic battery updates (old mode, for testing).
 #define USE_DEEP_SLEEP 1
-// След reset чака толкова ms ПРЕДИ Wi‑Fi/sleep — за качване на скетч и Serial Monitor. Продукт на батерия: 0.
+// After reset, wait this many ms BEFORE Wi-Fi/sleep — for sketch upload and Serial Monitor. Battery product: 0.
 #if USE_DEEP_SLEEP
-#define UPLOAD_GRACE_MS 20000
+#define UPLOAD_GRACE_MS 0
 #else
 #define UPLOAD_GRACE_MS 0
 #endif
-// 1 = lastSeen/history през Firebase .sv (ако библиотеката го поддържа). 0 = millis() — по-надеждно за запис.
+// 1 = lastSeen/history via Firebase .sv (if the library supports it). 0 = millis() — more reliable for writes.
 #define RTDB_USE_SV_TIMESTAMP 0
-// При deep sleep: 0 = само магнит. Напр. 3600 = веднъж на час изпраща пак (жив ли е, батерия).
-#define DEEP_SLEEP_HEARTBEAT_SEC 0
-// 0 = изключено. При >0: само ако powerSource е „battery“ и % е под прага (виж readBatteryPercent — сива зона ADC = no_battery, без skip).
+// With deep sleep: 0 = magnet only. E.g. 3600 = also send once per hour (alive check, battery).
+#define DEEP_SLEEP_HEARTBEAT_SEC 21600
+// 0 = disabled. If >0: only when powerSource is "battery" and % is below the threshold (see readBatteryPercent — ADC gray zone = no_battery, no skip).
 #define LOW_BATT_SKIP_WIFI_PCT 0
 #define LOW_BATT_RETRY_SEC (6UL * 3600UL)
-// --- КОНФИГУРАЦИЯ FIREBASE ---
+// --- FIREBASE CONFIGURATION ---
 #define FIREBASE_HOST "https://cleverhaus-petrov-default-rtdb.europe-west1.firebasedatabase.app"
-// ВНИМАНИЕ: legacy Database Secret е остарял/непрепоръчителен; за продукт → Service Account или друг auth.
+// WARNING: legacy Database Secret is deprecated/not recommended; for production → Service Account or other auth.
 #define FIREBASE_AUTH "5h8JwKgmM9yFZuzBlCYSQ9mPEjdWPq552l7U9irF"
-// Render API — FCM push при промяна на магнита (само ако systemEnabled=true).
+// Render API — FCM push on magnet change (only when systemEnabled=true).
 #define PUSH_API_URL "https://cleverhaus.onrender.com/api/sensor-event"
+// Checks whether the email has a registered account (returns registered: true/false, creates nothing).
+#define EMAIL_CHECK_URL "https://cleverhaus.onrender.com/api/device-link"
 FirebaseData fbdo;
 FirebaseAuth auth;
 FirebaseConfig config;
-// Reed към GND при „активно“: INPUT_PULLUP. За по-малък ток в sleep ползвай външен pull-up 100k–1M към 3V3.
+// Reed to GND when "active": INPUT_PULLUP. For lower sleep current use an external 100k–1M pull-up to 3V3.
 const int sensorPin = 4;
-// Батерия: ESP32 класически = GPIO 34. ESP32-C3 = GPIO 0 (D0) ако батерията е свързана там.
+// Battery: classic ESP32 = GPIO 34. ESP32-C3 = GPIO 0 (D0) if the battery is wired there.
 #if CONFIG_IDF_TARGET_ESP32C3
 #define BATTERY_ADC_PIN 0
 #else
@@ -52,7 +54,7 @@ const int sensorPin = 4;
 #define BATTERY_ADC_FULL  2500
 #define USB_DETECT_PIN -1
 #define BATTERY_ADC_NO_CELL 400
-// --- Стойности по подразбиране (след първо въвеждане през портала се пазят във флаша) ---
+// --- Defaults (after first entry via the portal they are kept in flash) ---
 #define DEVICE_NAME_DEFAULT "Senzor1"
 // ---
 char user_email[64];
@@ -113,9 +115,33 @@ static String getSafeEmailKey(const char* email) {
     safe.replace("@", "_at_");
     return safe;
 }
-// Валидни нива за ext0: 0 = LOW, 1 = HIGH (не ползвай -1 при wakeup).
+static bool connectWifiFast() {
+    WiFi.mode(WIFI_STA);
+    WiFi.begin();
+    for (int i = 0; i < 48; i++) {
+        if (WiFi.status() == WL_CONNECTED) return true;
+        delay(250);
+    }
+    return false;
+}
+static void syncTimeQuick() {
+    configTime(0, 0, "pool.ntp.org", "time.nist.gov");
+    for (int i = 0; i < 25; i++) {
+        time_t nowSec = 0;
+        time(&nowSec);
+        if (nowSec > 1700000000L) return;
+        delay(200);
+    }
+}
+static int64_t timestampMsNow() {
+    time_t nowSec = 0;
+    time(&nowSec);
+    if (nowSec > 1700000000L) return (int64_t)nowSec * 1000;
+    return (int64_t)millis();
+}
+// Valid ext0 levels: 0 = LOW, 1 = HIGH (do not use -1 for wakeup).
 RTC_DATA_ATTR int nextWakeLevel = 0;
-RTC_DATA_ATTR int8_t rtcLastSentStatus = -1;  // -1 = още не сме писали; 0/1 = последен статус
+RTC_DATA_ATTR int8_t rtcLastSentStatus = -1;  // -1 = nothing sent yet; 0/1 = last sent status
 String transliterateToLatin(String s) {
     String out = "";
     const char* p = s.c_str();
@@ -264,7 +290,7 @@ int readBatteryPercent(char* powerSourceOut, size_t powerSourceLen) {
         powerSourceOut[powerSourceLen - 1] = '\0';
         return 100;
     }
-    // Между NO_CELL и EMPTY: няма валиден делител/клетка (плаващ ADC на GPIO0 и т.н.) — не е „battery“, за да не спира Wi‑Fi.
+    // Between NO_CELL and EMPTY: no valid divider/cell (floating ADC on GPIO0 etc.) — not "battery", so Wi-Fi is never skipped.
     if (raw < BATTERY_ADC_EMPTY) {
         strncpy(powerSourceOut, "no_battery", powerSourceLen - 1);
         powerSourceOut[powerSourceLen - 1] = '\0';
@@ -285,6 +311,32 @@ static bool readSystemEnabled(const String& userPath) {
         }
     }
     return false;
+}
+
+// 1 = registered, 0 = no such account, -1 = server/network unreachable (do not block setup).
+static int checkEmailRegistered(const char* email) {
+    if (WiFi.status() != WL_CONNECTED) return -1;
+    WiFiClientSecure client;
+    client.setInsecure();
+    HTTPClient http;
+    if (!http.begin(client, EMAIL_CHECK_URL)) return -1;
+    // Render free tier: cold start can take ~30-60 s — long timeout only here (setup, not on every wake).
+    http.setTimeout(60000);
+    http.addHeader("Content-Type", "application/json");
+    StaticJsonDocument<128> doc;
+    doc["email"] = email;
+    String body;
+    serializeJson(doc, body);
+    int code = http.POST(body);
+    String resp = (code > 0) ? http.getString() : String();
+    http.end();
+    Serial.print("Email check HTTP ");
+    Serial.println(code);
+    if (code != 200) return -1;
+    StaticJsonDocument<256> rd;
+    if (deserializeJson(rd, resp)) return -1;
+    if (!rd["registered"].is<bool>()) return -1;
+    return rd["registered"].as<bool>() ? 1 : 0;
 }
 
 static void sendPushIfAway(
@@ -319,7 +371,7 @@ static void sendPushIfAway(
     }
     http.end();
 }
-// Изключва Wi‑Fi и настройва GPIO wake + опционален heartbeat таймер преди esp_deep_sleep_start().
+// Turns Wi-Fi off and arms GPIO wake + optional heartbeat timer before esp_deep_sleep_start().
 static void armDeepSleepGpioWakeup(int wakeLevel) {
     WiFi.disconnect(true);
     delay(50);
@@ -338,10 +390,12 @@ static void armDeepSleepGpioWakeup(int wakeLevel) {
     pinMode(sensorPin, INPUT_PULLUP);
     gpio_set_pull_mode((gpio_num_t)sensorPin, GPIO_PULLUP_ONLY);
     delay(50);
-    esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_GPIO);
     esp_deep_sleep_enable_gpio_wakeup(
         1ULL << sensorPin,
         wakeLevel ? ESP_GPIO_WAKEUP_GPIO_HIGH : ESP_GPIO_WAKEUP_GPIO_LOW);
+    // C3: without hold the internal pull-up drops in deep sleep → the pin floats and never wakes the chip.
+    gpio_hold_en((gpio_num_t)sensorPin);
+    gpio_deep_sleep_hold_en();
 #else
     pinMode(sensorPin, INPUT_PULLUP);
     delay(200);
@@ -353,8 +407,10 @@ static void armDeepSleepGpioWakeup(int wakeLevel) {
 #endif
 }
 void setup() {
+    const esp_sleep_wakeup_cause_t bootWakeCause = esp_sleep_get_wakeup_cause();
+    const bool coldBoot = (bootWakeCause == ESP_SLEEP_WAKEUP_UNDEFINED);
 #if UPLOAD_GRACE_MS > 0
-    delay(UPLOAD_GRACE_MS);
+    if (coldBoot) delay(UPLOAD_GRACE_MS);
 #endif
 #if !USE_DEEP_SLEEP
     delay(2000);
@@ -362,9 +418,16 @@ void setup() {
     Serial.begin(115200);
     Serial.println("\n--- PetrovSolution ---");
 #if USE_DEEP_SLEEP && UPLOAD_GRACE_MS > 0
-    Serial.println("UPLOAD: ako ne mojesh da kachish — XIAO C3/S3: zadraj BOOT, natisni RST, pusni BOOT sled 1s, Upload.");
+    if (coldBoot) {
+        Serial.println("UPLOAD: hold BOOT + RST to flash a sketch.");
+    }
 #endif
     loadSensorConfigFromNvs();
+#if CONFIG_IDF_TARGET_ESP32C3
+    // Release the hold from the previous deep sleep, otherwise the pin stays frozen.
+    gpio_deep_sleep_hold_dis();
+    gpio_hold_dis((gpio_num_t)sensorPin);
+#endif
     pinMode(sensorPin, INPUT_PULLUP);
     if (BATTERY_ADC_PIN >= 0) pinMode(BATTERY_ADC_PIN, INPUT);
     if (USB_DETECT_PIN >= 0) pinMode(USB_DETECT_PIN, INPUT);
@@ -378,11 +441,11 @@ void setup() {
         char psLow[16];
         int batLow = readBatteryPercent(psLow, sizeof(psLow));
         if (batLow < (int)LOW_BATT_SKIP_WIFI_PCT && strcmp(psLow, "battery") == 0) {
-            Serial.print("Kritichna bateriya ");
+            Serial.print("Critical battery ");
             Serial.print(batLow);
-            Serial.print("% — bez Wi-Fi, retry sled ");
+            Serial.print("% — skipping Wi-Fi, retry in ");
             Serial.print((unsigned long)(LOW_BATT_RETRY_SEC / 3600UL));
-            Serial.println(" ch");
+            Serial.println(" h");
             WiFi.mode(WIFI_OFF);
             esp_sleep_enable_timer_wakeup((uint64_t)LOW_BATT_RETRY_SEC * 1000000ULL);
             esp_deep_sleep_start();
@@ -394,63 +457,132 @@ void setup() {
     char prev_email[64];
     strncpy(prev_email, user_email, sizeof(prev_email) - 1);
     prev_email[sizeof(prev_email) - 1] = '\0';
-    WiFiManager wm;
-    wm.setSaveConfigCallback(saveConfigCallback);
-    WiFiManagerParameter custom_email(
-        "fbemail",
-        "Email (sushtiyat pri registracia)",
-        user_email,
-        sizeof(user_email) - 1);
-    WiFiManagerParameter custom_name(
-        "dname",
-        "Ime na tozi senzor",
-        device_name,
-        sizeof(device_name) - 1);
-    wm.addParameter(&custom_email);
-    wm.addParameter(&custom_name);
-    if (!emailLooksValid(user_email)) {
-        Serial.println("Nyama email — otvoren setup portal (AuraHomeSystems_Setup)...");
-        wm.resetSettings();
+    bool wifiConnected = false;
+    bool emailFromPortal = false;
+    if (emailLooksValid(user_email)) {
+        Serial.println("Fast WiFi connect...");
+        wifiConnected = connectWifiFast();
+        if (wifiConnected) {
+            Serial.print("WiFi OK: ");
+            Serial.println(WiFi.localIP());
+        }
     }
-    if (!wm.autoConnect("AuraHomeSystems_Setup")) {
-        Serial.println("Neuspeh! Restart...");
-        delay(3000);
-        ESP.restart();
+    if (!wifiConnected) {
+        WiFiManager wm;
+        wm.setSaveConfigCallback(saveConfigCallback);
+        bool emailWasRejected = false;
+        {
+            prefs.begin("aura", true);
+            emailWasRejected = prefs.getBool("emailbad", false);
+            prefs.end();
+        }
+        WiFiManagerParameter warn_html(
+            "<p style='color:#c00;font-weight:bold'>This email is not registered. "
+            "Please register at aurahomesystems.eu first, then enter the same email here.</p>");
+        if (emailWasRejected) {
+            wm.addParameter(&warn_html);
+        }
+        WiFiManagerParameter custom_email(
+            "fbemail",
+            "Email (same as your account registration)",
+            user_email,
+            sizeof(user_email) - 1);
+        WiFiManagerParameter custom_name(
+            "dname",
+            "Sensor name",
+            device_name,
+            sizeof(device_name) - 1);
+        wm.addParameter(&custom_email);
+        wm.addParameter(&custom_name);
+        bool portalOk;
+        if (!emailLooksValid(user_email)) {
+            // No (valid) email → forced portal. startConfigPortal keeps the saved WiFi network,
+            // so after a rejected email the user only has to fix the email.
+            Serial.println("No email — opening setup portal (AuraHomeSystems_Setup)...");
+            portalOk = wm.startConfigPortal("AuraHomeSystems_Setup");
+        } else {
+#if USE_DEEP_SLEEP
+            // Configured battery-powered sensor: the portal must not hang forever (AP mode ~100 mA).
+            wm.setConfigPortalTimeout(180);
+#endif
+            portalOk = wm.autoConnect("AuraHomeSystems_Setup");
+        }
+        if (!portalOk) {
+#if USE_DEEP_SLEEP
+            if (emailLooksValid(user_email)) {
+                // Router missing/power outage: sleep 5 min and retry instead of keeping the portal open.
+                Serial.println("No WiFi — deep sleep 5 min, then retry.");
+                Serial.flush();
+                armDeepSleepGpioWakeup(nextWakeLevel);
+                esp_sleep_enable_timer_wakeup(300ULL * 1000000ULL);
+                esp_deep_sleep_start();
+            }
+#endif
+            Serial.println("Failed! Restarting...");
+            delay(3000);
+            ESP.restart();
+        }
+        strncpy(user_email, custom_email.getValue(), sizeof(user_email) - 1);
+        user_email[sizeof(user_email) - 1] = '\0';
+        strncpy(device_name, custom_name.getValue(), sizeof(device_name) - 1);
+        device_name[sizeof(device_name) - 1] = '\0';
+        {
+            String e = String(user_email);
+            e.trim();
+            e.toLowerCase();
+            e.toCharArray(user_email, sizeof(user_email));
+            String n = String(device_name);
+            n.trim();
+            n.toCharArray(device_name, sizeof(device_name));
+        }
+        if (!emailLooksValid(user_email)) {
+            Serial.println("ERROR: Enter a valid email in the setup portal. Restarting...");
+            delay(3000);
+            ESP.restart();
+        }
+        if (shouldSaveConfig || strcmp(prev_email, user_email) != 0) {
+            saveSensorConfigToNvs();
+            Serial.print("Email saved: ");
+            Serial.println(user_email);
+        }
+        emailFromPortal = true;
     }
-    strncpy(user_email, custom_email.getValue(), sizeof(user_email) - 1);
-    user_email[sizeof(user_email) - 1] = '\0';
-    strncpy(device_name, custom_name.getValue(), sizeof(device_name) - 1);
-    device_name[sizeof(device_name) - 1] = '\0';
-    {
-        String e = String(user_email);
-        e.trim();
-        e.toLowerCase();
-        e.toCharArray(user_email, sizeof(user_email));
-        String n = String(device_name);
-        n.trim();
-        n.toCharArray(device_name, sizeof(device_name));
-    }
-    if (!emailLooksValid(user_email)) {
-        Serial.println("GRESHKA: Vavedete validen email v setup portala. Restart...");
-        delay(3000);
-        ESP.restart();
-    }
-    if (shouldSaveConfig || strcmp(prev_email, user_email) != 0) {
-        saveSensorConfigToNvs();
-        Serial.print("Email zapazen: ");
-        Serial.println(user_email);
-        Serial.println("Registrirai se na saita sas sushtiya email.");
+    // New email from the portal (or cold boot) → verify it belongs to a registered account.
+    if (emailFromPortal || coldBoot) {
+        int reg = checkEmailRegistered(user_email);
+        if (reg == -1) {
+            delay(2000);
+            reg = checkEmailRegistered(user_email);
+        }
+        if (reg == 0) {
+            Serial.println("Email NOT registered! Clearing it and reopening the setup portal...");
+            prefs.begin("aura", false);
+            prefs.remove("email");
+            prefs.putBool("emailbad", true);
+            prefs.end();
+            user_email[0] = '\0';
+            delay(500);
+            ESP.restart();
+        }
+        if (reg == 1) {
+            Serial.println("Email OK — account is registered.");
+            prefs.begin("aura", false);
+            if (prefs.getBool("emailbad", false)) prefs.remove("emailbad");
+            prefs.end();
+        }
+        // reg == -1: server unreachable — continue, so a working sensor is never blocked.
     }
     config.database_url = FIREBASE_HOST;
     config.signer.tokens.legacy_token = FIREBASE_AUTH;
     Firebase.begin(&config, &auth);
     Firebase.reconnectWiFi(true);
-#if !USE_DEEP_SLEEP
-    // При buden rezim NTP e polezen za lokalno vreme; pri deep sleep vremeto e ot Firebase .sv.
+#if USE_DEEP_SLEEP
+    syncTimeQuick();
+#else
     configTime(0, 0, "pool.ntp.org", "time.nist.gov");
     delay(800);
 #endif
-    // Път: /users/<email_key>/ — същият като dashboard след регистрация
+    // Path: /users/<email_key>/ — same as the dashboard after registration
     String userKey = getSafeEmailKey(user_email);
     String userPath = "/users/" + userKey;
 #if USE_DEEP_SLEEP
@@ -464,10 +596,10 @@ void setup() {
     String devicePath = userPath + "/devices/" + deviceID;
     bool systemEnabled = readSystemEnabled(userPath);
     bool currentStatus = (digitalRead(sensorPin) == HIGH);
-    Serial.print("Senzor ");
+    Serial.print("Sensor ");
     Serial.print(device_name);
     Serial.print(" -> ");
-    Serial.println(currentStatus ? "ZATVORENO" : "OTVORENO");
+    Serial.println(currentStatus ? "CLOSED" : "OPEN");
     char powerSource[16];
     int batteryPct = readBatteryPercent(powerSource, sizeof(powerSource));
     FirebaseJson json;
@@ -476,7 +608,7 @@ void setup() {
 #if RTDB_USE_SV_TIMESTAMP
     json.set("lastSeen/.sv", "timestamp");
 #else
-    json.set("lastSeen", (int64_t)millis());
+    json.set("lastSeen", timestampMsNow());
 #endif
     json.set("battery", batteryPct);
     json.set("powerSource", powerSource);
@@ -484,7 +616,8 @@ void setup() {
         Serial.println("Firebase: OK");
         const int8_t curSt = currentStatus ? 1 : 0;
         const bool statusChanged = (rtcLastSentStatus < 0 || rtcLastSentStatus != curSt);
-        const bool writeHistory = !wakeFromTimer || statusChanged;
+        // History only on a real change — otherwise resets/false wakes fill the list with identical entries.
+        const bool writeHistory = statusChanged;
         if (writeHistory) {
             String historyKey = String(millis()) + "_" + String((uint32_t)(esp_random() & 0xFFFF));
             String historyPath = userPath + "/history/" + historyKey;
@@ -495,7 +628,7 @@ void setup() {
 #if RTDB_USE_SV_TIMESTAMP
             jsonHist.set("timestamp/.sv", "timestamp");
 #else
-            jsonHist.set("timestamp", (int64_t)millis());
+            jsonHist.set("timestamp", timestampMsNow());
 #endif
             Firebase.RTDB.setJSON(&fbdo, historyPath.c_str(), &jsonHist);
         }
@@ -510,23 +643,23 @@ void setup() {
     nextWakeLevel = currentStatus ? 0 : 1;
     delay(300);
     Serial.flush();
-    // Преди sleep: RTC pull (ESP32/S3) или gpio pull (C3) — виж armDeepSleepGpioWakeup().
+    // Before sleep: RTC pull (ESP32/S3) or gpio pull (C3) — see armDeepSleepGpioWakeup().
     armDeepSleepGpioWakeup(nextWakeLevel);
-    Serial.print("Deep sleep. Sledvasht bud: promiana na senzor (chekai ");
+    Serial.print("Deep sleep. Next wake: sensor change (waiting for ");
     Serial.print(nextWakeLevel ? "HIGH" : "LOW");
     Serial.print(")");
 #if DEEP_SLEEP_HEARTBEAT_SEC > 0
-    Serial.print(" ili timer ");
+    Serial.print(" or timer ");
     Serial.print(DEEP_SLEEP_HEARTBEAT_SEC);
     Serial.print("s");
 #endif
     Serial.println();
-    Serial.println("Spam...");
+    Serial.println("Sleeping...");
     delay(150);
     esp_deep_sleep_start();
     return;
 #endif
-    Serial.println("ONLINE I GOTOVO!");
+    Serial.println("ONLINE AND READY!");
 }
 void loop() {
 #if !USE_DEEP_SLEEP
@@ -546,10 +679,10 @@ void loop() {
         loopCount = 0;
     }
     if (shouldSend) {
-        Serial.print("Senzor ");
+        Serial.print("Sensor ");
         Serial.print(device_name);
         Serial.print(" -> ");
-        Serial.println(currentStatus ? "ZATVORENO" : "OTVORENO");
+        Serial.println(currentStatus ? "CLOSED" : "OPEN");
         char powerSource[16];
         int batteryPct = readBatteryPercent(powerSource, sizeof(powerSource));
         FirebaseJson json;
@@ -558,29 +691,32 @@ void loop() {
 #if RTDB_USE_SV_TIMESTAMP
         json.set("lastSeen/.sv", "timestamp");
 #else
-        json.set("lastSeen", (int64_t)millis());
+        json.set("lastSeen", timestampMsNow());
 #endif
         json.set("battery", batteryPct);
         json.set("powerSource", powerSource);
         if (Firebase.RTDB.setJSON(&fbdo, devicePath, &json)) {
-            Serial.println("Firebase obnoven!");
-            String historyKey = String(millis()) + "_" + String((uint32_t)(esp_random() & 0xFFFF));
-            String historyPath = userPath + "/history/" + historyKey;
-            FirebaseJson jsonHist;
-            jsonHist.set("deviceId", deviceID);
-            jsonHist.set("deviceName", String(device_name));
-            jsonHist.set("status", currentStatus ? "closed" : "open");
+            Serial.println("Firebase updated!");
+            // History + push only on a real change; periodic sends are just for battery/lastSeen.
+            if (statusChanged) {
+                String historyKey = String(millis()) + "_" + String((uint32_t)(esp_random() & 0xFFFF));
+                String historyPath = userPath + "/history/" + historyKey;
+                FirebaseJson jsonHist;
+                jsonHist.set("deviceId", deviceID);
+                jsonHist.set("deviceName", String(device_name));
+                jsonHist.set("status", currentStatus ? "closed" : "open");
 #if RTDB_USE_SV_TIMESTAMP
-            jsonHist.set("timestamp/.sv", "timestamp");
+                jsonHist.set("timestamp/.sv", "timestamp");
 #else
-            jsonHist.set("timestamp", (int64_t)millis());
+                jsonHist.set("timestamp", timestampMsNow());
 #endif
-            Firebase.RTDB.setJSON(&fbdo, historyPath.c_str(), &jsonHist);
-            if (statusChanged && systemEnabled) {
-                sendPushIfAway(userKey, deviceID, String(device_name), currentStatus);
+                Firebase.RTDB.setJSON(&fbdo, historyPath.c_str(), &jsonHist);
+                if (systemEnabled) {
+                    sendPushIfAway(userKey, deviceID, String(device_name), currentStatus);
+                }
             }
         } else {
-            Serial.print("Greshka: ");
+            Serial.print("Error: ");
             Serial.println(fbdo.errorReason());
         }
         if (statusChanged) lastStatus = currentStatus;

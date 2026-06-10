@@ -1341,7 +1341,7 @@ const translations = {
 
 function getTranslation(lang, key) {
     const parts = key.split(".");
-    let o = translations[lang] || translations.bg;
+    let o = translations[lang] || translations.en;
     for (const p of parts) {
         o = o ? o[p] : undefined;
     }

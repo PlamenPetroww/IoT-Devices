@@ -45,3 +45,13 @@ Content-Type: application/json
 - **state** – `"open"` или `"closed"`.
 
 Render ще прочете push токените от Realtime Database за този `uid` и ще изпрати FCM известие на всички регистрирани устройства.
+
+## 5. Arduino (автоматично)
+
+В **`AuraSensor_UID.ino`** (не старият код с email) при **промяна на магнита** и **`systemEnabled: true`** (режим „Навън“ в dashboard) сензорът сам извиква:
+
+`POST https://cleverhaus.onrender.com/api/sensor-event`
+
+В WiFi Manager полето е **Firebase UID** (от dashboard), не имейл. Път в RTDB: `/users/<uid>/devices/...`
+
+Push **не** идва само от запис в Firebase — нужен е този API call (вече е в скетча).

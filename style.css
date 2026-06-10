@@ -52,7 +52,12 @@ body {
     overflow-x: hidden;
 }
 
+/* Контур само при Tab/клавиатура – не при клик с мишка върху страницата */
 #main-content:focus {
+    outline: none;
+}
+
+#main-content:focus-visible {
     outline: 2px solid var(--accent-strong);
     outline-offset: 4px;
 }
@@ -107,6 +112,14 @@ body {
         padding-left: 24px;
         display: inline-block;
         text-align: left;
+    }
+
+    .section-split .bullets {
+        padding-left: 0;
+        display: block;
+        max-width: 100%;
+        text-align: center;
+        list-style-position: inside;
     }
 
     .contact-form {
@@ -304,8 +317,8 @@ body {
     display: flex;
     align-items: center;
     gap: 18px;
-    flex-shrink: 0;
-    min-width: 220px;
+    flex-shrink: 1;
+    min-width: 0;
     padding-left: 24px;
 }
 
@@ -345,7 +358,39 @@ body {
     width: 100%;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1280px) and (min-width: 1025px) {
+    .nav {
+        gap: 14px;
+        font-size: 12px;
+    }
+
+    .nav-links {
+        gap: 12px;
+    }
+
+    .nav-actions {
+        gap: 10px;
+        padding-left: 12px;
+        min-width: 0;
+    }
+
+    .nav-actions::before {
+        margin-right: 10px;
+    }
+
+    .nav a {
+        letter-spacing: 0.1em;
+        padding: 4px 0 4px;
+    }
+
+    .lang-dropdown-trigger {
+        padding: 6px 10px;
+        font-size: 12px;
+    }
+}
+
+/* До ~laptop/tablet ширина редът с всички линкове се блъска; менюто се отваря по-рано */
+@media (max-width: 1024px) {
     .site-header {
         padding: 10px 12px;
         gap: 10px;
@@ -375,6 +420,7 @@ body {
         box-shadow: -8px 12px 32px rgba(0, 0, 0, 0.5);
         flex-direction: column;
         align-items: stretch;
+        justify-content: flex-start;
         gap: 2px;
         max-height: calc(100vh - 80px);
         height: auto;
@@ -384,6 +430,7 @@ body {
         transform: translateY(-8px);
         transition: transform 0.22s ease-out, opacity 0.2s ease, visibility 0.2s;
         z-index: 60;
+        text-align: left;
     }
     .site-header.menu-open .nav {
         opacity: 1;
@@ -406,12 +453,23 @@ body {
     }
     .nav-links {
         flex-direction: column;
-        align-items: stretch;
+        align-items: flex-start;
+        align-self: stretch;
+        width: 100%;
+        margin-left: 0;
+        margin-right: 0;
         gap: 2px;
     }
 
     .nav-more {
         width: 100%;
+    }
+
+    .nav-more-trigger {
+        width: 100%;
+        box-sizing: border-box;
+        justify-content: flex-start;
+        padding: 12px 14px;
     }
 
     .nav-more-menu {
@@ -423,9 +481,14 @@ body {
     }
     .nav-actions {
         margin-left: 0;
+        margin-right: 0;
+        align-self: stretch;
+        width: 100%;
         flex-direction: column;
-        align-items: stretch;
+        align-items: flex-start;
         gap: 2px;
+        padding-left: 0;
+        padding-right: 0;
         border-top: 1px solid rgba(148, 163, 184, 0.3);
         padding-top: 10px;
         margin-top: 6px;
@@ -439,6 +502,9 @@ body {
         letter-spacing: 0.05em;
         padding: 12px 14px;
         border-radius: 10px;
+        text-align: left;
+        width: 100%;
+        box-sizing: border-box;
     }
     .nav a:hover {
         background: rgba(34, 197, 94, 0.1);
@@ -446,21 +512,39 @@ body {
     .lang-dropdown {
         flex-shrink: 0;
         margin-left: 0;
+        margin-right: 0;
+        align-self: stretch;
+        width: 100%;
         margin-top: 6px;
         padding-top: 6px;
         border-top: 1px solid rgba(148, 163, 184, 0.3);
     }
     .lang-dropdown-trigger {
         width: 100%;
-        justify-content: center;
-        padding: 8px 12px;
+        box-sizing: border-box;
+        justify-content: flex-start;
+        padding: 12px 14px;
+    }
+
+    /* .page { text-align: center } не трябва да центрира елементите в чекмеджето */
+    .site-header .nav,
+    .site-header .nav-links,
+    .site-header .nav-actions,
+    .site-header .nav-more,
+    .site-header .lang-dropdown {
+        text-align: left;
     }
 }
 
-/* Language dropdown – изцяло вдясно */
+/* Language dropdown – вдясно само на широк екран */
 .lang-dropdown {
     position: relative;
-    margin-left: auto;
+}
+
+@media (min-width: 1025px) {
+    .lang-dropdown {
+        margin-left: auto;
+    }
 }
 
 .lang-dropdown-trigger {
@@ -540,8 +624,8 @@ body {
     display: none;
 }
 
-/* На мобилни: падащото меню се отваря нагоре, за да не покрива съдържанието */
-@media (max-width: 768px) {
+/* В чекмеджето на навигацията: падащото меню нагоре, за да не покрива съдържанието */
+@media (max-width: 1024px) {
     .lang-dropdown-menu {
         top: auto;
         bottom: calc(100% + 8px);
@@ -1385,7 +1469,8 @@ main {
     overflow: hidden;
 }
 
-.phone-screen {
+/* Само вътре в .phone (3D блок), не в hero .phone-mockup — иначе вторият .phone-screen презаписваше първия и екранът се изместваше */
+.phone .phone-screen {
     position: absolute;
     inset: 8px 6px 10px;
     border-radius: 14px;
@@ -1457,6 +1542,18 @@ main {
 
 .section-split .section-content {
     max-width: 640px;
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center;
+}
+
+.section-split .bullets {
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 0;
+    list-style-position: inside;
+    text-align: center;
+    max-width: 36rem;
 }
 
 .section h2 {
@@ -2483,6 +2580,20 @@ main {
     flex-direction: column;
     align-items: stretch;
     justify-content: center;
+}
+
+.buy-card-pay-mount {
+    min-height: 132px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: #f1f5f9;
+    border: 1px solid rgba(148, 163, 184, 0.45);
+}
+
+.buy-card-field-hint {
+    max-width: 320px;
+    align-self: center;
+    text-align: center;
 }
 
 .buy-revolut-pay-mount[hidden] {

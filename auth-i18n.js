@@ -1,9 +1,9 @@
 function getAuraLang() {
     try {
-        const lang = localStorage.getItem("aura-lang") || "bg";
-        return translations[lang] ? lang : "bg";
+        const lang = localStorage.getItem("aura-lang") || "en";
+        return translations[lang] ? lang : "en";
     } catch (_) {
-        return "bg";
+        return "en";
     }
 }
 
@@ -19,22 +19,22 @@ function authT(key, vars) {
 
 function firebaseAuthLang() {
     const lang = getAuraLang();
-    if (lang === "en") return "en";
+    if (lang === "bg") return "bg";
     if (lang === "de") return "de";
-    return "bg";
+    return "en";
 }
 
 function auraDateLocale() {
     const lang = getAuraLang();
-    if (lang === "en") return "en-GB";
+    if (lang === "bg") return "bg-BG";
     if (lang === "de") return "de-DE";
-    return "bg-BG";
+    return "en-GB";
 }
 
 function initAuthI18n(page) {
     const lang = getAuraLang();
     document.documentElement.lang =
-        lang === "de" ? "de" : lang === "en" ? "en" : "bg";
+        lang === "de" ? "de" : lang === "bg" ? "bg" : "en";
 
     const titleKeys = {
         register: "auth.registerPageTitle",

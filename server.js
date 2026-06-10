@@ -33,6 +33,19 @@ loadEnvFile();
 
 const REVOLUT_API_VERSION = process.env.REVOLUT_API_VERSION || "2024-09-01";
 
+// Render free tier sleeps after ~15 min idle → 30-60 s push delay on the next sensor event.
+// Self-ping keeps the instance warm. RENDER_EXTERNAL_URL is set automatically by Render.
+const KEEP_ALIVE_URL = process.env.KEEP_ALIVE_URL || process.env.RENDER_EXTERNAL_URL || "";
+if (/^https?:\/\//.test(KEEP_ALIVE_URL)) {
+  const pingMod = KEEP_ALIVE_URL.startsWith("https") ? https : http;
+  setInterval(() => {
+    pingMod
+      .get(KEEP_ALIVE_URL, (r) => r.resume())
+      .on("error", () => {});
+  }, 10 * 60 * 1000);
+  console.log("[keep-alive] Pinging", KEEP_ALIVE_URL, "every 10 min");
+}
+
 /** Strip accidental "sandbox " prefix from pasted Revolut keys. */
 function sanitizeRevolutKey(key) {
   if (!key || typeof key !== "string") return "";
@@ -203,11 +216,11 @@ function directOrderSummaryListHtmlEmail(data) {
   const rev = data.revolutId ? escapeHtmlEmail(String(data.revolutId).trim()) : "";
   return (
     "<ul style=\"margin:12px 0;padding-left:20px;line-height:1.6\">" +
-    "<li><strong>Брой сензори:</strong> " + (q || "—") + "</li>" +
-    "<li><strong>Начин на плащане:</strong> " + (pm || "—") + "</li>" +
+    "<li><strong>Number of sensors:</strong> " + (q || "—") + "</li>" +
+    "<li><strong>Payment method:</strong> " + (pm || "—") + "</li>" +
     (rev ? "<li><strong>Revolut:</strong> " + rev + "</li>" : "") +
-    "<li><strong>Адрес за доставка:</strong> " + (addr || "—") + "</li>" +
-    (phone ? "<li><strong>Телефон:</strong> " + phone + "</li>" : "") +
+    "<li><strong>Delivery address:</strong> " + (addr || "—") + "</li>" +
+    (phone ? "<li><strong>Phone:</strong> " + phone + "</li>" : "") +
     "</ul>"
   );
 }
@@ -215,15 +228,15 @@ function directOrderSummaryListHtmlEmail(data) {
 function buildDirectOrderCustomerEmailHtml(data) {
   const site = "Aura HomeSystems";
   return (
-    "<!DOCTYPE html><html lang=\"bg\"><head><meta charset=\"UTF-8\"></head>" +
+    "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"></head>" +
     "<body style=\"font-family:system-ui,sans-serif;line-height:1.55;color:#1a1a1a;max-width:560px\">" +
-    "<p>Здравейте,</p>" +
-    "<p>Благодарим за вашата поръчка в <strong>" +
+    "<p>Hello,</p>" +
+    "<p>Thank you for your order at <strong>" +
     escapeHtmlEmail(site) +
-    "</strong>. Получихме следните данни:</p>" +
+    "</strong>. We received the following details:</p>" +
     directOrderSummaryListHtmlEmail(data) +
-    "<p>Ще се свържем с вас при необходимост относно плащане и изпращане.</p>" +
-    "<p>Поздрави,<br><strong>" +
+    "<p>We will contact you if needed regarding payment and shipping.</p>" +
+    "<p>Best regards,<br><strong>" +
     escapeHtmlEmail(site) +
     "</strong></p></body></html>"
   );
@@ -300,7 +313,7 @@ function buildPasswordResetEmail(lang, resetLink) {
         "</body></html>",
     },
   };
-  return templates[lang] || templates.bg;
+  return templates[lang] || templates.en;
 }
 
 function buildWelcomeEmail(lang, resetLink) {
@@ -343,7 +356,7 @@ function buildWelcomeEmail(lang, resetLink) {
         "</body></html>",
     },
   };
-  return templates[lang] || templates.bg;
+  return templates[lang] || templates.en;
 }
 
 function normalizeEmailKey(email) {
@@ -392,7 +405,7 @@ function handlePasswordResetRequest(email, lang, callback) {
     return;
   }
   const auth = firebaseAdmin.auth();
-  const mailLang = lang === "en" || lang === "de" ? lang : "bg";
+  const mailLang = lang === "bg" || lang === "de" ? lang : "en";
   auth
     .getUserByEmail(emailNorm)
     .then(() =>
@@ -440,14 +453,14 @@ function maybeSendCustomerOrderConfirmation(parsed) {
   const key = process.env.RESEND_API_KEY;
   if (!key) {
     console.warn(
-      "[Resend] Пропускаме имейл до клиента: няма RESEND_API_KEY. Задайте го в средата или във файл `.env` в корена на проекта."
+      "[Resend] Skipping customer email: RESEND_API_KEY is missing. Set it in the environment or in a `.env` file in the project root."
     );
     return;
   }
   if (String(parsed.orderType || "").trim() !== "direct") return;
   const to = String(parsed.email || parsed._replyto || "").trim();
   if (!to) {
-    console.warn("[Resend] Пропускаме имейл до клиента: липсва email в заявката.");
+    console.warn("[Resend] Skipping customer email: no email in the request.");
     return;
   }
   const fromAddr = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
@@ -456,7 +469,7 @@ function maybeSendCustomerOrderConfirmation(parsed) {
     {
       from: fromAddr,
       to: [to],
-      subject: "Потвърждение на поръчка – Aura HomeSystems",
+      subject: "Order confirmation – Aura HomeSystems",
       html: buildDirectOrderCustomerEmailHtml(parsed),
     },
     (err, status, body) => {
@@ -464,7 +477,7 @@ function maybeSendCustomerOrderConfirmation(parsed) {
       else if (status && status >= 400) {
         console.error("Resend customer order email HTTP:", status, body || "");
       } else {
-        console.log("[Resend] Изпратено потвърждение на поръчка до", to);
+        console.log("[Resend] Order confirmation sent to", to);
       }
     }
   );
@@ -620,11 +633,16 @@ function sendPushToUser(userKey, title, body, callback) {
               body: bodyStr,
               icon: "https://aurahomesystems.eu/favicon.png",
               silent: !playSound,
+              // Стои на екрана до реакция + ново събитие алармира пак, вместо да се слее тихо.
+              requireInteraction: true,
+              tag: "aura-push",
+              renotify: true,
+              vibrate: playSound ? [180, 90, 180] : [],
             },
           },
           android: {
             priority: "high",
-            notification: androidNotification,
+            notification: Object.assign({ priority: "max", defaultVibrateTimings: playSound }, androidNotification),
           },
           apns: {
             payload: {
@@ -820,7 +838,7 @@ const server = http.createServer((req, res) => {
         return;
       }
       const email = parsed.email;
-      const lang = String(parsed.lang || "bg").toLowerCase();
+      const lang = String(parsed.lang || "en").toLowerCase();
       handlePasswordResetRequest(email, lang, (err) => {
         if (err && err.message === "INVALID_EMAIL") {
           res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
@@ -903,7 +921,7 @@ const server = http.createServer((req, res) => {
         (parsed.email ? normalizeEmailKey(parsed.email) : "");
       const deviceId = parsed.deviceId || parsed.sensorId;
       const state = parsed.state;
-      const deviceName = parsed.deviceName || deviceId || "Сензор";
+      const deviceName = parsed.deviceName || deviceId || "Sensor";
       if (!userKey) {
         res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
         res.end(JSON.stringify({ error: "Missing userKey" }));
@@ -912,8 +930,8 @@ const server = http.createServer((req, res) => {
       const isOpen = state === "open" || state === true;
       const title = "Aura HomeSystems";
       const bodyText = isOpen
-        ? deviceName + " е отворен(а)."
-        : deviceName + " е затворен(а).";
+        ? deviceName + " was opened."
+        : deviceName + " was closed.";
       sendPushToUser(userKey, title, bodyText, (err, sent) => {
         if (err) {
           res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });

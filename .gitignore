@@ -8,3 +8,17 @@ Thumbs.db
 .env
 .env.local
 node_modules/
+
+# Local Netlify folder
+.netlify
+
+# Android signing / build artifacts (не качвай в Git)
+android.keystore
+keystore.properties
+*.aab
+*.apk
+*.idsig
+app/build/
+.gradle/
+build/
+local.properties

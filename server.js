@@ -367,6 +367,44 @@ function normalizeEmailKey(email) {
     .replace(/@/g, "_at_");
 }
 
+// Best effort: "Your sensor is ready – set a password" email with a reset link for auto-created accounts.
+function sendDeviceLinkWelcomeEmail(auth, emailNorm) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.warn("[device-link] RESEND_API_KEY missing — welcome email skipped for", emailNorm);
+    return;
+  }
+  auth
+    .generatePasswordResetLink(emailNorm, {
+      url: PASSWORD_RESET_CONTINUE_URL,
+      handleCodeInApp: false,
+    })
+    .then((link) => {
+      const content = buildWelcomeEmail("en", link);
+      const fromAddr = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
+      sendResendEmail(
+        apiKey,
+        {
+          from: fromAddr,
+          to: [emailNorm],
+          subject: content.subject,
+          html: content.html,
+        },
+        (err, status, respBody) => {
+          if (err) console.error("[device-link] welcome email:", err.message);
+          else if (status && status >= 400) {
+            console.error("[device-link] welcome email HTTP:", status, respBody || "");
+          } else {
+            console.log("[device-link] welcome email sent to", emailNorm);
+          }
+        }
+      );
+    })
+    .catch((e) => {
+      console.error("[device-link] reset link failed:", e.message || e);
+    });
+}
+
 function handleDeviceLinkRequest(body, callback) {
   if (!firebaseAdmin) {
     callback(new Error("DEVICE_LINK_NOT_CONFIGURED"));
@@ -386,7 +424,29 @@ function handleDeviceLinkRequest(body, callback) {
     })
     .catch((err) => {
       if (err && err.code === "auth/user-not-found") {
-        callback(null, { userKey, registered: false });
+        // Сензор с непознат email → създаваме акаунта и пращаме "задай парола".
+        // Така редът регистрация/сензор няма значение и никой не остава блокиран.
+        auth
+          .createUser({ email: emailNorm })
+          .then((newUser) => {
+            if (firebaseDb) {
+              firebaseDb
+                .ref("userEmailKeys/" + newUser.uid)
+                .set(userKey)
+                .catch((e) => console.error("[device-link] userEmailKeys:", e.message || e));
+            }
+            sendDeviceLinkWelcomeEmail(auth, emailNorm);
+            console.log("[device-link] account auto-created for", emailNorm);
+            callback(null, { userKey, uid: newUser.uid, registered: true, created: true });
+          })
+          .catch((createErr) => {
+            if (createErr && createErr.code === "auth/invalid-email") {
+              // Невалиден по преценка на Firebase → сензорът отваря портала за поправка.
+              callback(null, { userKey, registered: false });
+              return;
+            }
+            callback(createErr);
+          });
         return;
       }
       callback(err);

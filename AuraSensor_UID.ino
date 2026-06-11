@@ -477,8 +477,8 @@ void setup() {
             prefs.end();
         }
         WiFiManagerParameter warn_html(
-            "<p style='color:#c00;font-weight:bold'>This email is not registered. "
-            "Please register at aurahomesystems.eu first, then enter the same email here.</p>");
+            "<p style='color:#c00;font-weight:bold'>The email address could not be verified. "
+            "Please check it for typos and enter it again.</p>");
         if (emailWasRejected) {
             wm.addParameter(&warn_html);
         }
@@ -547,7 +547,8 @@ void setup() {
         }
         emailFromPortal = true;
     }
-    // New email from the portal (or cold boot) → verify it belongs to a registered account.
+    // New email from the portal (or cold boot) → verify it. The server auto-creates the account
+    // if needed and emails a "set password" link; registered:false now means an invalid email.
     if (emailFromPortal || coldBoot) {
         int reg = checkEmailRegistered(user_email);
         if (reg == -1) {
@@ -555,7 +556,7 @@ void setup() {
             reg = checkEmailRegistered(user_email);
         }
         if (reg == 0) {
-            Serial.println("Email NOT registered! Clearing it and reopening the setup portal...");
+            Serial.println("Email rejected as invalid! Clearing it and reopening the setup portal...");
             prefs.begin("aura", false);
             prefs.remove("email");
             prefs.putBool("emailbad", true);
@@ -565,7 +566,7 @@ void setup() {
             ESP.restart();
         }
         if (reg == 1) {
-            Serial.println("Email OK — account is registered.");
+            Serial.println("Email OK — account is ready.");
             prefs.begin("aura", false);
             if (prefs.getBool("emailbad", false)) prefs.remove("emailbad");
             prefs.end();

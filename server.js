@@ -666,7 +666,10 @@ function sendPushToUser(userKey, title, body, callback) {
       callback(null, 0);
       return;
     }
-    const tokens = Object.values(val).map((v) => v && v.token).filter(Boolean);
+    const entries = Object.keys(val)
+      .map((key) => ({ key, token: val[key] && val[key].token }))
+      .filter((e) => Boolean(e.token));
+    const tokens = entries.map((e) => e.token);
     if (tokens.length === 0) {
       callback(null, 0);
       return;
@@ -717,7 +720,21 @@ function sendPushToUser(userKey, title, body, callback) {
           next(i + 1);
         })
         .catch((e) => {
-          console.warn("[FCM] send failed:", e && e.message ? e.message : e);
+          const code = (e && e.code) || "";
+          // Мъртъв/ротиран токен → трием го, иначе базата се пълни с адреси „в нищото“.
+          if (
+            code === "messaging/registration-token-not-registered" ||
+            code === "messaging/invalid-registration-token" ||
+            code === "messaging/invalid-argument"
+          ) {
+            console.warn("[FCM] removing dead token:", entries[i].key);
+            firebaseDb
+              .ref("users/" + userKey + "/pushTokens/" + entries[i].key)
+              .remove()
+              .catch(() => {});
+          } else {
+            console.warn("[FCM] send failed:", e && e.message ? e.message : e);
+          }
           next(i + 1);
         });
     };

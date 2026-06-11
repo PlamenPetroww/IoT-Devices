@@ -21,6 +21,7 @@
       <p class="subtitle" data-i18n="auth.registerSubtitle">Създаване на профил</p>
       <form id="registerForm" class="auth-form">
         <div id="registerError" class="auth-error"></div>
+        <button type="button" id="setPasswordBtn" style="display: none"></button>
         <label for="email" data-i18n="auth.email">Имейл</label>
         <input
           type="email"
@@ -68,16 +69,55 @@
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
     <script src="translations.js"></script>
     <script src="auth-i18n.js"></script>
+    <script src="inquiry-config.js"></script>
     <script src="firebase-config.js"></script>
     <script>
       initAuthI18n("register");
       const form = document.getElementById("registerForm");
       const errorEl = document.getElementById("registerError");
       const submitBtn = document.getElementById("submitBtn");
+      const setPasswordBtn = document.getElementById("setPasswordBtn");
       firebase.auth().languageCode = firebaseAuthLang();
       function showError(msg) {
         errorEl.textContent = msg || "";
         errorEl.classList.toggle("visible", !!msg);
+      }
+      // Акаунт, създаден от сензора (без парола): един клик праща "set password" линк.
+      function offerSetPassword(email) {
+        setPasswordBtn.textContent = authT("auth.sendSetPasswordLink");
+        setPasswordBtn.style.display = "block";
+        setPasswordBtn.onclick = async () => {
+          setPasswordBtn.disabled = true;
+          try {
+            const apiBase =
+              typeof window.INQUIRY_FUNCTIONS_BASE_URL === "string"
+                ? window.INQUIRY_FUNCTIONS_BASE_URL.replace(/\/$/, "")
+                : "";
+            let sent = false;
+            if (apiBase) {
+              try {
+                const res = await fetch(apiBase + "/api/password-reset", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ email: email, lang: getAuraLang() }),
+                });
+                const data = await res.json().catch(() => ({}));
+                sent = res.ok && data && data.success;
+              } catch (_) {}
+            }
+            if (!sent) {
+              await firebase.auth().sendPasswordResetEmail(email);
+            }
+            showError("");
+            errorEl.textContent = authT("auth.setPasswordLinkSent");
+            errorEl.classList.add("visible");
+            setPasswordBtn.style.display = "none";
+          } catch (e) {
+            errorEl.textContent = authT("auth.setPasswordLinkFailed");
+            errorEl.classList.add("visible");
+            setPasswordBtn.disabled = false;
+          }
+        };
       }
       form.addEventListener("submit", async (e) => {
         e.preventDefault();
@@ -105,9 +145,10 @@
           }
           window.location.href = "dashboard.html";
         } catch (err) {
-          if (err.code === "auth/email-already-in-use")
+          if (err.code === "auth/email-already-in-use") {
             showError(authT("auth.errEmailInUse"));
-          else if (err.code === "auth/invalid-email")
+            offerSetPassword(email);
+          } else if (err.code === "auth/invalid-email")
             showError(authT("auth.errInvalidEmail"));
           else if (err.code === "auth/weak-password")
             showError(authT("auth.errWeakPassword"));

@@ -134,12 +134,29 @@
     var exists = Object.keys(val).some(function (k) {
       return val[k] && val[k].token === token;
     });
+
+    // Chrome ротира токена: изтрий стария запис на ТОВА устройство, за да не праща FCM „в нищото“.
+    var prevToken = null;
+    try {
+      prevToken = localStorage.getItem("auraPushToken");
+    } catch (_) {}
+    if (prevToken && prevToken !== token) {
+      Object.keys(val).forEach(function (k) {
+        if (val[k] && val[k].token === prevToken) {
+          ref.child(k).remove().catch(function () {});
+        }
+      });
+    }
+
     if (!exists) {
       await ref.push({
         token: token,
         createdAt: firebase.database.ServerValue.TIMESTAMP,
       });
     }
+    try {
+      localStorage.setItem("auraPushToken", token);
+    } catch (_) {}
   }
 
   async function registerPush(opts) {

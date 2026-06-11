@@ -683,12 +683,15 @@ function sendPushToUser(userKey, title, body, callback) {
       }
       const titleStr = String(title || "Aura HomeSystems");
       const bodyStr = String(body || "");
+      // Уникален tag на събитие: новото известие е ОТДЕЛНО (със звук), не тиха замяна на старото.
+      // Същият tag обединява дублиращите display-пътища (auto-display + SW) за едно събитие.
+      const eventTag = "aura-" + Date.now() + "-" + Math.floor(Math.random() * 1000);
       const androidNotification = playSound ? { sound: "default" } : { defaultSound: false };
       messaging
         .send({
           token: tokens[i],
           notification: { title: titleStr, body: bodyStr },
-          data: { title: titleStr, body: bodyStr, playSound: playFlag },
+          data: { title: titleStr, body: bodyStr, playSound: playFlag, eventTag },
           webpush: {
             headers: { Urgency: "high" },
             notification: {
@@ -696,9 +699,7 @@ function sendPushToUser(userKey, title, body, callback) {
               body: bodyStr,
               icon: "https://aurahomesystems.eu/favicon.png",
               silent: !playSound,
-              // Стои на екрана до реакция + ново събитие алармира пак, вместо да се слее тихо.
-              requireInteraction: true,
-              tag: "aura-push",
+              tag: eventTag,
               renotify: true,
               vibrate: playSound ? [180, 90, 180] : [],
             },

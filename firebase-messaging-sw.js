@@ -39,9 +39,9 @@ firebase.messaging().onBackgroundMessage((payload) => {
   const options = {
     body,
     icon: "/favicon.png",
-    tag: "aura-push",
+    // Tag на събитие (от сървъра): отделно известие за всяко събитие, без тиха замяна.
+    tag: data.eventTag || "aura-" + Date.now(),
     renotify: true,
-    requireInteraction: true,
     silent: !playSound,
     vibrate: playSound ? [180, 90, 180] : [],
   };
@@ -77,9 +77,8 @@ self.addEventListener("push", (event) => {
     const options = {
       body,
       icon: "/favicon.png",
-      tag: "aura-push",
+      tag: data.eventTag || "aura-" + Date.now(),
       renotify: true,
-      requireInteraction: true,
       silent: !playSound,
       vibrate: playSound ? [180, 90, 180] : [],
     };

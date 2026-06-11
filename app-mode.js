@@ -47,7 +47,9 @@
   function pageName() {
     var parts = global.location.pathname.split("/").filter(Boolean);
     var last = parts[parts.length - 1];
-    if (!last || last.indexOf(".") === -1) return "index.html";
+    if (!last) return "index.html";
+    // Netlify Pretty URLs serves register.html as /register — treat it as the same page.
+    if (last.indexOf(".") === -1) return last + ".html";
     return last;
   }
 

@@ -131,29 +131,42 @@
     var ref = state.db.ref(state.userPath + "/pushTokens");
     var snap = await ref.once("value");
     var val = snap.val() || {};
-    var exists = Object.keys(val).some(function (k) {
-      return val[k] && val[k].token === token;
-    });
 
-    // Chrome ротира токена: изтрий стария запис на ТОВА устройство, за да не праща FCM „в нищото“.
+    // Един запис на браузър/телефон — toggle на известия обновява, не добавя нов токен.
+    var deviceKey = null;
+    try {
+      deviceKey = localStorage.getItem("auraPushDeviceKey");
+      if (!deviceKey) {
+        deviceKey =
+          "dev_" +
+          Date.now().toString(36) +
+          "_" +
+          Math.random().toString(36).slice(2, 10);
+        localStorage.setItem("auraPushDeviceKey", deviceKey);
+      }
+    } catch (_) {
+      deviceKey = "dev_fallback";
+    }
+
     var prevToken = null;
     try {
       prevToken = localStorage.getItem("auraPushToken");
     } catch (_) {}
-    if (prevToken && prevToken !== token) {
-      Object.keys(val).forEach(function (k) {
-        if (val[k] && val[k].token === prevToken) {
-          ref.child(k).remove().catch(function () {});
-        }
-      });
-    }
 
-    if (!exists) {
-      await ref.push({
-        token: token,
-        createdAt: firebase.database.ServerValue.TIMESTAMP,
-      });
-    }
+    // Премахни дубликати и стария токен на това устройство.
+    Object.keys(val).forEach(function (k) {
+      var row = val[k];
+      if (!row || !row.token) return;
+      if (row.token === token) return;
+      if (k === deviceKey || row.token === prevToken) {
+        ref.child(k).remove().catch(function () {});
+      }
+    });
+
+    await ref.child(deviceKey).set({
+      token: token,
+      createdAt: firebase.database.ServerValue.TIMESTAMP,
+    });
     try {
       localStorage.setItem("auraPushToken", token);
     } catch (_) {}

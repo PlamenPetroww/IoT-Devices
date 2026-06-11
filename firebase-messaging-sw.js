@@ -52,38 +52,3 @@ firebase.messaging().onBackgroundMessage((payload) => {
     return null;
   }
 });
-
-self.addEventListener("push", (event) => {
-  try {
-    const raw = event.data ? event.data.text() : "";
-    let payload = {};
-    try {
-      payload = raw ? JSON.parse(raw) : {};
-    } catch (parseErr) {
-      payload = { raw };
-    }
-
-    const data = payload && payload.data ? payload.data : payload || {};
-    const playSound = data.playSound !== "0";
-    const title =
-      data.title ||
-      (payload.notification && payload.notification.title) ||
-      "Aura HomeSystems";
-    const body =
-      data.body ||
-      (payload.notification && payload.notification.body) ||
-      "";
-
-    const options = {
-      body,
-      icon: "/favicon.png",
-      tag: data.eventTag || "aura-" + Date.now(),
-      renotify: true,
-      silent: !playSound,
-      vibrate: playSound ? [180, 90, 180] : [],
-    };
-    event.waitUntil(self.registration.showNotification(title, options));
-  } catch (e) {
-    console.error("[firebase-messaging-sw] push fallback failed:", e);
-  }
-});

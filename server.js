@@ -669,7 +669,13 @@ function sendPushToUser(userKey, title, body, callback) {
     const entries = Object.keys(val)
       .map((key) => ({ key, token: val[key] && val[key].token }))
       .filter((e) => Boolean(e.token));
-    const tokens = entries.map((e) => e.token);
+    const seen = new Set();
+    const uniqueEntries = entries.filter((e) => {
+      if (seen.has(e.token)) return false;
+      seen.add(e.token);
+      return true;
+    });
+    const tokens = uniqueEntries.map((e) => e.token);
     if (tokens.length === 0) {
       callback(null, 0);
       return;
@@ -683,37 +689,17 @@ function sendPushToUser(userKey, title, body, callback) {
       }
       const titleStr = String(title || "Aura HomeSystems");
       const bodyStr = String(body || "");
-      // Уникален tag на събитие: новото известие е ОТДЕЛНО (със звук), не тиха замяна на старото.
-      // Същият tag обединява дублиращите display-пътища (auto-display + SW) за едно събитие.
       const eventTag = "aura-" + Date.now() + "-" + Math.floor(Math.random() * 1000);
-      const androidNotification = playSound ? { sound: "default" } : { defaultSound: false };
+      // Data-only: SW показва веднъж. notification + webpush.notification + SW = 3 дублирани известия.
       messaging
         .send({
           token: tokens[i],
-          notification: { title: titleStr, body: bodyStr },
           data: { title: titleStr, body: bodyStr, playSound: playFlag, eventTag },
           webpush: {
             headers: { Urgency: "high" },
-            notification: {
-              title: titleStr,
-              body: bodyStr,
-              icon: "https://aurahomesystems.eu/favicon.png",
-              silent: !playSound,
-              tag: eventTag,
-              renotify: true,
-              vibrate: playSound ? [180, 90, 180] : [],
-            },
           },
           android: {
             priority: "high",
-            notification: Object.assign({ priority: "max", defaultVibrateTimings: playSound }, androidNotification),
-          },
-          apns: {
-            payload: {
-              aps: {
-                sound: playSound ? "default" : undefined,
-              },
-            },
           },
         })
         .then(() => {
@@ -730,9 +716,9 @@ function sendPushToUser(userKey, title, body, callback) {
             code === "messaging/invalid-argument" ||
             /unregistered|not.?registered|entity was not found/i.test(msg)
           ) {
-            console.warn("[FCM] removing dead token:", entries[i].key);
+            console.warn("[FCM] removing dead token:", uniqueEntries[i].key);
             firebaseDb
-              .ref("users/" + userKey + "/pushTokens/" + entries[i].key)
+              .ref("users/" + userKey + "/pushTokens/" + uniqueEntries[i].key)
               .remove()
               .catch(() => {});
           } else {

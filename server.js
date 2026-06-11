@@ -721,11 +721,13 @@ function sendPushToUser(userKey, title, body, callback) {
         })
         .catch((e) => {
           const code = (e && e.code) || "";
+          const msg = String((e && e.message) || "");
           // Мъртъв/ротиран токен → трием го, иначе базата се пълни с адреси „в нищото“.
           if (
             code === "messaging/registration-token-not-registered" ||
             code === "messaging/invalid-registration-token" ||
-            code === "messaging/invalid-argument"
+            code === "messaging/invalid-argument" ||
+            /unregistered|not.?registered|entity was not found/i.test(msg)
           ) {
             console.warn("[FCM] removing dead token:", entries[i].key);
             firebaseDb

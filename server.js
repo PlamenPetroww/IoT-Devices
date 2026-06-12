@@ -425,7 +425,7 @@ function registerNativePushToken(nonce, token, callback) {
       callback(new Error("EXPIRED"));
       return;
     }
-    saveNativeTokenForUser(row.userKey, tokenStr, callback);
+    saveNativeTokenForUser(row.userKey, tokenStr, null, callback);
   }, callback);
 }
 
@@ -435,7 +435,11 @@ function sanitizeDeviceId(deviceId) {
   return s;
 }
 
-function saveNativeTokenForUser(userKey, tokenStr, callback) {
+function saveNativeTokenForUser(userKey, tokenStr, deviceId, callback) {
+  if (typeof deviceId === "function") {
+    callback = deviceId;
+    deviceId = null;
+  }
   firebaseDb
     .ref("users/" + userKey + "/pushTokens/native_android")
     .set({
@@ -444,23 +448,62 @@ function saveNativeTokenForUser(userKey, tokenStr, callback) {
       createdAt: firebaseAdmin.database.ServerValue.TIMESTAMP,
     })
     .then(() => {
-      firebaseDb.ref("users/" + userKey + "/pushTokens").once("value", (tokSnap) => {
-        const all = tokSnap.val() || {};
-        Object.keys(all).forEach((key) => {
-          if (key === "native_android") return;
-          const row = all[key];
-          if (!row || !row.token) return;
-          if (row.platform !== "android" || row.token === tokenStr) {
-            firebaseDb
-              .ref("users/" + userKey + "/pushTokens/" + key)
-              .remove()
-              .catch(() => {});
-          }
-        });
-      });
-      callback(null, userKey);
+      const jobs = [];
+      if (deviceId) {
+        jobs.push(
+          firebaseDb.ref("users/" + userKey + "/settings/nativeDeviceId").set(deviceId)
+        );
+      }
+      jobs.push(
+        firebaseDb.ref("users/" + userKey + "/pushTokens").once("value").then((tokSnap) => {
+          const all = tokSnap.val() || {};
+          Object.keys(all).forEach((key) => {
+            if (key === "native_android") return;
+            const row = all[key];
+            if (!row || !row.token) return;
+            if (row.platform !== "android" || row.token === tokenStr) {
+              firebaseDb
+                .ref("users/" + userKey + "/pushTokens/" + key)
+                .remove()
+                .catch(() => {});
+            }
+          });
+        })
+      );
+      return Promise.all(jobs);
     })
+    .then(() => callback(null, userKey))
     .catch(callback);
+}
+
+function refreshNativeTokenBeforeSend(userKey, callback) {
+  if (!firebaseDb) {
+    callback();
+    return;
+  }
+  firebaseDb.ref("users/" + userKey + "/settings/nativeDeviceId").once("value", (idSnap) => {
+    const deviceId = sanitizeDeviceId(idSnap.val());
+    if (!deviceId) {
+      callback();
+      return;
+    }
+    firebaseDb.ref("nativeDeviceTokens/" + deviceId).once("value", (tokSnap) => {
+      const row = tokSnap.val();
+      if (!row || !row.token) {
+        callback();
+        return;
+      }
+      firebaseDb.ref("users/" + userKey + "/pushTokens/native_android").once("value", (curSnap) => {
+        const cur = curSnap.val();
+        if (cur && cur.token === row.token) {
+          callback();
+          return;
+        }
+        console.log("[native-push] refreshing token for", userKey, "from", deviceId);
+        saveNativeTokenForUser(userKey, row.token, deviceId, () => callback());
+      }, callback);
+    }, callback);
+  }, callback);
 }
 
 function linkNativeDeviceToUser(userKey, deviceId, callback) {
@@ -479,7 +522,7 @@ function linkNativeDeviceToUser(userKey, deviceId, callback) {
       callback(new Error("NO_TOKEN"));
       return;
     }
-    saveNativeTokenForUser(userKey, row.token, callback);
+    saveNativeTokenForUser(userKey, row.token, id, callback);
   }, callback);
 }
 
@@ -776,6 +819,7 @@ function sendPushToUser(userKey, title, body, callback) {
     callback(new Error("Firebase not configured"));
     return;
   }
+  refreshNativeTokenBeforeSend(userKey, () => {
   firebaseDb.ref("users/" + userKey + "/settings/alertSoundEnabled").once("value", (settingSnap) => {
     const playSound = settingSnap.val() !== false;
     const playFlag = playSound ? "1" : "0";
@@ -815,21 +859,17 @@ function sendPushToUser(userKey, title, body, callback) {
         uniqueEntries.map((e) => e.platform).join(",")
       );
     }
-    const hasNative = uniqueEntries.some((e) => e.key === "native_android" || e.platform === "android");
     const sendEntries = uniqueEntries;
     if (sendEntries.length === 0) {
       callback(null, 0, "none");
       return;
     }
-    const viaParts = [];
-    if (hasNative) viaParts.push("android");
-    if (uniqueEntries.some((e) => e.platform !== "android")) viaParts.push("web");
-    const viaLabel = viaParts.length ? viaParts.join("+") : sendEntries.map((e) => e.platform).join("+");
     const messaging = firebaseAdmin.messaging();
     let sent = 0;
+    const sentVia = [];
     const next = (i) => {
       if (i >= sendEntries.length) {
-        callback(null, sent, viaLabel);
+        callback(null, sent, sentVia.join("+") || "none");
         return;
       }
       const titleStr = String(title || "Aura HomeSystems");
@@ -844,6 +884,11 @@ function sendPushToUser(userKey, title, body, callback) {
       if (isNative) {
         message.android = {
           priority: "high",
+          notification: {
+            title: titleStr,
+            body: bodyStr,
+            channelId: "aura_alerts",
+          },
         };
       } else {
         message.webpush = {
@@ -854,6 +899,7 @@ function sendPushToUser(userKey, title, body, callback) {
         .send(message)
         .then(() => {
           sent++;
+          sentVia.push(isNative ? "android" : "web");
           next(i + 1);
         })
         .catch((e) => {
@@ -878,6 +924,7 @@ function sendPushToUser(userKey, title, body, callback) {
     next(0);
   }, (err) => callback(err));
   }, (err) => callback(err));
+  });
 }
 
 const server = http.createServer((req, res) => {

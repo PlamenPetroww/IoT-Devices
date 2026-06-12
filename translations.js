@@ -355,7 +355,9 @@ const translations = {
             registerError: "Грешка: {message}",
             registering: "Регистриране на известия…",
             nativeFailed: "Неуспешна регистрация. Опитайте отново след секунда.",
-            nativePending: "Регистрацията започна — натиснете отново след няколко секунди или отворете app-а пак."
+            nativePending: "Регистрацията започна — натиснете отново след няколко секунди.",
+            linking: "Свързване на известията…",
+            linkWait: "Изчакайте 5 сек., отворете app-а отново и натиснете жълтия текст."
         },
         footer: { text: "Умни сензори за по-спокоен дом.", wifiNote: "За да използваш нашите сензори, необходима е стабилна WiFi връзка у дома.", impressum: "Импресум", privacy: "Политика за поверителност", installation: "Инсталация на сензори" },
         impressum: {
@@ -809,7 +811,9 @@ const translations = {
             registerError: "Error: {message}",
             registering: "Registering notifications…",
             nativeFailed: "Registration failed. Try again in a few seconds.",
-            nativePending: "Registration started — tap again in a few seconds or reopen the app."
+            nativePending: "Registration started — tap Yes again in a few seconds.",
+            linking: "Linking phone alerts…",
+            linkWait: "Wait 5 sec., reopen the app, then tap the yellow text again."
         },
         footer: { text: "Smart sensors for a calmer home.", wifiNote: "A stable WiFi connection at home is required to use our sensors.", impressum: "Impressum", privacy: "Privacy Policy", installation: "Sensor installation" },
         impressum: {
@@ -1263,7 +1267,9 @@ const translations = {
             registerError: "Fehler: {message}",
             registering: "Benachrichtigungen werden registriert…",
             nativeFailed: "Registrierung fehlgeschlagen. Bitte erneut versuchen.",
-            nativePending: "Registrierung gestartet — in ein paar Sekunden erneut tippen oder App neu öffnen."
+            nativePending: "Registrierung gestartet — in ein paar Sekunden erneut tippen.",
+            linking: "Benachrichtigungen werden verknüpft…",
+            linkWait: "5 Sek. warten, App erneut öffnen, dann gelben Text erneut tippen."
         },
         footer: { text: "Smarte Sensoren für ein ruhigeres Zuhause.", wifiNote: "Für unsere Sensoren ist eine stabile WLAN-Verbindung zu Hause erforderlich.", impressum: "Impressum", privacy: "Datenschutz", installation: "Sensor-Installation" },
         impressum: {

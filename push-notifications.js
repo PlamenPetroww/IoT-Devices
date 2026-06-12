@@ -180,6 +180,63 @@
     }
   }
 
+  function captureDeviceId() {
+    try {
+      var params = new URLSearchParams(global.location.search || "");
+      var did = params.get("aura_did");
+      if (did) {
+        localStorage.setItem("auraDeviceId", did);
+      }
+    } catch (_) {}
+  }
+
+  async function linkNativeDevice() {
+    if (!isAuraAndroidTwa()) return false;
+    captureDeviceId();
+    var deviceId = null;
+    try {
+      deviceId = localStorage.getItem("auraDeviceId");
+    } catch (_) {}
+    if (!deviceId || typeof firebase === "undefined" || !firebase.auth) return false;
+    var user = firebase.auth().currentUser;
+    if (!user) return false;
+    var idToken = await user.getIdToken();
+    var resp = await fetch(getApiBase() + "/api/link-native-device", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + idToken,
+      },
+      body: JSON.stringify({ deviceId: deviceId }),
+    });
+    return resp.ok;
+  }
+
+  async function ensureNativePushLinked() {
+    if (!isAuraAndroidTwa()) return false;
+    if (await hasServerPushToken()) return true;
+    var linkingText =
+      (global.authT && global.authT("push.linking")) || "Linking phone alerts…";
+    setPushHint(linkingText);
+    if (els.chip) {
+      els.chip.textContent = linkingText;
+    }
+    var linked = await linkNativeDevice();
+    await syncPushStatusFromServer();
+    if (state.pushKind === "native") {
+      setPushHint("");
+      return true;
+    }
+    if (!linked) {
+      state.message =
+        (global.authT && global.authT("push.linkWait")) ||
+        "Open the app again in a few seconds, then tap here once more.";
+      setPushHint(state.message);
+    }
+    notify();
+    return false;
+  }
+
   function openNativeBridgeIntent(intentUrl) {
     try {
       global.location.href = intentUrl;
@@ -378,6 +435,17 @@
         return !!(await hasServerPushToken());
       }
       try {
+        var linked = await ensureNativePushLinked();
+        if (linked) {
+          setOnboardingDismissed();
+          hideOverlay();
+          notify();
+          return true;
+        }
+        if (opts.skipBridgeFallback) {
+          notify();
+          return false;
+        }
         setPushHint(
           (global.authT && global.authT("push.registering")) ||
             "Registering notifications…"
@@ -580,7 +648,7 @@
       els.chip.style.cursor = "pointer";
       els.chip.addEventListener("click", function () {
         if (isAuraAndroidTwa() && state.pushKind !== "native") {
-          registerPush({ userInitiated: true });
+          ensureNativePushLinked();
         }
       });
     }
@@ -643,6 +711,7 @@
     state.onStateChange = options.onStateChange || null;
     cacheElements();
     bindUi();
+    captureDeviceId();
 
     if (!isSupported() && !isAuraAndroidTwa()) {
       state.status = "unsupported";
@@ -651,6 +720,11 @@
     }
 
     await syncPushStatusFromServer();
+
+    if (isAuraAndroidTwa() && state.pushKind !== "native") {
+      await linkNativeDevice();
+      await syncPushStatusFromServer();
+    }
 
     if (state.status === "active") {
       if (!isAuraAndroidTwa() && Notification.permission === "granted") {
@@ -686,13 +760,17 @@
       state.visibilityBound = true;
       global.document.addEventListener("visibilitychange", function () {
         if (global.document.visibilityState !== "visible") return;
-        syncPushStatusFromServer().then(function (has) {
-          if (has) {
-            setOnboardingDismissed();
-            hideOverlay();
-            if (state.pendingAway) applyAwayMode();
-          }
-        });
+      syncPushStatusFromServer().then(function (has) {
+        if (has) {
+          setOnboardingDismissed();
+          hideOverlay();
+          if (state.pendingAway) applyAwayMode();
+        } else if (isAuraAndroidTwa()) {
+          linkNativeDevice().then(function () {
+            syncPushStatusFromServer();
+          });
+        }
+      });
       });
     }
   }

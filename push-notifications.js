@@ -163,7 +163,7 @@
     return !/Firefox/i.test(ua);
   }
 
-  function openNativeBridgeIntent(intentUrl, schemeUrl) {
+  function openNativeBridgeIntent(intentUrl) {
     try {
       var link = global.document.createElement("a");
       link.href = intentUrl;
@@ -171,12 +171,10 @@
       global.document.body.appendChild(link);
       link.click();
       global.document.body.removeChild(link);
-    } catch (_) {}
-    setTimeout(function () {
-      try {
-        global.location.href = schemeUrl;
-      } catch (_) {}
-    }, 300);
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   function sleep(ms) {
@@ -256,13 +254,7 @@
       "intent://native-push?nonce=" +
       encodeURIComponent(data.nonce) +
       "#Intent;scheme=aurahomesystems;package=com.aurahomesystems.app;end";
-    var schemeUrl =
-      "aurahomesystems://native-push?nonce=" + encodeURIComponent(data.nonce);
-    openNativeBridgeIntent(intentUrl, schemeUrl);
-    try {
-      localStorage.setItem("auraNativePushAt", String(Date.now()));
-    } catch (_) {}
-    return true;
+    return openNativeBridgeIntent(intentUrl);
   }
 
   async function refreshWebPushToken(messaging, swReg, vapidKey) {
@@ -353,6 +345,9 @@
     }
 
     if (useNative) {
+      if (!opts.userInitiated) {
+        return !!(await hasServerPushToken());
+      }
       try {
         setAwayHint(
           (global.authT && global.authT("push.registering")) ||
@@ -435,7 +430,6 @@
       global.document.addEventListener("visibilitychange", function () {
         if (global.document.visibilityState !== "visible") return;
         refreshWebPushToken(messaging, swReg, vapidKey);
-        if (isAuraAndroidTwa()) registerNativePushBridge().catch(function () {});
       });
 
       var token = await messaging.getToken({
@@ -557,7 +551,7 @@
   function bindUi() {
     if (els.overlayYes) {
       els.overlayYes.addEventListener("click", function () {
-        registerPush().then(function (ok) {
+        registerPush({ userInitiated: true }).then(function (ok) {
           if (ok && state.pendingAway) applyAwayMode();
         });
       });
@@ -574,7 +568,7 @@
     if (els.awayEnable) {
       els.awayEnable.addEventListener("click", function () {
         els.awayEnable.disabled = true;
-        registerPush().then(function (ok) {
+        registerPush({ userInitiated: true }).then(function (ok) {
           els.awayEnable.disabled = false;
           if (ok) applyAwayMode();
           else if (state.message) {
@@ -612,14 +606,16 @@
     await syncPushStatusFromServer();
 
     if (state.status === "active") {
-      registerPush({ skipPermissionRequest: true }).catch(function () {});
+      if (!isAuraAndroidTwa() && Notification.permission === "granted") {
+        registerPush({ skipPermissionRequest: true }).catch(function () {});
+      }
       return;
     }
 
     state.status = "pending";
     notify();
 
-    if (Notification.permission === "granted" || isAuraAndroidTwa()) {
+    if (Notification.permission === "granted" && !isAuraAndroidTwa()) {
       var ok = await registerPush({ skipPermissionRequest: true });
       if (ok) return;
     }

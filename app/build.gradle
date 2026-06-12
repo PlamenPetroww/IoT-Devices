@@ -18,6 +18,7 @@ import groovy.xml.MarkupBuilder
 
 plugins {
     id 'com.android.application'
+    id 'com.google.gms.google-services'
 }
 
 def twaManifest = [
@@ -57,8 +58,8 @@ android {
         applicationId "com.aurahomesystems.app"
         minSdkVersion 21
         targetSdkVersion 35
-        versionCode 9
-        versionName "9"
+        versionCode 10
+        versionName "10"
 
         // The name for the application
         resValue "string", "appName", twaManifest.name
@@ -210,4 +211,6 @@ dependencies {
     
         implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.6.2'
     
+    implementation platform('com.google.firebase:firebase-bom:33.7.0')
+    implementation 'com.google.firebase:firebase-messaging'
 }

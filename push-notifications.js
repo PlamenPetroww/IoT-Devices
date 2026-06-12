@@ -131,6 +131,65 @@
     });
   }
 
+  function getApiBase() {
+    if (global.INQUIRY_FUNCTIONS_BASE_URL) return global.INQUIRY_FUNCTIONS_BASE_URL;
+    var h = global.location && global.location.hostname;
+    if (h === "localhost" || h === "127.0.0.1") return "http://localhost:3000";
+    return "https://cleverhaus.onrender.com";
+  }
+
+  function isAuraAndroidTwa() {
+    var ua = global.navigator && global.navigator.userAgent ? global.navigator.userAgent : "";
+    if (!/Android/i.test(ua)) return false;
+    try {
+      if (global.matchMedia && global.matchMedia("(display-mode: standalone)").matches) return true;
+    } catch (_) {}
+    try {
+      if (global.document.referrer.indexOf("android-app://") === 0) return true;
+    } catch (_) {}
+    return false;
+  }
+
+  async function registerNativePushBridge() {
+    if (!isAuraAndroidTwa()) return false;
+    if (typeof firebase === "undefined" || !firebase.auth) return false;
+    var user = firebase.auth().currentUser;
+    if (!user) return false;
+
+    var idToken = await user.getIdToken();
+    var resp = await fetch(getApiBase() + "/api/native-push-session", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + idToken,
+      },
+      body: "{}",
+    });
+    if (!resp.ok) return false;
+    var data = await resp.json();
+    if (!data || !data.nonce) return false;
+
+    var intentUrl =
+      "intent://native-push?nonce=" +
+      encodeURIComponent(data.nonce) +
+      "#Intent;scheme=aurahomesystems;package=com.aurahomesystems.app;end";
+    global.location.href = intentUrl;
+    try {
+      localStorage.setItem("auraNativePushAt", String(Date.now()));
+    } catch (_) {}
+    return true;
+  }
+
+  async function refreshWebPushToken(messaging, swReg, vapidKey) {
+    try {
+      var token = await messaging.getToken({
+        vapidKey: vapidKey,
+        serviceWorkerRegistration: swReg || undefined,
+      });
+      if (token) await saveTokenIfNew(token);
+    } catch (_) {}
+  }
+
   async function saveTokenIfNew(token) {
     var ref = state.db.ref(state.userPath + "/pushTokens");
     var snap = await ref.once("value");
@@ -173,6 +232,7 @@
 
     await ref.child(deviceKey).set({
       token: token,
+      platform: "web",
       createdAt: firebase.database.ServerValue.TIMESTAMP,
     });
     try {
@@ -211,6 +271,29 @@
       return false;
     }
 
+    if (isAuraAndroidTwa()) {
+      try {
+        var nativeOk = await registerNativePushBridge();
+        if (state.db && state.userPath) {
+          var alertRef = state.db.ref(state.userPath + "/settings/alertSoundEnabled");
+          var alertSnap = await alertRef.once("value");
+          if (alertSnap.val() === null) {
+            await alertRef.set(true);
+          }
+        }
+        markRegistered();
+        state.status = "active";
+        state.message = "";
+        notify();
+        return nativeOk;
+      } catch (nativeErr) {
+        state.status = "error";
+        state.message = nativeErr.message || "Native push registration failed.";
+        notify();
+        return false;
+      }
+    }
+
     try {
       var messaging = firebase.messaging();
       var swReg = await registerServiceWorker();
@@ -229,6 +312,12 @@
       }
 
       bindForegroundHandler(messaging);
+
+      global.document.addEventListener("visibilitychange", function () {
+        if (global.document.visibilityState !== "visible") return;
+        refreshWebPushToken(messaging, swReg, vapidKey);
+        if (isAuraAndroidTwa()) registerNativePushBridge().catch(function () {});
+      });
 
       var token = await messaging.getToken({
         vapidKey: vapidKey,

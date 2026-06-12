@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "435229084392",
+    "project_id": "cleverhaus-petrov",
+    "storage_bucket": "cleverhaus-petrov.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:435229084392:android:REPLACE_FROM_FIREBASE_CONSOLE",
+        "android_client_info": {
+          "package_name": "com.aurahomesystems.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "REPLACE_FROM_FIREBASE_CONSOLE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

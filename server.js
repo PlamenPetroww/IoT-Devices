@@ -367,6 +367,93 @@ function normalizeEmailKey(email) {
     .replace(/@/g, "_at_");
 }
 
+function verifyBearerUserKey(req, callback) {
+  if (!firebaseAdmin) {
+    callback(new Error("NOT_CONFIGURED"));
+    return;
+  }
+  const authHeader = String(req.headers.authorization || "");
+  const match = authHeader.match(/^Bearer\s+(\S+)/i);
+  if (!match) {
+    callback(new Error("UNAUTHORIZED"));
+    return;
+  }
+  firebaseAdmin
+    .auth()
+    .verifyIdToken(match[1])
+    .then((decoded) => {
+      const email = decoded && decoded.email;
+      if (!email) {
+        callback(new Error("UNAUTHORIZED"));
+        return;
+      }
+      callback(null, normalizeEmailKey(email));
+    })
+    .catch(() => callback(new Error("UNAUTHORIZED")));
+}
+
+function createNativePushNonce(userKey, callback) {
+  if (!firebaseDb) {
+    callback(new Error("NOT_CONFIGURED"));
+    return;
+  }
+  const nonce = crypto.randomBytes(16).toString("hex");
+  const expires = Date.now() + 5 * 60 * 1000;
+  firebaseDb
+    .ref("nativePushReg/" + nonce)
+    .set({ userKey, expires })
+    .then(() => callback(null, nonce))
+    .catch(callback);
+}
+
+function registerNativePushToken(nonce, token, callback) {
+  if (!firebaseDb) {
+    callback(new Error("NOT_CONFIGURED"));
+    return;
+  }
+  const tokenStr = String(token || "").trim();
+  const nonceStr = String(nonce || "").trim();
+  if (!tokenStr || !nonceStr) {
+    callback(new Error("INVALID"));
+    return;
+  }
+  const regRef = firebaseDb.ref("nativePushReg/" + nonceStr);
+  regRef.once("value", (snap) => {
+    const row = snap.val();
+    if (!row || !row.userKey || !row.expires || row.expires < Date.now()) {
+      regRef.remove().catch(() => {});
+      callback(new Error("EXPIRED"));
+      return;
+    }
+    const userKey = row.userKey;
+    regRef.remove().catch(() => {});
+    firebaseDb
+      .ref("users/" + userKey + "/pushTokens/native_android")
+      .set({
+        token: tokenStr,
+        platform: "android",
+        createdAt: firebaseAdmin.database.ServerValue.TIMESTAMP,
+      })
+      .then(() => {
+        firebaseDb.ref("users/" + userKey + "/pushTokens").once("value", (tokSnap) => {
+          const all = tokSnap.val() || {};
+          Object.keys(all).forEach((key) => {
+            if (key === "native_android") return;
+            const row = all[key];
+            if (row && row.platform !== "android") {
+              firebaseDb
+                .ref("users/" + userKey + "/pushTokens/" + key)
+                .remove()
+                .catch(() => {});
+            }
+          });
+        });
+        callback(null, userKey);
+      })
+      .catch(callback);
+  }, callback);
+}
+
 // Best effort: "Your sensor is ready – set a password" email with a reset link for auto-created accounts.
 function sendDeviceLinkWelcomeEmail(auth, emailNorm) {
   const apiKey = process.env.RESEND_API_KEY;
@@ -673,6 +760,7 @@ function sendPushToUser(userKey, title, body, callback) {
       .map((key) => ({
         key,
         token: val[key] && val[key].token,
+        platform: (val[key] && val[key].platform) || "web",
         createdAt: (val[key] && val[key].createdAt) || 0,
       }))
       .filter((e) => Boolean(e.token));
@@ -690,7 +778,13 @@ function sendPushToUser(userKey, title, body, callback) {
     });
     const tokens = uniqueEntries.map((e) => e.token);
     if (tokens.length > 1) {
-      console.log("[FCM]", userKey, "tokens:", tokens.length);
+      console.log(
+        "[FCM]",
+        userKey,
+        "tokens:",
+        tokens.length,
+        uniqueEntries.map((e) => e.platform).join(",")
+      );
     }
     if (tokens.length === 0) {
       callback(null, 0);
@@ -706,18 +800,32 @@ function sendPushToUser(userKey, title, body, callback) {
       const titleStr = String(title || "Aura HomeSystems");
       const bodyStr = String(body || "");
       const eventTag = "aura-" + Date.now() + "-" + Math.floor(Math.random() * 1000);
-      // Data-only: SW показва веднъж. notification + webpush.notification + SW = 3 дублирани известия.
-      messaging
-        .send({
-          token: tokens[i],
-          data: { title: titleStr, body: bodyStr, playSound: playFlag, eventTag },
-          webpush: {
-            headers: { Urgency: "high" },
-          },
-          android: {
+      const entry = uniqueEntries[i];
+      const isNative = entry.platform === "android";
+      const message = {
+        token: entry.token,
+        data: { title: titleStr, body: bodyStr, playSound: playFlag, eventTag },
+      };
+      if (isNative) {
+        // Native FCM → Google Play Services (works in standby, unlike Chrome web push).
+        message.android = {
+          priority: "high",
+          notification: {
+            title: titleStr,
+            body: bodyStr,
+            channelId: "aura_alerts",
             priority: "high",
+            defaultVibrateTimings: playSound,
+            defaultSound: playSound,
           },
-        })
+        };
+      } else {
+        message.webpush = {
+          headers: { Urgency: "high" },
+        };
+      }
+      messaging
+        .send(message)
         .then(() => {
           sent++;
           next(i + 1);
@@ -978,6 +1086,59 @@ const server = http.createServer((req, res) => {
         }
         res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
         res.end(JSON.stringify(result));
+      });
+    });
+    return;
+  }
+
+  if (requestPath === "/api/native-push-session" && req.method === "POST") {
+    setCors(res, req);
+    verifyBearerUserKey(req, (err, userKey) => {
+      if (err) {
+        const code = err.message === "UNAUTHORIZED" ? 401 : 503;
+        res.writeHead(code, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({ error: err.message || "Unauthorized" }));
+        return;
+      }
+      createNativePushNonce(userKey, (nonceErr, nonce) => {
+        if (nonceErr) {
+          res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify({ error: "Could not create session" }));
+          return;
+        }
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({ nonce }));
+      });
+    });
+    return;
+  }
+
+  if (requestPath === "/api/register-native-push" && req.method === "POST") {
+    setCors(res, req);
+    let body = "";
+    req.on("data", (chunk) => {
+      body += chunk;
+    });
+    req.on("end", () => {
+      let parsed = {};
+      try {
+        parsed = JSON.parse(body || "{}");
+      } catch (e) {
+        res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({ error: "Invalid JSON" }));
+        return;
+      }
+      registerNativePushToken(parsed.nonce, parsed.token, (regErr, userKey) => {
+        if (regErr) {
+          const code =
+            regErr.message === "EXPIRED" || regErr.message === "INVALID" ? 400 : 500;
+          res.writeHead(code, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify({ error: regErr.message || "Register failed" }));
+          return;
+        }
+        console.log("[native-push] registered for", userKey);
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({ success: true }));
       });
     });
     return;

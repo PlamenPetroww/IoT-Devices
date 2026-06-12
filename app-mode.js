@@ -62,7 +62,45 @@
     global.location.replace(LOGIN_PATH + global.location.search);
   }
 
+  function captureAppMeta() {
+    try {
+      var params = new URLSearchParams(global.location.search);
+      var did = params.get("aura_did");
+      if (did) global.localStorage.setItem("auraDeviceId", did);
+      var ver = params.get("aura_app_ver");
+      if (ver) global.localStorage.setItem("auraAppVersion", ver);
+    } catch (_) {}
+  }
+
+  function getAppVersion() {
+    try {
+      return global.localStorage.getItem("auraAppVersion") || "";
+    } catch (_) {
+      return "";
+    }
+  }
+
+  function showAppVersionUi() {
+    if (!playApp) return;
+    var ver = getAppVersion();
+    if (!ver) return;
+    var label =
+      (global.authT && global.authT("dashboard.appVersion", { v: ver })) ||
+      "App version " + ver;
+    var menuEl = global.document.getElementById("appVersionMenu");
+    if (menuEl) {
+      menuEl.textContent = label;
+      menuEl.hidden = false;
+    }
+    var footerEl = global.document.getElementById("appVersionLine");
+    if (footerEl) {
+      footerEl.textContent = label;
+      footerEl.hidden = false;
+    }
+  }
+
   function patchLinks() {
+    captureAppMeta();
     global.document.documentElement.classList.add("aura-play-app");
 
     global.document.querySelectorAll('a[href="index.html"], a[href="/"]').forEach(function (link) {
@@ -83,6 +121,8 @@
       link.setAttribute("target", "_blank");
       link.setAttribute("rel", "noopener noreferrer");
     });
+
+    showAppVersionUi();
   }
 
   var playApp = isPlayApp();
@@ -91,6 +131,7 @@
     isPlayApp: function () {
       return playApp;
     },
+    getAppVersion: getAppVersion,
     siteUrl: siteUrl,
     openOnWebsite: function (path) {
       global.open(siteUrl(path), "_blank", "noopener,noreferrer");

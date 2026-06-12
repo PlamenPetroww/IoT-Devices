@@ -427,6 +427,26 @@
     background: rgba(248, 113, 113, 0.12);
 }
 
+.header-menu-item--meta {
+    cursor: default;
+    color: #94a3b8;
+    font-size: 0.85rem;
+    border-top: 1px solid rgba(148, 163, 184, 0.15);
+    margin-top: 4px;
+    padding-top: 10px;
+}
+
+.header-menu-item--meta:hover {
+    background: transparent;
+}
+
+.app-version-line {
+    display: block;
+    margin-top: 10px;
+    color: #64748b;
+    font-size: 0.82rem;
+}
+
 .delete-account-box .delete-account-info,
 .delete-account-box .delete-account-email {
     font-size: 0.9rem;

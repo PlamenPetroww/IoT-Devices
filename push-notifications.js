@@ -255,27 +255,62 @@
     }
   }
 
+  async function removeWebPushTokensOnTwa() {
+    if (!isAuraAndroidTwa() || !state.db || !state.userPath) return;
+    var snap = await state.db.ref(state.userPath + "/pushTokens").once("value");
+    var val = snap.val() || {};
+    Object.keys(val).forEach(function (k) {
+      if (k === "native_android") return;
+      var row = val[k];
+      if (row && row.token && row.platform !== "android") {
+        state.db.ref(state.userPath + "/pushTokens/" + k).remove().catch(function () {});
+      }
+    });
+  }
+
   async function ensureNativePushLinked() {
     if (!isAuraAndroidTwa()) return false;
     if (await hasServerPushToken()) return true;
+    captureDeviceId();
+    var deviceId = null;
+    try {
+      deviceId = localStorage.getItem("auraDeviceId");
+    } catch (_) {}
+    if (!deviceId) {
+      state.message =
+        (global.authT && global.authT("push.reopenApp")) ||
+        "Close the app completely and open it again.";
+      setPushHint(state.message);
+      if (els.chip) els.chip.textContent = state.message;
+      notify();
+      return false;
+    }
     var linkingText =
       (global.authT && global.authT("push.linking")) || "Linking phone alerts…";
     setPushHint(linkingText);
     if (els.chip) {
       els.chip.textContent = linkingText;
     }
-    var linked = await linkNativeDevice();
-    await syncPushStatusFromServer();
-    if (state.pushKind === "native") {
-      setPushHint("");
-      return true;
+    var deadline = Date.now() + 30000;
+    while (Date.now() < deadline) {
+      var linked = await linkNativeDevice();
+      await syncPushStatusFromServer();
+      if (state.pushKind === "native") {
+        setPushHint("");
+        notify();
+        return true;
+      }
+      if (linked) {
+        await sleep(400);
+        continue;
+      }
+      if (els.chip) els.chip.textContent = linkingText;
+      await sleep(2000);
     }
-    if (!linked) {
-      state.message =
-        (global.authT && global.authT("push.linkWait")) ||
-        "Open the app again in a few seconds, then tap here once more.";
-      setPushHint(state.message);
-    }
+    state.message =
+      (global.authT && global.authT("push.linkWait")) ||
+      "Wait 5 sec., reopen the app, then tap the yellow text again.";
+    setPushHint(state.message);
     notify();
     return false;
   }
@@ -649,8 +684,9 @@
         els.chip.textContent = t("dashboard.pushNativeActive") || "✓ Native alerts active";
         els.chip.hidden = false;
         els.chip.classList.remove("push-chip-warn");
-      } else if (state.pushKind === "web" && isAuraAndroidTwa()) {
-        els.chip.textContent = t("dashboard.pushWebWeak") || "⚠ Update app from Play Store for reliable alerts";
+      } else if (isAuraAndroidTwa() && state.pushKind !== "native") {
+        els.chip.textContent =
+          t("dashboard.pushNativePending") || "Tap to activate reliable phone alerts";
         els.chip.hidden = false;
         els.chip.classList.add("push-chip-warn");
       } else if (state.status === "active" && state.pushKind === "web") {
@@ -776,9 +812,14 @@
 
     await syncPushStatusFromServer();
 
-    if (isAuraAndroidTwa() && state.pushKind !== "native") {
-      await linkNativeDevice();
-      await syncPushStatusFromServer();
+    if (isAuraAndroidTwa()) {
+      if (state.pushKind !== "native") {
+        await removeWebPushTokensOnTwa();
+        await syncPushStatusFromServer();
+      }
+      if (state.pushKind !== "native") {
+        await ensureNativePushLinked();
+      }
     }
 
     if (state.status === "active") {

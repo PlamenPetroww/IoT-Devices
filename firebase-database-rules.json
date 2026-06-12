@@ -15,7 +15,7 @@
     "nativeDeviceTokens": {
       "$deviceId": {
         ".read": "auth != null",
-        ".write": false
+        ".write": "$deviceId.matches(/^aura_[a-fA-F0-9]{32}$/) && newData.hasChildren(['token']) && newData.child('token').isString() && newData.child('token').val().length > 20"
       }
     }
   }

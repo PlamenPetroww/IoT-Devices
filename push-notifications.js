@@ -341,7 +341,7 @@
 
   async function registerPush(opts) {
     opts = opts || {};
-    var useNative = isAuraAndroidTwa();
+    var useNative = isAuraAndroidTwa() && !opts.forceWeb;
 
     if (!useNative && !isSupported()) {
       state.status = "unsupported";
@@ -635,6 +635,11 @@
     if (Notification.permission === "granted" && !isAuraAndroidTwa()) {
       var ok = await registerPush({ skipPermissionRequest: true });
       if (ok) return;
+    }
+
+    if (isAuraAndroidTwa() && Notification.permission === "granted") {
+      var webOk = await registerPush({ skipPermissionRequest: true, forceWeb: true });
+      if (webOk) return;
     }
 
     if (Notification.permission === "denied" && !isAuraAndroidTwa()) {

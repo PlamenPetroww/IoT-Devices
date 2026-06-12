@@ -753,7 +753,7 @@ function sendPushToUser(userKey, title, body, callback) {
     firebaseDb.ref("users/" + userKey + "/pushTokens").once("value", (snap) => {
     const val = snap.val();
     if (!val || typeof val !== "object") {
-      callback(null, 0);
+      callback(null, 0, "none");
       return;
     }
     const entries = Object.keys(val)
@@ -786,21 +786,26 @@ function sendPushToUser(userKey, title, body, callback) {
         uniqueEntries.map((e) => e.platform).join(",")
       );
     }
-    if (tokens.length === 0) {
-      callback(null, 0);
+    const hasNative = uniqueEntries.some((e) => e.platform === "android");
+    const sendEntries = hasNative
+      ? uniqueEntries.filter((e) => e.platform === "android")
+      : uniqueEntries;
+    if (sendEntries.length === 0) {
+      callback(null, 0, "none");
       return;
     }
+    const viaLabel = sendEntries.map((e) => e.platform).join("+");
     const messaging = firebaseAdmin.messaging();
     let sent = 0;
     const next = (i) => {
-      if (i >= tokens.length) {
-        callback(null, sent);
+      if (i >= sendEntries.length) {
+        callback(null, sent, viaLabel);
         return;
       }
       const titleStr = String(title || "Aura HomeSystems");
       const bodyStr = String(body || "");
       const eventTag = "aura-" + Date.now() + "-" + Math.floor(Math.random() * 1000);
-      const entry = uniqueEntries[i];
+      const entry = sendEntries[i];
       const isNative = entry.platform === "android";
       const message = {
         token: entry.token,
@@ -840,9 +845,9 @@ function sendPushToUser(userKey, title, body, callback) {
             code === "messaging/invalid-argument" ||
             /unregistered|not.?registered|entity was not found/i.test(msg)
           ) {
-            console.warn("[FCM] removing dead token:", uniqueEntries[i].key);
+            console.warn("[FCM] removing dead token:", sendEntries[i].key);
             firebaseDb
-              .ref("users/" + userKey + "/pushTokens/" + uniqueEntries[i].key)
+              .ref("users/" + userKey + "/pushTokens/" + sendEntries[i].key)
               .remove()
               .catch(() => {});
           } else {
@@ -1175,13 +1180,13 @@ const server = http.createServer((req, res) => {
       const bodyText = isOpen
         ? deviceName + " was opened."
         : deviceName + " was closed.";
-      sendPushToUser(userKey, title, bodyText, (err, sent) => {
+      sendPushToUser(userKey, title, bodyText, (err, sent, via) => {
         if (err) {
           res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
           res.end(JSON.stringify({ error: err.message }));
           return;
         }
-        console.log("[sensor-event]", userKey, "sent:", sent);
+        console.log("[sensor-event]", userKey, "sent:", sent, "via", via || "none");
         res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
         res.end(JSON.stringify({ success: true, sent }));
       });

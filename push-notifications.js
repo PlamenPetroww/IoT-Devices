@@ -14,6 +14,7 @@
     foregroundBound: false,
     overlayMode: null,
     visibilityBound: false,
+    pushKind: "none",
   };
 
   var els = {};
@@ -203,20 +204,26 @@
     });
   }
 
-  async function hasServerPushToken() {
-    if (!state.db || !state.userPath) return false;
+  async function getPushTokenKind() {
+    if (!state.db || !state.userPath) return "none";
     var snap = await state.db.ref(state.userPath + "/pushTokens").once("value");
     var val = snap.val();
-    if (!val || typeof val !== "object") return false;
-    if (isAuraAndroidTwa()) {
-      return !!(val.native_android && val.native_android.token);
-    }
-    return Object.keys(val).some(function (k) {
+    if (!val || typeof val !== "object") return "none";
+    if (val.native_android && val.native_android.token) return "native";
+    var hasWeb = Object.keys(val).some(function (k) {
       return val[k] && val[k].token;
     });
+    return hasWeb ? "web" : "none";
+  }
+
+  async function hasServerPushToken() {
+    var kind = await getPushTokenKind();
+    if (isAuraAndroidTwa()) return kind === "native";
+    return kind !== "none";
   }
 
   async function syncPushStatusFromServer() {
+    state.pushKind = await getPushTokenKind();
     var hasToken = await hasServerPushToken();
     if (hasToken) {
       markRegistered();
@@ -514,7 +521,22 @@
 
   function updateUi() {
     if (els.chip) {
-      els.chip.hidden = state.status !== "active";
+      var t = global.authT || function (k) { return k; };
+      if (state.pushKind === "native") {
+        els.chip.textContent = t("dashboard.pushNativeActive") || "✓ Native alerts active";
+        els.chip.hidden = false;
+        els.chip.classList.remove("push-chip-warn");
+      } else if (state.pushKind === "web" && isAuraAndroidTwa()) {
+        els.chip.textContent = t("dashboard.pushWebWeak") || "⚠ Update app from Play Store for reliable alerts";
+        els.chip.hidden = false;
+        els.chip.classList.add("push-chip-warn");
+      } else if (state.status === "active" && state.pushKind === "web") {
+        els.chip.textContent = t("dashboard.pushActive");
+        els.chip.hidden = false;
+        els.chip.classList.remove("push-chip-warn");
+      } else {
+        els.chip.hidden = true;
+      }
     }
     if (
       state.overlayMode === "onboarding" &&
@@ -554,6 +576,14 @@
   }
 
   function bindUi() {
+    if (els.chip) {
+      els.chip.style.cursor = "pointer";
+      els.chip.addEventListener("click", function () {
+        if (isAuraAndroidTwa() && state.pushKind !== "native") {
+          registerPush({ userInitiated: true });
+        }
+      });
+    }
     if (els.overlayYes) {
       els.overlayYes.addEventListener("click", function () {
         els.overlayYes.disabled = true;

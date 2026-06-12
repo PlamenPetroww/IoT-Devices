@@ -285,8 +285,12 @@
           db.ref(userPath).update({ systemEnabled: false });
         });
         modeAway.addEventListener("click", () => {
-          if (window.AuraPush && !AuraPush.requestAwayModeWithPush()) return;
-          db.ref(userPath).update({ systemEnabled: true });
+          Promise.resolve(
+            window.AuraPush ? AuraPush.requestAwayModeWithPush() : true
+          ).then((ready) => {
+            if (ready === false) return;
+            db.ref(userPath).update({ systemEnabled: true });
+          });
         });
         const devicesList = document.getElementById("devicesList");
         const historyRef = db.ref(userPath + "/history");

@@ -352,7 +352,8 @@ const translations = {
             tokenFailed: "Неуспешно получаване на токен за известия.",
             registerError: "Грешка: {message}",
             registering: "Регистриране на известия…",
-            nativeFailed: "Неуспешна регистрация. Опитайте отново след секунда."
+            nativeFailed: "Неуспешна регистрация. Опитайте отново след секунда.",
+            nativePending: "Регистрацията започна — натиснете отново след няколко секунди или отворете app-а пак."
         },
         footer: { text: "Умни сензори за по-спокоен дом.", wifiNote: "За да използваш нашите сензори, необходима е стабилна WiFi връзка у дома.", impressum: "Импресум", privacy: "Политика за поверителност", installation: "Инсталация на сензори" },
         impressum: {
@@ -803,7 +804,8 @@ const translations = {
             tokenFailed: "Could not obtain notification token.",
             registerError: "Error: {message}",
             registering: "Registering notifications…",
-            nativeFailed: "Registration failed. Try again in a few seconds."
+            nativeFailed: "Registration failed. Try again in a few seconds.",
+            nativePending: "Registration started — tap again in a few seconds or reopen the app."
         },
         footer: { text: "Smart sensors for a calmer home.", wifiNote: "A stable WiFi connection at home is required to use our sensors.", impressum: "Impressum", privacy: "Privacy Policy", installation: "Sensor installation" },
         impressum: {
@@ -1254,7 +1256,8 @@ const translations = {
             tokenFailed: "Benachrichtigungstoken konnte nicht abgerufen werden.",
             registerError: "Fehler: {message}",
             registering: "Benachrichtigungen werden registriert…",
-            nativeFailed: "Registrierung fehlgeschlagen. Bitte erneut versuchen."
+            nativeFailed: "Registrierung fehlgeschlagen. Bitte erneut versuchen.",
+            nativePending: "Registrierung gestartet — in ein paar Sekunden erneut tippen oder App neu öffnen."
         },
         footer: { text: "Smarte Sensoren für ein ruhigeres Zuhause.", wifiNote: "Für unsere Sensoren ist eine stabile WLAN-Verbindung zu Hause erforderlich.", impressum: "Impressum", privacy: "Datenschutz", installation: "Sensor-Installation" },
         impressum: {

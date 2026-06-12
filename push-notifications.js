@@ -58,6 +58,12 @@
     } catch (_) {}
   }
 
+  function clearRegisteredLocally() {
+    try {
+      localStorage.removeItem("auraPushRegistered");
+    } catch (_) {}
+  }
+
   function wasRegisteredLocally() {
     try {
       return localStorage.getItem("auraPushRegistered") === "1";
@@ -171,6 +177,49 @@
         global.location.href = schemeUrl;
       } catch (_) {}
     }, 300);
+  }
+
+  function sleep(ms) {
+    return new Promise(function (resolve) {
+      setTimeout(resolve, ms);
+    });
+  }
+
+  async function hasServerPushToken() {
+    if (!state.db || !state.userPath) return false;
+    var snap = await state.db.ref(state.userPath + "/pushTokens").once("value");
+    var val = snap.val();
+    if (!val || typeof val !== "object") return false;
+    if (isAuraAndroidTwa()) {
+      return !!(val.native_android && val.native_android.token);
+    }
+    return Object.keys(val).some(function (k) {
+      return val[k] && val[k].token;
+    });
+  }
+
+  async function syncPushStatusFromServer() {
+    var hasToken = await hasServerPushToken();
+    if (hasToken) {
+      markRegistered();
+      state.status = "active";
+    } else {
+      clearRegisteredLocally();
+      if (state.status === "active") {
+        state.status = "pending";
+      }
+    }
+    notify();
+    return hasToken;
+  }
+
+  async function waitForServerPushToken(maxMs) {
+    var deadline = Date.now() + (maxMs || 5000);
+    while (Date.now() < deadline) {
+      if (await hasServerPushToken()) return true;
+      await sleep(400);
+    }
+    return false;
   }
 
   function setAwayHint(text) {
@@ -326,6 +375,21 @@
           notify();
           return false;
         }
+        setAwayHint(
+          (global.authT && global.authT("push.registering")) ||
+            "Registering notifications…"
+        );
+        var saved = await waitForServerPushToken(6000);
+        if (!saved) {
+          clearRegisteredLocally();
+          state.status = "pending";
+          state.message =
+            (global.authT && global.authT("push.nativePending")) ||
+            "Registration started — tap again in a few seconds or reopen the app.";
+          setAwayHint(state.message);
+          notify();
+          return false;
+        }
         markRegistered();
         state.status = "active";
         state.message = "";
@@ -469,11 +533,10 @@
   }
 
   function shouldShowOnboardingOnLogin() {
-    if (!isSupported()) return false;
+    if (!isSupported() && !isAuraAndroidTwa()) return false;
     if (isActive()) return false;
-    if (Notification.permission === "denied") return false;
+    if (Notification.permission === "denied" && !isAuraAndroidTwa()) return false;
     if (onboardingDismissed()) return false;
-    if (Notification.permission === "granted" && wasRegisteredLocally()) return false;
     return true;
   }
 
@@ -540,36 +603,57 @@
     cacheElements();
     bindUi();
 
-    if (!isSupported()) {
+    if (!isSupported() && !isAuraAndroidTwa()) {
       state.status = "unsupported";
       notify();
       return;
     }
 
-    if (Notification.permission === "granted") {
-      state.status = wasRegisteredLocally() ? "active" : "pending";
-      notify();
-      var ok = await registerPush({ skipPermissionRequest: true });
-      if (!ok && shouldShowOnboardingOnLogin()) {
-        showOnboardingOverlay();
-      }
-      return;
-    }
+    await syncPushStatusFromServer();
 
-    if (Notification.permission === "denied") {
-      state.status = "denied";
-      notify();
+    if (state.status === "active") {
+      registerPush({ skipPermissionRequest: true }).catch(function () {});
       return;
     }
 
     state.status = "pending";
     notify();
+
+    if (Notification.permission === "granted" || isAuraAndroidTwa()) {
+      var ok = await registerPush({ skipPermissionRequest: true });
+      if (ok) return;
+    }
+
+    if (Notification.permission === "denied" && !isAuraAndroidTwa()) {
+      state.status = "denied";
+      notify();
+      return;
+    }
+
     if (shouldShowOnboardingOnLogin()) {
       showOnboardingOverlay();
     }
+
+    global.document.addEventListener("visibilitychange", function () {
+      if (global.document.visibilityState !== "visible") return;
+      syncPushStatusFromServer().then(function (has) {
+        if (has && state.pendingAway) applyAwayMode();
+      });
+    });
   }
 
-  function requestAwayModeWithPush() {
+  async function requestAwayModeWithPush() {
+    if (!(await hasServerPushToken())) {
+      clearRegisteredLocally();
+      state.status = "pending";
+      notify();
+    } else if (!isActive()) {
+      state.status = "active";
+      markRegistered();
+      notify();
+      return true;
+    }
+
     if (isActive()) return true;
     state.pendingAway = true;
     showAwayOverlay();

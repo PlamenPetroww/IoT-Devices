@@ -325,7 +325,10 @@
   async function syncPushStatusFromServer() {
     state.pushKind = await getPushTokenKind();
     var hasToken = await hasServerPushToken();
-    if (hasToken) {
+    if (state.pushKind === "native") {
+      markRegistered();
+      state.status = "active";
+    } else if (hasToken) {
       markRegistered();
       state.status = "active";
     } else {
@@ -387,6 +390,7 @@
   }
 
   async function refreshWebPushToken(messaging, swReg, vapidKey) {
+    if (isAuraAndroidTwa()) return;
     try {
       var token = await messaging.getToken({
         vapidKey: vapidKey,
@@ -397,6 +401,7 @@
   }
 
   async function saveTokenIfNew(token) {
+    if (isAuraAndroidTwa()) return;
     var ref = state.db.ref(state.userPath + "/pushTokens");
     var snap = await ref.once("value");
     var val = snap.val() || {};
@@ -426,7 +431,7 @@
     Object.keys(val).forEach(function (k) {
       var row = val[k];
       if (!row || !row.token) return;
-      if (k === deviceKey) return;
+      if (k === "native_android" || k === deviceKey) return;
       if (row.token === token) {
         ref.child(k).remove().catch(function () {});
         return;
@@ -789,11 +794,6 @@
     if (Notification.permission === "granted" && !isAuraAndroidTwa()) {
       var ok = await registerPush({ skipPermissionRequest: true });
       if (ok) return;
-    }
-
-    if (isAuraAndroidTwa() && Notification.permission === "granted") {
-      var webOk = await registerPush({ skipPermissionRequest: true, forceWeb: true });
-      if (webOk) return;
     }
 
     if (Notification.permission === "denied" && !isAuraAndroidTwa()) {

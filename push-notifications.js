@@ -203,7 +203,8 @@
     Object.keys(all).forEach(function (k) {
       if (k === "native_android") return;
       var row = all[k];
-      if (row && row.platform !== "android") {
+      if (!row || !row.token) return;
+      if (row.platform !== "android" || row.token === token) {
         ref.child(k).remove().catch(function () {});
       }
     });
@@ -774,13 +775,26 @@
     if (els.awayEnable) {
       els.awayEnable.addEventListener("click", function () {
         els.awayEnable.disabled = true;
-        registerPush({ userInitiated: true }).then(function (ok) {
-          els.awayEnable.disabled = false;
-          if (ok) applyAwayMode();
-          else if (state.message) {
-            setAwayHint(state.message);
-          }
-        });
+        setAwayHint(
+          (global.authT && global.authT("push.linking")) || "Linking phone alerts…"
+        );
+        registerPush({ userInitiated: true, skipBridgeFallback: true })
+          .then(function (ok) {
+            els.awayEnable.disabled = false;
+            if (ok) {
+              applyAwayMode();
+              return;
+            }
+            setAwayHint(
+              (global.authT && global.authT("push.awayPushFailed")) ||
+                "Alerts not linked yet. Away mode is on — reopen the app and tap the yellow text."
+            );
+            applyAwayMode();
+          })
+          .catch(function () {
+            els.awayEnable.disabled = false;
+            applyAwayMode();
+          });
       });
     }
     if (els.awaySkip) {
@@ -818,7 +832,7 @@
         await syncPushStatusFromServer();
       }
       if (state.pushKind !== "native") {
-        await ensureNativePushLinked();
+        ensureNativePushLinked().catch(function () {});
       }
     }
 

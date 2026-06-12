@@ -449,7 +449,8 @@ function saveNativeTokenForUser(userKey, tokenStr, callback) {
         Object.keys(all).forEach((key) => {
           if (key === "native_android") return;
           const row = all[key];
-          if (row && row.platform !== "android") {
+          if (!row || !row.token) return;
+          if (row.platform !== "android" || row.token === tokenStr) {
             firebaseDb
               .ref("users/" + userKey + "/pushTokens/" + key)
               .remove()
@@ -814,15 +815,16 @@ function sendPushToUser(userKey, title, body, callback) {
         uniqueEntries.map((e) => e.platform).join(",")
       );
     }
-    const hasNative = uniqueEntries.some((e) => e.platform === "android");
-    const sendEntries = hasNative
-      ? uniqueEntries.filter((e) => e.platform === "android")
-      : uniqueEntries;
+    const hasNative = uniqueEntries.some((e) => e.key === "native_android" || e.platform === "android");
+    const sendEntries = uniqueEntries;
     if (sendEntries.length === 0) {
       callback(null, 0, "none");
       return;
     }
-    const viaLabel = sendEntries.map((e) => e.platform).join("+");
+    const viaParts = [];
+    if (hasNative) viaParts.push("android");
+    if (uniqueEntries.some((e) => e.platform !== "android")) viaParts.push("web");
+    const viaLabel = viaParts.length ? viaParts.join("+") : sendEntries.map((e) => e.platform).join("+");
     const messaging = firebaseAdmin.messaging();
     let sent = 0;
     const next = (i) => {
@@ -834,23 +836,14 @@ function sendPushToUser(userKey, title, body, callback) {
       const bodyStr = String(body || "");
       const eventTag = "aura-" + Date.now() + "-" + Math.floor(Math.random() * 1000);
       const entry = sendEntries[i];
-      const isNative = entry.platform === "android";
+      const isNative = entry.key === "native_android" || entry.platform === "android";
       const message = {
         token: entry.token,
         data: { title: titleStr, body: bodyStr, playSound: playFlag, eventTag },
       };
       if (isNative) {
-        // Native FCM → Google Play Services (works in standby, unlike Chrome web push).
         message.android = {
           priority: "high",
-          notification: {
-            title: titleStr,
-            body: bodyStr,
-            channelId: "aura_alerts",
-            priority: "high",
-            defaultVibrateTimings: playSound,
-            defaultSound: playSound,
-          },
         };
       } else {
         message.webpush = {
@@ -866,20 +859,18 @@ function sendPushToUser(userKey, title, body, callback) {
         .catch((e) => {
           const code = (e && e.code) || "";
           const msg = String((e && e.message) || "");
-          // Мъртъв/ротиран токен → трием го, иначе базата се пълни с адреси „в нищото“.
-          if (
+          const isDeadToken =
             code === "messaging/registration-token-not-registered" ||
             code === "messaging/invalid-registration-token" ||
-            code === "messaging/invalid-argument" ||
-            /unregistered|not.?registered|entity was not found/i.test(msg)
-          ) {
-            console.warn("[FCM] removing dead token:", sendEntries[i].key);
+            /unregistered|not.?registered|entity was not found/i.test(msg);
+          if (isDeadToken) {
+            console.warn("[FCM] removing dead token:", sendEntries[i].key, code || msg);
             firebaseDb
               .ref("users/" + userKey + "/pushTokens/" + sendEntries[i].key)
               .remove()
               .catch(() => {});
           } else {
-            console.warn("[FCM] send failed:", e && e.message ? e.message : e);
+            console.warn("[FCM] send failed:", sendEntries[i].key, code || msg || e);
           }
           next(i + 1);
         });

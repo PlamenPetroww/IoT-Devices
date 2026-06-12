@@ -361,7 +361,8 @@ const translations = {
             linking: "Свързване на известията…",
             linkWait: "Изчакайте 5 сек., отворете app-а отново и натиснете жълтия текст.",
             reopenApp: "Затворете app-а напълно и го отворете отново.",
-            serverUnreachable: "Сървърът не отговаря. Затворете app-а, отворете го пак и опитайте отново."
+            serverUnreachable: "Сървърът не отговаря. Затворете app-а, отворете го пак и опитайте отново.",
+            awayPushFailed: "Известията още не са свързани. Режим „Навън“ е включен — отворете app-а и натиснете жълтия текст."
         },
         footer: { text: "Умни сензори за по-спокоен дом.", wifiNote: "За да използваш нашите сензори, необходима е стабилна WiFi връзка у дома.", impressum: "Импресум", privacy: "Политика за поверителност", installation: "Инсталация на сензори" },
         impressum: {
@@ -821,7 +822,8 @@ const translations = {
             linking: "Linking phone alerts…",
             linkWait: "Wait 5 sec., reopen the app, then tap the yellow text again.",
             reopenApp: "Close the app completely and open it again.",
-            serverUnreachable: "Server unreachable. Close the app, reopen it, and try again."
+            serverUnreachable: "Server unreachable. Close the app, reopen it, and try again.",
+            awayPushFailed: "Alerts not linked yet. Away mode is on — reopen the app and tap the yellow text."
         },
         footer: { text: "Smart sensors for a calmer home.", wifiNote: "A stable WiFi connection at home is required to use our sensors.", impressum: "Impressum", privacy: "Privacy Policy", installation: "Sensor installation" },
         impressum: {
@@ -1281,7 +1283,8 @@ const translations = {
             linking: "Benachrichtigungen werden verknüpft…",
             linkWait: "5 Sek. warten, App erneut öffnen, dann gelben Text erneut tippen.",
             reopenApp: "App vollständig schließen und erneut öffnen.",
-            serverUnreachable: "Server nicht erreichbar. App schließen, neu öffnen und erneut versuchen."
+            serverUnreachable: "Server nicht erreichbar. App schließen, neu öffnen und erneut versuchen.",
+            awayPushFailed: "Benachrichtigungen noch nicht verknüpft. Modus „Unterwegs“ ist an — App öffnen und gelben Text tippen."
         },
         footer: { text: "Smarte Sensoren für ein ruhigeres Zuhause.", wifiNote: "Für unsere Sensoren ist eine stabile WLAN-Verbindung zu Hause erforderlich.", impressum: "Impressum", privacy: "Datenschutz", installation: "Sensor-Installation" },
         impressum: {

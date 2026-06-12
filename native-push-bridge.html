@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Aura – notifications</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        background: #0f172a;
+        color: #e2e8f0;
+        display: flex;
+        min-height: 100vh;
+        align-items: center;
+        justify-content: center;
+        margin: 0;
+        padding: 24px;
+        text-align: center;
+      }
+      .box {
+        max-width: 320px;
+      }
+      a {
+        color: #38bdf8;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="box">
+      <p id="msg">Registering phone alerts…</p>
+      <p><a id="back" href="/dashboard.html" hidden>Back to dashboard</a></p>
+    </div>
+    <script>
+      (function () {
+        var params = new URLSearchParams(location.search);
+        var nonce = params.get("nonce");
+        var msg = document.getElementById("msg");
+        var back = document.getElementById("back");
+        if (!nonce) {
+          msg.textContent = "Missing registration data.";
+          back.hidden = false;
+          return;
+        }
+        var fallback = encodeURIComponent("https://aurahomesystems.eu/dashboard.html");
+        var intentUrl =
+          "intent://native-push?nonce=" +
+          encodeURIComponent(nonce) +
+          "#Intent;scheme=aurahomesystems;package=com.aurahomesystems.app;S.browser_fallback_url=" +
+          fallback +
+          ";end";
+        setTimeout(function () {
+          location.href = intentUrl;
+        }, 200);
+        setTimeout(function () {
+          msg.textContent = "If nothing happened, open dashboard and tap Yes again.";
+          back.hidden = false;
+        }, 4000);
+      })();
+    </script>
+  </body>
+</html>

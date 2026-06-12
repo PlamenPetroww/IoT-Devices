@@ -163,7 +163,26 @@
     return !/Firefox/i.test(ua);
   }
 
+  function setPushHint(text) {
+    if (state.overlayMode === "away") {
+      setAwayHint(text);
+      return;
+    }
+    if (!els.dialogHint) return;
+    if (text) {
+      els.dialogHint.textContent = text;
+      els.dialogHint.hidden = false;
+    } else {
+      els.dialogHint.hidden = true;
+      els.dialogHint.textContent = "";
+    }
+  }
+
   function openNativeBridgeIntent(intentUrl) {
+    try {
+      global.location.href = intentUrl;
+      return true;
+    } catch (_) {}
     try {
       var link = global.document.createElement("a");
       link.href = intentUrl;
@@ -250,11 +269,9 @@
     var data = await resp.json();
     if (!data || !data.nonce) return false;
 
-    var intentUrl =
-      "intent://native-push?nonce=" +
-      encodeURIComponent(data.nonce) +
-      "#Intent;scheme=aurahomesystems;package=com.aurahomesystems.app;end";
-    return openNativeBridgeIntent(intentUrl);
+    global.location.href =
+      "/native-push-bridge.html?nonce=" + encodeURIComponent(data.nonce);
+    return true;
   }
 
   async function refreshWebPushToken(messaging, swReg, vapidKey) {
@@ -349,7 +366,7 @@
         return !!(await hasServerPushToken());
       }
       try {
-        setAwayHint(
+        setPushHint(
           (global.authT && global.authT("push.registering")) ||
             "Registering notifications…"
         );
@@ -366,35 +383,35 @@
           state.message =
             (global.authT && global.authT("push.nativeFailed")) ||
             "Could not register phone alerts. Try again in a few seconds.";
-          setAwayHint(state.message);
+          setPushHint(state.message);
           notify();
           return false;
         }
-        setAwayHint(
+        setPushHint(
           (global.authT && global.authT("push.registering")) ||
             "Registering notifications…"
         );
-        var saved = await waitForServerPushToken(6000);
+        var saved = await waitForServerPushToken(8000);
         if (!saved) {
           clearRegisteredLocally();
           state.status = "pending";
           state.message =
             (global.authT && global.authT("push.nativePending")) ||
-            "Registration started — tap again in a few seconds or reopen the app.";
-          setAwayHint(state.message);
+            "Registration started — tap Yes again in a few seconds.";
+          setPushHint(state.message);
           notify();
           return false;
         }
         markRegistered();
         state.status = "active";
         state.message = "";
-        setAwayHint("");
+        setPushHint("");
         notify();
         return true;
       } catch (nativeErr) {
         state.status = "error";
         state.message = nativeErr.message || "Native push registration failed.";
-        setAwayHint(state.message);
+        setPushHint(state.message);
         notify();
         return false;
       }
@@ -403,7 +420,7 @@
     if (permission !== "granted") {
       state.status = "denied";
       state.message = (global.authT && global.authT("push.denied")) || "Notifications denied.";
-      setAwayHint(state.message);
+      setPushHint(state.message);
       notify();
       return false;
     }
@@ -551,8 +568,16 @@
   function bindUi() {
     if (els.overlayYes) {
       els.overlayYes.addEventListener("click", function () {
+        els.overlayYes.disabled = true;
         registerPush({ userInitiated: true }).then(function (ok) {
-          if (ok && state.pendingAway) applyAwayMode();
+          els.overlayYes.disabled = false;
+          if (ok) {
+            setOnboardingDismissed();
+            hideOverlay();
+            if (state.pendingAway) applyAwayMode();
+          } else if (state.message) {
+            setPushHint(state.message);
+          }
         });
       });
     }
@@ -633,7 +658,11 @@
     global.document.addEventListener("visibilitychange", function () {
       if (global.document.visibilityState !== "visible") return;
       syncPushStatusFromServer().then(function (has) {
-        if (has && state.pendingAway) applyAwayMode();
+        if (has) {
+          setOnboardingDismissed();
+          hideOverlay();
+          if (state.pendingAway) applyAwayMode();
+        }
       });
     });
   }

@@ -75,9 +75,17 @@ public class LauncherActivity
         if (uri == null) {
             return null;
         }
+        String versionName = "";
+        try {
+            versionName =
+                    getPackageManager()
+                            .getPackageInfo(getPackageName(), 0)
+                            .versionName;
+        } catch (PackageManager.NameNotFoundException ignored) {
+        }
         return uri.buildUpon()
                 .appendQueryParameter("aura_did", AuraDeviceId.get(this))
-                .appendQueryParameter("aura_app_ver", BuildConfig.VERSION_NAME)
+                .appendQueryParameter("aura_app_ver", versionName != null ? versionName : "")
                 .build();
     }
 }

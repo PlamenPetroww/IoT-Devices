@@ -425,32 +425,60 @@ function registerNativePushToken(nonce, token, callback) {
       callback(new Error("EXPIRED"));
       return;
     }
-    const userKey = row.userKey;
-    regRef.remove().catch(() => {});
-    firebaseDb
-      .ref("users/" + userKey + "/pushTokens/native_android")
-      .set({
-        token: tokenStr,
-        platform: "android",
-        createdAt: firebaseAdmin.database.ServerValue.TIMESTAMP,
-      })
-      .then(() => {
-        firebaseDb.ref("users/" + userKey + "/pushTokens").once("value", (tokSnap) => {
-          const all = tokSnap.val() || {};
-          Object.keys(all).forEach((key) => {
-            if (key === "native_android") return;
-            const row = all[key];
-            if (row && row.platform !== "android") {
-              firebaseDb
-                .ref("users/" + userKey + "/pushTokens/" + key)
-                .remove()
-                .catch(() => {});
-            }
-          });
+    saveNativeTokenForUser(row.userKey, tokenStr, callback);
+  }, callback);
+}
+
+function sanitizeDeviceId(deviceId) {
+  const s = String(deviceId || "").trim();
+  if (!/^aura_[a-fA-F0-9]{32}$/.test(s)) return null;
+  return s;
+}
+
+function saveNativeTokenForUser(userKey, tokenStr, callback) {
+  firebaseDb
+    .ref("users/" + userKey + "/pushTokens/native_android")
+    .set({
+      token: tokenStr,
+      platform: "android",
+      createdAt: firebaseAdmin.database.ServerValue.TIMESTAMP,
+    })
+    .then(() => {
+      firebaseDb.ref("users/" + userKey + "/pushTokens").once("value", (tokSnap) => {
+        const all = tokSnap.val() || {};
+        Object.keys(all).forEach((key) => {
+          if (key === "native_android") return;
+          const row = all[key];
+          if (row && row.platform !== "android") {
+            firebaseDb
+              .ref("users/" + userKey + "/pushTokens/" + key)
+              .remove()
+              .catch(() => {});
+          }
         });
-        callback(null, userKey);
-      })
-      .catch(callback);
+      });
+      callback(null, userKey);
+    })
+    .catch(callback);
+}
+
+function linkNativeDeviceToUser(userKey, deviceId, callback) {
+  if (!firebaseDb) {
+    callback(new Error("NOT_CONFIGURED"));
+    return;
+  }
+  const id = sanitizeDeviceId(deviceId);
+  if (!id) {
+    callback(new Error("INVALID"));
+    return;
+  }
+  firebaseDb.ref("nativeDeviceTokens/" + id).once("value", (snap) => {
+    const row = snap.val();
+    if (!row || !row.token) {
+      callback(new Error("NO_TOKEN"));
+      return;
+    }
+    saveNativeTokenForUser(userKey, row.token, callback);
   }, callback);
 }
 
@@ -1113,6 +1141,91 @@ const server = http.createServer((req, res) => {
         }
         res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
         res.end(JSON.stringify({ nonce }));
+      });
+    });
+    return;
+  }
+
+  if (requestPath === "/api/native-device-token" && req.method === "POST") {
+    setCors(res, req);
+    let body = "";
+    req.on("data", (chunk) => {
+      body += chunk;
+    });
+    req.on("end", () => {
+      let parsed = {};
+      try {
+        parsed = JSON.parse(body || "{}");
+      } catch (e) {
+        res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({ error: "Invalid JSON" }));
+        return;
+      }
+      const deviceId = sanitizeDeviceId(parsed.deviceId);
+      const token = String(parsed.token || "").trim();
+      if (!deviceId || !token) {
+        res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({ error: "Invalid deviceId or token" }));
+        return;
+      }
+      if (!firebaseDb) {
+        res.writeHead(503, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({ error: "Not configured" }));
+        return;
+      }
+      firebaseDb
+        .ref("nativeDeviceTokens/" + deviceId)
+        .set({
+          token,
+          updatedAt: firebaseAdmin.database.ServerValue.TIMESTAMP,
+        })
+        .then(() => {
+          console.log("[native-device-token] stored for", deviceId);
+          res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify({ success: true }));
+        })
+        .catch(() => {
+          res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify({ error: "Store failed" }));
+        });
+    });
+    return;
+  }
+
+  if (requestPath === "/api/link-native-device" && req.method === "POST") {
+    setCors(res, req);
+    let body = "";
+    req.on("data", (chunk) => {
+      body += chunk;
+    });
+    req.on("end", () => {
+      let parsed = {};
+      try {
+        parsed = JSON.parse(body || "{}");
+      } catch (e) {
+        res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({ error: "Invalid JSON" }));
+        return;
+      }
+      verifyBearerUserKey(req, (err, userKey) => {
+        if (err) {
+          const code = err.message === "UNAUTHORIZED" ? 401 : 503;
+          res.writeHead(code, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify({ error: err.message || "Unauthorized" }));
+          return;
+        }
+        linkNativeDeviceToUser(userKey, parsed.deviceId, (linkErr, linkedKey) => {
+          if (linkErr) {
+            const code =
+              linkErr.message === "NO_TOKEN" || linkErr.message === "INVALID" ? 404 : 500;
+            res.writeHead(code, { "Content-Type": "application/json; charset=utf-8" });
+            res.end(JSON.stringify({ error: linkErr.message || "Link failed" }));
+            return;
+          }
+          console.log("[native-push] linked device for", linkedKey);
+          res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify({ success: true }));
+        });
       });
     });
     return;

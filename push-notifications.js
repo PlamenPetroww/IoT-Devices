@@ -190,6 +190,34 @@
     } catch (_) {}
   }
 
+  async function saveNativeAndroidToken(token) {
+    if (!state.db || !state.userPath || !token) return false;
+    var ref = state.db.ref(state.userPath + "/pushTokens");
+    await ref.child("native_android").set({
+      token: token,
+      platform: "android",
+      createdAt: firebase.database.ServerValue.TIMESTAMP,
+    });
+    var snap = await ref.once("value");
+    var all = snap.val() || {};
+    Object.keys(all).forEach(function (k) {
+      if (k === "native_android") return;
+      var row = all[k];
+      if (row && row.platform !== "android") {
+        ref.child(k).remove().catch(function () {});
+      }
+    });
+    return true;
+  }
+
+  async function linkNativeDeviceViaRtdb(deviceId) {
+    if (!state.db || !deviceId) return false;
+    var snap = await state.db.ref("nativeDeviceTokens/" + deviceId).once("value");
+    var row = snap.val();
+    if (!row || !row.token) return false;
+    return saveNativeAndroidToken(row.token);
+  }
+
   async function linkNativeDevice() {
     if (!isAuraAndroidTwa()) return false;
     captureDeviceId();
@@ -200,16 +228,31 @@
     if (!deviceId || typeof firebase === "undefined" || !firebase.auth) return false;
     var user = firebase.auth().currentUser;
     if (!user) return false;
-    var idToken = await user.getIdToken();
-    var resp = await fetch(getApiBase() + "/api/link-native-device", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer " + idToken,
-      },
-      body: JSON.stringify({ deviceId: deviceId }),
-    });
-    return resp.ok;
+
+    try {
+      var idToken = await user.getIdToken();
+      var resp = await fetch(getApiBase() + "/api/link-native-device", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + idToken,
+        },
+        body: JSON.stringify({ deviceId: deviceId }),
+      });
+      var contentType = resp.headers.get("content-type") || "";
+      if (resp.ok && contentType.indexOf("application/json") !== -1) {
+        return true;
+      }
+    } catch (err) {
+      console.warn("[push] link-native-device fetch failed:", err);
+    }
+
+    try {
+      return await linkNativeDeviceViaRtdb(deviceId);
+    } catch (rtdbErr) {
+      console.warn("[push] link via RTDB failed:", rtdbErr);
+      return false;
+    }
   }
 
   async function ensureNativePushLinked() {
@@ -473,7 +516,14 @@
         return true;
       } catch (nativeErr) {
         state.status = "error";
-        state.message = nativeErr.message || "Native push registration failed.";
+        var errMsg = nativeErr && nativeErr.message ? nativeErr.message : "";
+        if (/failed to fetch|networkerror|load failed/i.test(errMsg)) {
+          state.message =
+            (global.authT && global.authT("push.serverUnreachable")) ||
+            "Cannot reach the server. Close the app, reopen it, and try again.";
+        } else {
+          state.message = errMsg || "Native push registration failed.";
+        }
         setPushHint(state.message);
         notify();
         return false;

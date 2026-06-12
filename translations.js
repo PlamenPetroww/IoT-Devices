@@ -358,7 +358,8 @@ const translations = {
             nativeFailed: "Неуспешна регистрация. Опитайте отново след секунда.",
             nativePending: "Регистрацията започна — натиснете отново след няколко секунди.",
             linking: "Свързване на известията…",
-            linkWait: "Изчакайте 5 сек., отворете app-а отново и натиснете жълтия текст."
+            linkWait: "Изчакайте 5 сек., отворете app-а отново и натиснете жълтия текст.",
+            serverUnreachable: "Сървърът не отговаря. Затворете app-а, отворете го пак и опитайте отново."
         },
         footer: { text: "Умни сензори за по-спокоен дом.", wifiNote: "За да използваш нашите сензори, необходима е стабилна WiFi връзка у дома.", impressum: "Импресум", privacy: "Политика за поверителност", installation: "Инсталация на сензори" },
         impressum: {
@@ -815,7 +816,8 @@ const translations = {
             nativeFailed: "Registration failed. Try again in a few seconds.",
             nativePending: "Registration started — tap Yes again in a few seconds.",
             linking: "Linking phone alerts…",
-            linkWait: "Wait 5 sec., reopen the app, then tap the yellow text again."
+            linkWait: "Wait 5 sec., reopen the app, then tap the yellow text again.",
+            serverUnreachable: "Server unreachable. Close the app, reopen it, and try again."
         },
         footer: { text: "Smart sensors for a calmer home.", wifiNote: "A stable WiFi connection at home is required to use our sensors.", impressum: "Impressum", privacy: "Privacy Policy", installation: "Sensor installation" },
         impressum: {
@@ -1272,7 +1274,8 @@ const translations = {
             nativeFailed: "Registrierung fehlgeschlagen. Bitte erneut versuchen.",
             nativePending: "Registrierung gestartet — in ein paar Sekunden erneut tippen.",
             linking: "Benachrichtigungen werden verknüpft…",
-            linkWait: "5 Sek. warten, App erneut öffnen, dann gelben Text erneut tippen."
+            linkWait: "5 Sek. warten, App erneut öffnen, dann gelben Text erneut tippen.",
+            serverUnreachable: "Server nicht erreichbar. App schließen, neu öffnen und erneut versuchen."
         },
         footer: { text: "Smarte Sensoren für ein ruhigeres Zuhause.", wifiNote: "Für unsere Sensoren ist eine stabile WLAN-Verbindung zu Hause erforderlich.", impressum: "Impressum", privacy: "Datenschutz", installation: "Sensor-Installation" },
         impressum: {

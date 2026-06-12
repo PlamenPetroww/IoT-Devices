@@ -1,0 +1,11 @@
+# Render Web Service – Node API (FCM, native push, sensor events).
+# In Render Dashboard: New → Blueprint → connect this repo, or set an existing service to:
+#   Build: npm install
+#   Start: npm start
+services:
+  - type: web
+    name: cleverhaus
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/revolut-config

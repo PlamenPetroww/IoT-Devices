@@ -28,27 +28,28 @@ self.addEventListener("activate", (event) => {
 firebase.messaging().onBackgroundMessage((payload) => {
   const data = (payload && payload.data) || {};
   const playSound = data.playSound !== "0";
-  const title =
-    (payload.notification && payload.notification.title) ||
-    data.title ||
-    "Aura HomeSystems";
-  const body =
-    (payload.notification && payload.notification.body) ||
-    data.body ||
-    "";
+  const title = data.title || "Aura HomeSystems";
+  const body = data.body || "";
   const options = {
     body,
     icon: "/favicon.png",
-    // Tag на събитие (от сървъра): отделно известие за всяко събитие, без тиха замяна.
     tag: data.eventTag || "aura-" + Date.now(),
     renotify: true,
     silent: !playSound,
     vibrate: playSound ? [180, 90, 180] : [],
   };
-  try {
-    return self.registration.showNotification(title, options);
-  } catch (e) {
-    console.error("[firebase-messaging-sw] showNotification failed:", e);
-    return null;
-  }
+
+  // App отворен на екрана → foreground handler показва; иначе 2 еднакви известия.
+  return self.clients
+    .matchAll({ type: "window", includeUncontrolled: true })
+    .then(function (clients) {
+      for (var i = 0; i < clients.length; i++) {
+        if (clients[i].visibilityState === "visible") return null;
+      }
+      return self.registration.showNotification(title, options);
+    })
+    .catch(function (e) {
+      console.error("[firebase-messaging-sw] showNotification failed:", e);
+      return null;
+    });
 });

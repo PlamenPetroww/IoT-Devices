@@ -622,6 +622,9 @@ try {
     firebaseDb = firebaseAdmin.database();
   } else {
     console.warn("[Aura] FIREBASE_SERVICE_ACCOUNT_JSON not set");
+    if (!fs.existsSync(path.join(__dirname, ".env"))) {
+      console.warn("[Aura] Local dev: copy .env.example to .env and paste values from Render");
+    }
   }
 } catch (e) {
   console.warn("[Aura] Firebase Admin not configured:", e.message);
@@ -667,15 +670,28 @@ function sendPushToUser(userKey, title, body, callback) {
       return;
     }
     const entries = Object.keys(val)
-      .map((key) => ({ key, token: val[key] && val[key].token }))
+      .map((key) => ({
+        key,
+        token: val[key] && val[key].token,
+        createdAt: (val[key] && val[key].createdAt) || 0,
+      }))
       .filter((e) => Boolean(e.token));
     const seen = new Set();
     const uniqueEntries = entries.filter((e) => {
-      if (seen.has(e.token)) return false;
+      if (seen.has(e.token)) {
+        firebaseDb
+          .ref("users/" + userKey + "/pushTokens/" + e.key)
+          .remove()
+          .catch(() => {});
+        return false;
+      }
       seen.add(e.token);
       return true;
     });
     const tokens = uniqueEntries.map((e) => e.token);
+    if (tokens.length > 1) {
+      console.log("[FCM]", userKey, "tokens:", tokens.length);
+    }
     if (tokens.length === 0) {
       callback(null, 0);
       return;

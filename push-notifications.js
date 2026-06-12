@@ -114,9 +114,13 @@
         var body = (payload && payload.data && payload.data.body) || "";
         var playSound = shouldPlayAlertSound(payload);
         if ("Notification" in global && Notification.permission === "granted") {
+          var tag =
+            (payload && payload.data && payload.data.eventTag) ||
+            "aura-" + Date.now();
           new Notification(title, {
             body: body,
             icon: "/favicon.png",
+            tag: tag,
             silent: !playSound,
           });
         }
@@ -153,12 +157,16 @@
       prevToken = localStorage.getItem("auraPushToken");
     } catch (_) {}
 
-    // Премахни дубликати и стария токен на това устройство.
+    // Премахни стари/дублирани записи (legacy push IDs и стар токен на това устройство).
     Object.keys(val).forEach(function (k) {
       var row = val[k];
       if (!row || !row.token) return;
-      if (row.token === token) return;
-      if (k === deviceKey || row.token === prevToken) {
+      if (k === deviceKey) return;
+      if (row.token === token) {
+        ref.child(k).remove().catch(function () {});
+        return;
+      }
+      if (/^-[A-Za-z0-9_]+$/.test(k) || row.token === prevToken) {
         ref.child(k).remove().catch(function () {});
       }
     });

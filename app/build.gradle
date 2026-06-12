@@ -51,6 +51,12 @@ def twaManifest = [
     orientation: 'portrait-primary',
 ]
 
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
 android {
     compileSdkVersion 36
     namespace "com.aurahomesystems.app"
@@ -58,8 +64,8 @@ android {
         applicationId "com.aurahomesystems.app"
         minSdkVersion 21
         targetSdkVersion 35
-        versionCode 10
-        versionName "10"
+        versionCode 11
+        versionName "11"
 
         // The name for the application
         resValue "string", "appName", twaManifest.name
@@ -151,9 +157,22 @@ android {
 
         
     }
+    signingConfigs {
+        release {
+            if (keystorePropertiesFile.exists()) {
+                storeFile file(keystoreProperties["storeFile"])
+                storePassword keystoreProperties["storePassword"]
+                keyAlias keystoreProperties["keyAlias"]
+                keyPassword keystoreProperties["keyPassword"]
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled true
+            if (keystorePropertiesFile.exists()) {
+                signingConfig signingConfigs.release
+            }
         }
     }
     compileOptions {

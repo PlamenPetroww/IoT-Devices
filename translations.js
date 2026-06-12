@@ -350,7 +350,9 @@ const translations = {
             noVapid: "Липсва FIREBASE_VAPID_KEY в firebase-config.js (Firebase → Cloud Messaging).",
             denied: "Известията са изключени в настройките на телефона.",
             tokenFailed: "Неуспешно получаване на токен за известия.",
-            registerError: "Грешка: {message}"
+            registerError: "Грешка: {message}",
+            registering: "Регистриране на известия…",
+            nativeFailed: "Неуспешна регистрация. Опитайте отново след секунда."
         },
         footer: { text: "Умни сензори за по-спокоен дом.", wifiNote: "За да използваш нашите сензори, необходима е стабилна WiFi връзка у дома.", impressum: "Импресум", privacy: "Политика за поверителност", installation: "Инсталация на сензори" },
         impressum: {
@@ -799,7 +801,9 @@ const translations = {
             noVapid: "FIREBASE_VAPID_KEY is missing in firebase-config.js (Firebase → Cloud Messaging).",
             denied: "Notifications are disabled in your phone settings.",
             tokenFailed: "Could not obtain notification token.",
-            registerError: "Error: {message}"
+            registerError: "Error: {message}",
+            registering: "Registering notifications…",
+            nativeFailed: "Registration failed. Try again in a few seconds."
         },
         footer: { text: "Smart sensors for a calmer home.", wifiNote: "A stable WiFi connection at home is required to use our sensors.", impressum: "Impressum", privacy: "Privacy Policy", installation: "Sensor installation" },
         impressum: {
@@ -1248,7 +1252,9 @@ const translations = {
             noVapid: "FIREBASE_VAPID_KEY fehlt in firebase-config.js (Firebase → Cloud Messaging).",
             denied: "Benachrichtigungen sind in den Telefoneinstellungen deaktiviert.",
             tokenFailed: "Benachrichtigungstoken konnte nicht abgerufen werden.",
-            registerError: "Fehler: {message}"
+            registerError: "Fehler: {message}",
+            registering: "Benachrichtigungen werden registriert…",
+            nativeFailed: "Registrierung fehlgeschlagen. Bitte erneut versuchen."
         },
         footer: { text: "Smarte Sensoren für ein ruhigeres Zuhause.", wifiNote: "Für unsere Sensoren ist eine stabile WLAN-Verbindung zu Hause erforderlich.", impressum: "Impressum", privacy: "Datenschutz", installation: "Sensor-Installation" },
         impressum: {

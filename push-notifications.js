@@ -141,13 +141,47 @@
   function isAuraAndroidTwa() {
     var ua = global.navigator && global.navigator.userAgent ? global.navigator.userAgent : "";
     if (!/Android/i.test(ua)) return false;
+    var host = global.location && global.location.hostname;
+    if (host !== "aurahomesystems.eu" && host !== "www.aurahomesystems.eu") return false;
     try {
       if (global.matchMedia && global.matchMedia("(display-mode: standalone)").matches) return true;
     } catch (_) {}
     try {
-      if (global.document.referrer.indexOf("android-app://") === 0) return true;
+      if (global.matchMedia && global.matchMedia("(display-mode: fullscreen)").matches) return true;
     } catch (_) {}
-    return false;
+    try {
+      var ref = global.document.referrer || "";
+      if (ref.indexOf("android-app://") === 0) return true;
+    } catch (_) {}
+    // Play Store TWA on our domain (not mobile Firefox).
+    return !/Firefox/i.test(ua);
+  }
+
+  function openNativeBridgeIntent(intentUrl, schemeUrl) {
+    try {
+      var link = global.document.createElement("a");
+      link.href = intentUrl;
+      link.style.display = "none";
+      global.document.body.appendChild(link);
+      link.click();
+      global.document.body.removeChild(link);
+    } catch (_) {}
+    setTimeout(function () {
+      try {
+        global.location.href = schemeUrl;
+      } catch (_) {}
+    }, 300);
+  }
+
+  function setAwayHint(text) {
+    if (!els.awayHint) return;
+    if (text) {
+      els.awayHint.textContent = text;
+      els.awayHint.hidden = false;
+    } else {
+      els.awayHint.hidden = true;
+      els.awayHint.textContent = "";
+    }
   }
 
   async function registerNativePushBridge() {
@@ -173,7 +207,9 @@
       "intent://native-push?nonce=" +
       encodeURIComponent(data.nonce) +
       "#Intent;scheme=aurahomesystems;package=com.aurahomesystems.app;end";
-    global.location.href = intentUrl;
+    var schemeUrl =
+      "aurahomesystems://native-push?nonce=" + encodeURIComponent(data.nonce);
+    openNativeBridgeIntent(intentUrl, schemeUrl);
     try {
       localStorage.setItem("auraNativePushAt", String(Date.now()));
     } catch (_) {}
@@ -242,7 +278,9 @@
 
   async function registerPush(opts) {
     opts = opts || {};
-    if (!isSupported()) {
+    var useNative = isAuraAndroidTwa();
+
+    if (!useNative && !isSupported()) {
       state.status = "unsupported";
       state.message = (global.authT && global.authT("push.unsupported")) || "Push not supported.";
       notify();
@@ -250,7 +288,7 @@
     }
 
     var vapidKey = getVapidKey();
-    if (!vapidKey) {
+    if (!useNative && !vapidKey) {
       state.status = "error";
       state.message =
         (global.authT && global.authT("push.noVapid")) ||
@@ -260,19 +298,17 @@
     }
 
     var permission = Notification.permission;
-    if (permission === "default" && !opts.skipPermissionRequest) {
-      hideOverlay();
+    if (permission === "default" && !opts.skipPermissionRequest && !useNative) {
+      if (state.overlayMode !== "away") hideOverlay();
       permission = await Notification.requestPermission();
     }
-    if (permission !== "granted") {
-      state.status = "denied";
-      state.message = (global.authT && global.authT("push.denied")) || "Notifications denied.";
-      notify();
-      return false;
-    }
 
-    if (isAuraAndroidTwa()) {
+    if (useNative) {
       try {
+        setAwayHint(
+          (global.authT && global.authT("push.registering")) ||
+            "Registering notifications…"
+        );
         var nativeOk = await registerNativePushBridge();
         if (state.db && state.userPath) {
           var alertRef = state.db.ref(state.userPath + "/settings/alertSoundEnabled");
@@ -281,17 +317,36 @@
             await alertRef.set(true);
           }
         }
+        if (!nativeOk) {
+          state.status = "error";
+          state.message =
+            (global.authT && global.authT("push.nativeFailed")) ||
+            "Could not register phone alerts. Try again in a few seconds.";
+          setAwayHint(state.message);
+          notify();
+          return false;
+        }
         markRegistered();
         state.status = "active";
         state.message = "";
+        setAwayHint("");
         notify();
-        return nativeOk;
+        return true;
       } catch (nativeErr) {
         state.status = "error";
         state.message = nativeErr.message || "Native push registration failed.";
+        setAwayHint(state.message);
         notify();
         return false;
       }
+    }
+
+    if (permission !== "granted") {
+      state.status = "denied";
+      state.message = (global.authT && global.authT("push.denied")) || "Notifications denied.";
+      setAwayHint(state.message);
+      notify();
+      return false;
     }
 
     try {
@@ -433,6 +488,7 @@
     els.awayEnable = document.getElementById("pushAwayEnable");
     els.awaySkip = document.getElementById("pushAwaySkip");
     els.awayCancel = document.getElementById("pushAwayCancel");
+    els.awayHint = document.getElementById("pushAwayHint");
   }
 
   function bindUi() {
@@ -454,11 +510,12 @@
     }
     if (els.awayEnable) {
       els.awayEnable.addEventListener("click", function () {
+        els.awayEnable.disabled = true;
         registerPush().then(function (ok) {
+          els.awayEnable.disabled = false;
           if (ok) applyAwayMode();
-          else if (state.message && els.dialogHint && state.overlayMode === "away") {
-            els.dialogHint.textContent = state.message;
-            els.dialogHint.hidden = false;
+          else if (state.message) {
+            setAwayHint(state.message);
           }
         });
       });

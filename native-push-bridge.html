@@ -20,27 +20,32 @@
       .box {
         max-width: 320px;
       }
-      a {
-        color: #38bdf8;
-      }
     </style>
   </head>
   <body>
     <div class="box">
       <p id="msg">Registering phone alerts…</p>
-      <p><a id="back" href="/dashboard.html" hidden>Back to dashboard</a></p>
     </div>
     <script>
       (function () {
+        try {
+          sessionStorage.setItem("auraPushOnboardingDismissed", "1");
+        } catch (_) {}
+
         var params = new URLSearchParams(location.search);
         var nonce = params.get("nonce");
         var msg = document.getElementById("msg");
-        var back = document.getElementById("back");
+
+        function goDashboard() {
+          location.replace("/dashboard.html");
+        }
+
         if (!nonce) {
           msg.textContent = "Missing registration data.";
-          back.hidden = false;
+          setTimeout(goDashboard, 1500);
           return;
         }
+
         var fallback = encodeURIComponent("https://aurahomesystems.eu/dashboard.html");
         var intentUrl =
           "intent://native-push?nonce=" +
@@ -48,13 +53,12 @@
           "#Intent;scheme=aurahomesystems;package=com.aurahomesystems.app;S.browser_fallback_url=" +
           fallback +
           ";end";
+
         setTimeout(function () {
           location.href = intentUrl;
-        }, 200);
-        setTimeout(function () {
-          msg.textContent = "If nothing happened, open dashboard and tap Yes again.";
-          back.hidden = false;
-        }, 4000);
+        }, 250);
+
+        setTimeout(goDashboard, 2200);
       })();
     </script>
   </body>

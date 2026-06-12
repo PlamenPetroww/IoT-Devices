@@ -13,6 +13,7 @@
     pendingAway: false,
     foregroundBound: false,
     overlayMode: null,
+    visibilityBound: false,
   };
 
   var els = {};
@@ -269,6 +270,10 @@
     var data = await resp.json();
     if (!data || !data.nonce) return false;
 
+    try {
+      sessionStorage.setItem("auraPushOnboardingDismissed", "1");
+    } catch (_) {}
+
     global.location.href =
       "/native-push-bridge.html?nonce=" + encodeURIComponent(data.nonce);
     return true;
@@ -387,25 +392,8 @@
           notify();
           return false;
         }
-        setPushHint(
-          (global.authT && global.authT("push.registering")) ||
-            "Registering notifications…"
-        );
-        var saved = await waitForServerPushToken(8000);
-        if (!saved) {
-          clearRegisteredLocally();
-          state.status = "pending";
-          state.message =
-            (global.authT && global.authT("push.nativePending")) ||
-            "Registration started — tap Yes again in a few seconds.";
-          setPushHint(state.message);
-          notify();
-          return false;
-        }
-        markRegistered();
-        state.status = "active";
-        state.message = "";
-        setPushHint("");
+        setOnboardingDismissed();
+        hideOverlay();
         notify();
         return true;
       } catch (nativeErr) {
@@ -569,10 +557,14 @@
     if (els.overlayYes) {
       els.overlayYes.addEventListener("click", function () {
         els.overlayYes.disabled = true;
+        setOnboardingDismissed();
+        setPushHint(
+          (global.authT && global.authT("push.registering")) ||
+            "Registering notifications…"
+        );
         registerPush({ userInitiated: true }).then(function (ok) {
           els.overlayYes.disabled = false;
           if (ok) {
-            setOnboardingDismissed();
             hideOverlay();
             if (state.pendingAway) applyAwayMode();
           } else if (state.message) {
@@ -655,16 +647,19 @@
       showOnboardingOverlay();
     }
 
-    global.document.addEventListener("visibilitychange", function () {
-      if (global.document.visibilityState !== "visible") return;
-      syncPushStatusFromServer().then(function (has) {
-        if (has) {
-          setOnboardingDismissed();
-          hideOverlay();
-          if (state.pendingAway) applyAwayMode();
-        }
+    if (!state.visibilityBound) {
+      state.visibilityBound = true;
+      global.document.addEventListener("visibilitychange", function () {
+        if (global.document.visibilityState !== "visible") return;
+        syncPushStatusFromServer().then(function (has) {
+          if (has) {
+            setOnboardingDismissed();
+            hideOverlay();
+            if (state.pendingAway) applyAwayMode();
+          }
+        });
       });
-    });
+    }
   }
 
   async function requestAwayModeWithPush() {

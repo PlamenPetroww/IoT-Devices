@@ -1,5 +1,6 @@
 package com.aurahomesystems.app;
 
+import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -16,20 +17,24 @@ import com.google.firebase.messaging.RemoteMessage;
 import java.util.Map;
 
 public class AuraFirebaseMessagingService extends FirebaseMessagingService {
-    public static final String CHANNEL_ID = "aura_alerts";
+    public static final String CHANNEL_ID = "aura_alarm_alerts_v2";
 
     @Override
     public void onMessageReceived(RemoteMessage remoteMessage) {
+        Map<String, String> data = remoteMessage.getData();
+        String eventTag =
+                data != null && data.containsKey("eventTag") ? data.get("eventTag") : "";
+        NativePushRegistrar.sendAck(this, "received", eventTag, "");
         if (remoteMessage.getNotification() != null) {
             RemoteMessage.Notification n = remoteMessage.getNotification();
             showNotification(
                     n.getTitle() != null ? n.getTitle() : "Aura HomeSystems",
                     n.getBody() != null ? n.getBody() : "",
-                    true);
+                    true,
+                    eventTag);
             return;
         }
 
-        Map<String, String> data = remoteMessage.getData();
         if (data == null || data.isEmpty()) {
             return;
         }
@@ -37,15 +42,20 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
         String title = data.containsKey("title") ? data.get("title") : "Aura HomeSystems";
         String body = data.containsKey("body") ? data.get("body") : "";
         boolean playSound = !"0".equals(data.get("playSound"));
-        showNotification(title, body, playSound);
+        showNotification(title, body, playSound, eventTag);
     }
 
-    private void showNotification(String title, String body, boolean playSound) {
-        ensureChannel(playSound);
+    private void showNotification(String title, String body, boolean playSound, String eventTag) {
+        if (!NotificationPermissionHelper.areNotificationsEnabled(this)) {
+            android.util.Log.w("AuraFCM", "Notifications disabled — enable in phone Settings");
+            NativePushRegistrar.sendAck(this, "blocked_notifications_disabled", eventTag, "");
+            return;
+        }
+        ensureChannel(this, playSound);
 
         NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         Intent intent = new Intent(this, LauncherActivity.class);
-        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         PendingIntent pendingIntent = PendingIntent.getActivity(
                 this,
                 (int) (System.currentTimeMillis() & 0xffff),
@@ -58,8 +68,11 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
                 .setContentText(body)
                 .setAutoCancel(true)
                 .setContentIntent(pendingIntent)
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
-                .setCategory(NotificationCompat.CATEGORY_ALARM);
+                .setPriority(NotificationCompat.PRIORITY_MAX)
+                .setCategory(NotificationCompat.CATEGORY_ALARM)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                .setVibrate(new long[]{0, 300, 200, 300})
+                .setFullScreenIntent(pendingIntent, playSound);
 
         if (playSound) {
             builder.setDefaults(NotificationCompat.DEFAULT_ALL);
@@ -68,28 +81,38 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
         }
 
         nm.notify((int) (System.currentTimeMillis() & 0xfffffff), builder.build());
+        NativePushRegistrar.sendAck(this, "shown", eventTag, CHANNEL_ID);
     }
 
-    private void ensureChannel(boolean playSound) {
+    public static void ensureChannel(Context context, boolean playSound) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
             return;
         }
-        NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         NotificationChannel channel = new NotificationChannel(
                 CHANNEL_ID,
-                "Aura alerts",
+                "Aura alarm alerts",
                 NotificationManager.IMPORTANCE_HIGH);
-        channel.setDescription("Door and window sensor alerts");
+        channel.setDescription("Urgent door and window sensor alerts");
+        channel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
+        channel.enableVibration(true);
+        channel.setVibrationPattern(new long[]{0, 300, 200, 300});
         if (playSound) {
             channel.enableVibration(true);
             channel.setSound(
                     android.provider.Settings.System.DEFAULT_NOTIFICATION_URI,
                     new AudioAttributes.Builder()
-                            .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                            .setUsage(AudioAttributes.USAGE_ALARM)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                             .build());
         } else {
             channel.setSound(null, null);
         }
         nm.createNotificationChannel(channel);
+    }
+
+    @Override
+    public void onNewToken(String token) {
+        NativePushRegistrar.uploadToken(this, token);
     }
 }

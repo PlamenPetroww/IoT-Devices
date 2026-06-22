@@ -10,6 +10,7 @@ public class Application extends android.app.Application {
     @Override
     public void onCreate() {
         super.onCreate();
+        AuraFirebaseMessagingService.ensureChannel(this, true);
         AuraDeviceId.get(this);
         FirebaseMessaging.getInstance().getToken().addOnCompleteListener(task -> {
             if (task.isSuccessful() && task.getResult() != null) {

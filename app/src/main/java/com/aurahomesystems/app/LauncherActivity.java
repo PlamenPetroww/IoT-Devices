@@ -23,16 +23,13 @@ import android.os.Bundle;
 import android.widget.ImageView;
 
 import androidx.annotation.NonNull;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 
 
 
 public class LauncherActivity
         extends com.google.androidbrowserhelper.trusted.LauncherActivity {
-    
 
-    
+    private boolean notificationRequestScheduled = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,21 +43,49 @@ public class LauncherActivity
         } else {
             setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
         }
-        requestNotificationPermissionIfNeeded();
     }
 
-    private void requestNotificationPermissionIfNeeded() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (NotificationPermissionHelper.areNotificationsEnabled(this)) {
+            notificationRequestScheduled = false;
             return;
         }
-        if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS)
-                == PackageManager.PERMISSION_GRANTED) {
+        if (notificationRequestScheduled) {
             return;
         }
-        ActivityCompat.requestPermissions(
-                this,
-                new String[]{android.Manifest.permission.POST_NOTIFICATIONS},
-                1001);
+        notificationRequestScheduled = true;
+        getWindow()
+                .getDecorView()
+                .postDelayed(
+                        () -> {
+                            if (isFinishing()) {
+                                return;
+                            }
+                            if (NotificationPermissionHelper.areNotificationsEnabled(this)) {
+                                return;
+                            }
+                            NotificationPermissionHelper.requestIfNeeded(LauncherActivity.this, true);
+                        },
+                        1200);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(
+            int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode != NotificationPermissionHelper.REQUEST_CODE) {
+            return;
+        }
+        if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+        notificationRequestScheduled = false;
+        getSharedPreferences("aura_app", MODE_PRIVATE)
+                .edit()
+                .putBoolean("notify_perm_asked", false)
+                .apply();
     }
 
     @NonNull
@@ -75,6 +100,18 @@ public class LauncherActivity
         if (uri == null) {
             return null;
         }
+        String userKey = uri.getQueryParameter("aura_user_key");
+        if (userKey != null) {
+            NativePushRegistrar.rememberUserKey(this, userKey);
+            com.google.firebase.messaging.FirebaseMessaging.getInstance()
+                    .getToken()
+                    .addOnCompleteListener(
+                            task -> {
+                                if (task.isSuccessful() && task.getResult() != null) {
+                                    NativePushRegistrar.uploadToken(this, task.getResult());
+                                }
+                            });
+        }
         String versionName = "";
         try {
             versionName =
@@ -86,6 +123,9 @@ public class LauncherActivity
         return uri.buildUpon()
                 .appendQueryParameter("aura_did", AuraDeviceId.get(this))
                 .appendQueryParameter("aura_app_ver", versionName != null ? versionName : "")
+                .appendQueryParameter(
+                        "aura_notify",
+                        NotificationPermissionHelper.areNotificationsEnabled(this) ? "1" : "0")
                 .build();
     }
 }

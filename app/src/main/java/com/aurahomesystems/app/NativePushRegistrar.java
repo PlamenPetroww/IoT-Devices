@@ -27,15 +27,81 @@ final class NativePushRegistrar {
         final String tokenStr = token.trim();
         new Thread(() -> {
             boolean rtdbOk = uploadTokenToRtdb(deviceId, tokenStr);
-            boolean apiOk = uploadTokenToApi(deviceId, tokenStr);
+            boolean apiOk = uploadTokenToApi(context, deviceId, tokenStr);
             Log.i(TAG, "upload " + deviceId + " rtdb=" + rtdbOk + " api=" + apiOk);
             if (!rtdbOk && !apiOk) {
                 sleepQuiet(5000);
                 rtdbOk = uploadTokenToRtdb(deviceId, tokenStr);
-                apiOk = uploadTokenToApi(deviceId, tokenStr);
+                apiOk = uploadTokenToApi(context, deviceId, tokenStr);
                 Log.i(TAG, "upload retry " + deviceId + " rtdb=" + rtdbOk + " api=" + apiOk);
             }
         }).start();
+    }
+
+    static void rememberUserKey(Context context, String userKey) {
+        String normalized = normalizeUserKey(userKey);
+        if (normalized == null) {
+            return;
+        }
+        context.getSharedPreferences("aura_app", Context.MODE_PRIVATE)
+                .edit()
+                .putString("user_key", normalized)
+                .apply();
+    }
+
+    static void sendAck(Context context, String stage, String eventTag, String channelId) {
+        final String deviceId = AuraDeviceId.get(context);
+        final String stageStr = stage != null ? stage.trim() : "";
+        final String eventTagStr = eventTag != null ? eventTag.trim() : "";
+        final String channelIdStr = channelId != null ? channelId.trim() : "";
+        final String userKey =
+                context.getSharedPreferences("aura_app", Context.MODE_PRIVATE)
+                        .getString("user_key", "");
+        new Thread(
+                () -> {
+                    HttpURLConnection conn = null;
+                    try {
+                        conn =
+                                (HttpURLConnection)
+                                        new URL(API_BASE + "/api/native-push-ack")
+                                                .openConnection();
+                        conn.setRequestMethod("POST");
+                        conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+                        conn.setConnectTimeout(10000);
+                        conn.setReadTimeout(10000);
+                        conn.setDoOutput(true);
+
+                        JSONObject body = new JSONObject();
+                        body.put("deviceId", deviceId);
+                        body.put("stage", stageStr);
+                        body.put("eventTag", eventTagStr);
+                        body.put("channelId", channelIdStr);
+                        if (userKey != null && !userKey.trim().isEmpty()) {
+                            body.put("userKey", userKey.trim());
+                        }
+
+                        byte[] bytes = body.toString().getBytes(StandardCharsets.UTF_8);
+                        OutputStream out = conn.getOutputStream();
+                        out.write(bytes);
+                        out.flush();
+                        out.close();
+
+                        InputStream stream =
+                                conn.getResponseCode() >= 400
+                                        ? conn.getErrorStream()
+                                        : conn.getInputStream();
+                        if (stream != null) {
+                            stream.close();
+                        }
+                    } catch (Exception e) {
+                        Log.w(TAG, "native-push-ack failed", e);
+                    } finally {
+                        if (conn != null) {
+                            conn.disconnect();
+                        }
+                    }
+                })
+                .start();
     }
 
     private static boolean uploadTokenToRtdb(String deviceId, String token) {
@@ -78,7 +144,7 @@ final class NativePushRegistrar {
         }
     }
 
-    private static boolean uploadTokenToApi(String deviceId, String token) {
+    private static boolean uploadTokenToApi(Context context, String deviceId, String token) {
         HttpURLConnection conn = null;
         try {
             conn = (HttpURLConnection) new URL(API_BASE + "/api/native-device-token").openConnection();
@@ -91,6 +157,12 @@ final class NativePushRegistrar {
             JSONObject body = new JSONObject();
             body.put("deviceId", deviceId);
             body.put("token", token);
+            String userKey =
+                    context.getSharedPreferences("aura_app", Context.MODE_PRIVATE)
+                            .getString("user_key", null);
+            if (userKey != null && !userKey.trim().isEmpty()) {
+                body.put("userKey", userKey.trim());
+            }
 
             byte[] bytes = body.toString().getBytes(StandardCharsets.UTF_8);
             OutputStream out = conn.getOutputStream();
@@ -116,6 +188,16 @@ final class NativePushRegistrar {
 
     private static boolean isValidDeviceId(String deviceId) {
         return deviceId != null && deviceId.matches("^aura_[a-fA-F0-9]{32}$");
+    }
+
+    private static String normalizeUserKey(String raw) {
+        if (raw == null) return null;
+        String s = raw.trim().toLowerCase();
+        if (s.isEmpty()) return null;
+        if (s.contains("@")) {
+            s = s.replace(".", "-").replace("@", "_at_");
+        }
+        return s.matches("^[a-z0-9_-]+_at_[a-z0-9_-]+$") ? s : null;
     }
 
     private static void sleepQuiet(long ms) {

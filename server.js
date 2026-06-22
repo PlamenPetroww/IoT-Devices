@@ -481,16 +481,36 @@ function refreshNativeTokenBeforeSend(userKey, callback) {
     callback();
     return;
   }
+  const refreshFromLatestDevice = () => {
+    firebaseDb
+      .ref("nativeDeviceTokens")
+      .orderByChild("updatedAt")
+      .limitToLast(1)
+      .once("value", (latestSnap) => {
+        let latestDeviceId = null;
+        let latestRow = null;
+        latestSnap.forEach((child) => {
+          latestDeviceId = sanitizeDeviceId(child.key);
+          latestRow = child.val();
+        });
+        if (!latestDeviceId || !latestRow || !latestRow.token) {
+          callback();
+          return;
+        }
+        console.log("[native-push] refreshing token for", userKey, "from latest", latestDeviceId);
+        saveNativeTokenForUser(userKey, latestRow.token, latestDeviceId, () => callback());
+      }, () => callback());
+  };
   firebaseDb.ref("users/" + userKey + "/settings/nativeDeviceId").once("value", (idSnap) => {
     const deviceId = sanitizeDeviceId(idSnap.val());
     if (!deviceId) {
-      callback();
+      refreshFromLatestDevice();
       return;
     }
     firebaseDb.ref("nativeDeviceTokens/" + deviceId).once("value", (tokSnap) => {
       const row = tokSnap.val();
       if (!row || !row.token) {
-        callback();
+        refreshFromLatestDevice();
         return;
       }
       firebaseDb.ref("users/" + userKey + "/pushTokens/native_android").once("value", (curSnap) => {
@@ -884,11 +904,7 @@ function sendPushToUser(userKey, title, body, callback) {
       if (isNative) {
         message.android = {
           priority: "high",
-          notification: {
-            title: titleStr,
-            body: bodyStr,
-            channelId: "aura_alerts",
-          },
+          ttl: 60000,
         };
       } else {
         message.webpush = {
@@ -915,6 +931,19 @@ function sendPushToUser(userKey, title, body, callback) {
               .ref("users/" + userKey + "/pushTokens/" + sendEntries[i].key)
               .remove()
               .catch(() => {});
+            if (isNative) {
+              firebaseDb.ref("nativeDeviceTokens").once("value").then((snap) => {
+                const all = snap.val() || {};
+                Object.keys(all).forEach((deviceId) => {
+                  if (all[deviceId] && all[deviceId].token === entry.token) {
+                    firebaseDb
+                      .ref("nativeDeviceTokens/" + deviceId)
+                      .remove()
+                      .catch(() => {});
+                  }
+                });
+              }).catch(() => {});
+            }
           } else {
             console.warn("[FCM] send failed:", sendEntries[i].key, code || msg || e);
           }
@@ -1201,6 +1230,7 @@ const server = http.createServer((req, res) => {
       }
       const deviceId = sanitizeDeviceId(parsed.deviceId);
       const token = String(parsed.token || "").trim();
+      const linkedUserKey = String(parsed.userKey || "").trim();
       if (!deviceId || !token) {
         res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
         res.end(JSON.stringify({ error: "Invalid deviceId or token" }));
@@ -1218,6 +1248,9 @@ const server = http.createServer((req, res) => {
           updatedAt: firebaseAdmin.database.ServerValue.TIMESTAMP,
         })
         .then(() => {
+          if (/^[a-z0-9_-]+_at_[a-z0-9_-]+$/.test(linkedUserKey)) {
+            saveNativeTokenForUser(linkedUserKey, token, deviceId, () => {});
+          }
           console.log("[native-device-token] stored for", deviceId);
           res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
           res.end(JSON.stringify({ success: true }));
@@ -1300,6 +1333,38 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  if (requestPath === "/api/native-push-ack" && req.method === "POST") {
+    setCors(res, req);
+    let body = "";
+    req.on("data", (chunk) => { body += chunk; });
+    req.on("end", () => {
+      let parsed = {};
+      try {
+        parsed = JSON.parse(body || "{}");
+      } catch (e) {
+        res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({ error: "Invalid JSON" }));
+        return;
+      }
+      const deviceId = sanitizeDeviceId(parsed.deviceId) || String(parsed.deviceId || "").slice(0, 80);
+      const stage = String(parsed.stage || "unknown").slice(0, 80);
+      const eventTag = String(parsed.eventTag || "").slice(0, 120);
+      const userKey = String(parsed.userKey || "").slice(0, 120);
+      const channelId = String(parsed.channelId || "").slice(0, 120);
+      console.log(
+        "[native-push-ack]",
+        stage,
+        userKey || "no-user",
+        deviceId || "no-device",
+        eventTag || "no-event",
+        channelId || "no-channel"
+      );
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+      res.end(JSON.stringify({ success: true }));
+    });
+    return;
+  }
+
   if (requestPath === "/api/sensor-event" && req.method === "POST") {
     setCors(res, req);
     let body = "";
@@ -1331,16 +1396,56 @@ const server = http.createServer((req, res) => {
       const bodyText = isOpen
         ? deviceName + " was opened."
         : deviceName + " was closed.";
-      sendPushToUser(userKey, title, bodyText, (err, sent, via) => {
-        if (err) {
+      if (!firebaseDb || !firebaseAdmin) {
+        res.writeHead(503, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({ error: "Firebase not configured" }));
+        return;
+      }
+      const safeDeviceId = String(deviceId || deviceName || "sensor").replace(/[.$#[\]/]/g, "_");
+      const devicePath = "users/" + userKey + "/devices/" + safeDeviceId;
+      const historyRef = firebaseDb.ref("users/" + userKey + "/history").push();
+      const timestamp = firebaseAdmin.database.ServerValue.TIMESTAMP;
+      const deviceUpdate = {
+        status: !isOpen,
+        deviceName,
+        lastSeen: timestamp,
+      };
+      if (typeof parsed.battery === "number") deviceUpdate.battery = parsed.battery;
+      if (parsed.powerSource) deviceUpdate.powerSource = String(parsed.powerSource);
+
+      Promise.all([
+        firebaseDb.ref(devicePath).update(deviceUpdate),
+        historyRef.set({
+          deviceId: safeDeviceId,
+          deviceName,
+          status: isOpen ? "open" : "closed",
+          timestamp,
+        }),
+        firebaseDb.ref("users/" + userKey + "/systemEnabled").once("value"),
+      ])
+        .then((results) => {
+          const systemEnabled = results[2].val() === true;
+          if (!systemEnabled) {
+            console.log("[sensor-event]", userKey, "sent:", 0, "via", "off");
+            res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+            res.end(JSON.stringify({ success: true, sent: 0, via: "off" }));
+            return;
+          }
+          sendPushToUser(userKey, title, bodyText, (err, sent, via) => {
+            if (err) {
+              res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+              res.end(JSON.stringify({ error: err.message }));
+              return;
+            }
+            console.log("[sensor-event]", userKey, "sent:", sent, "via", via || "none");
+            res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+            res.end(JSON.stringify({ success: true, sent, via }));
+          });
+        })
+        .catch((err) => {
           res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
-          res.end(JSON.stringify({ error: err.message }));
-          return;
-        }
-        console.log("[sensor-event]", userKey, "sent:", sent, "via", via || "none");
-        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-        res.end(JSON.stringify({ success: true, sent }));
-      });
+          res.end(JSON.stringify({ error: err.message || "Sensor event failed" }));
+        });
     });
     return;
   }

@@ -252,7 +252,9 @@
           const allowedNext = ["delete-account.html", "dashboard.html"];
           const target =
             next && allowedNext.includes(next) ? next : "dashboard.html";
-          window.location.href = target;
+          const sep = target.indexOf("?") === -1 ? "?" : "&";
+          window.location.href =
+            target + sep + "aura_user_key=" + encodeURIComponent(emailKey);
         } catch (err) {
           if (err.code === "auth/user-not-found")
             showError(authT("auth.errNoUser"));

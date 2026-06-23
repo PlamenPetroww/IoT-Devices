@@ -62,6 +62,9 @@
             "@type": "Product",
             "name": "Aura HomeSystems Door & Window Sensor",
             "description": "Wireless WiFi door and window sensor with a mobile app and push notifications.",
+            "image": [
+              "https://aurahomesystems.eu/icons/icon-512.png"
+            ],
             "brand": { "@type": "Brand", "name": "Aura HomeSystems" },
             "category": "Smart Home Security Sensor",
             "offers": {
@@ -69,7 +72,42 @@
               "price": "59.00",
               "priceCurrency": "EUR",
               "availability": "https://schema.org/InStock",
-              "url": "https://aurahomesystems.eu/"
+              "url": "https://aurahomesystems.eu/",
+              "shippingDetails": {
+                "@type": "OfferShippingDetails",
+                "shippingDestination": {
+                  "@type": "DefinedRegion",
+                  "addressCountry": "BG"
+                },
+                "shippingRate": {
+                  "@type": "MonetaryAmount",
+                  "value": "0.00",
+                  "currency": "EUR"
+                },
+                "deliveryTime": {
+                  "@type": "ShippingDeliveryTime",
+                  "handlingTime": {
+                    "@type": "QuantitativeValue",
+                    "minValue": 0,
+                    "maxValue": 2,
+                    "unitCode": "DAY"
+                  },
+                  "transitTime": {
+                    "@type": "QuantitativeValue",
+                    "minValue": 1,
+                    "maxValue": 5,
+                    "unitCode": "DAY"
+                  }
+                }
+              },
+              "hasMerchantReturnPolicy": {
+                "@type": "MerchantReturnPolicy",
+                "applicableCountry": "BG",
+                "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
+                "merchantReturnDays": 14,
+                "returnMethod": "https://schema.org/ReturnByMail",
+                "returnFees": "https://schema.org/FreeReturn"
+              }
             }
           },
           {

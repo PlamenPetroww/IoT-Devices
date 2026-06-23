@@ -24,14 +24,17 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
         Map<String, String> data = remoteMessage.getData();
         String eventTag =
                 data != null && data.containsKey("eventTag") ? data.get("eventTag") : "";
-        NativePushRegistrar.sendAck(this, "received", eventTag, "");
+        String userKey =
+                data != null && data.containsKey("userKey") ? data.get("userKey") : "";
+        NativePushRegistrar.sendAck(this, "received", eventTag, "", userKey);
         if (remoteMessage.getNotification() != null) {
             RemoteMessage.Notification n = remoteMessage.getNotification();
             showNotification(
                     n.getTitle() != null ? n.getTitle() : "Aura HomeSystems",
                     n.getBody() != null ? n.getBody() : "",
                     true,
-                    eventTag);
+                    eventTag,
+                    userKey);
             return;
         }
 
@@ -42,13 +45,19 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
         String title = data.containsKey("title") ? data.get("title") : "Aura HomeSystems";
         String body = data.containsKey("body") ? data.get("body") : "";
         boolean playSound = !"0".equals(data.get("playSound"));
-        showNotification(title, body, playSound, eventTag);
+        showNotification(title, body, playSound, eventTag, userKey);
     }
 
-    private void showNotification(String title, String body, boolean playSound, String eventTag) {
+    private void showNotification(
+            String title,
+            String body,
+            boolean playSound,
+            String eventTag,
+            String userKey) {
         if (!NotificationPermissionHelper.areNotificationsEnabled(this)) {
             android.util.Log.w("AuraFCM", "Notifications disabled — enable in phone Settings");
-            NativePushRegistrar.sendAck(this, "blocked_notifications_disabled", eventTag, "");
+            NativePushRegistrar.sendAck(
+                    this, "blocked_notifications_disabled", eventTag, "", userKey);
             return;
         }
         ensureChannel(this, playSound);
@@ -81,7 +90,7 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
         }
 
         nm.notify((int) (System.currentTimeMillis() & 0xfffffff), builder.build());
-        NativePushRegistrar.sendAck(this, "shown", eventTag, CHANNEL_ID);
+        NativePushRegistrar.sendAck(this, "shown", eventTag, CHANNEL_ID, userKey);
     }
 
     public static void ensureChannel(Context context, boolean playSound) {

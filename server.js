@@ -398,6 +398,41 @@ function normalizeEmailKey(email) {
     .replace(/@/g, "_at_");
 }
 
+function emailCandidatesFromUserKey(userKey) {
+  const key = String(userKey || "").trim().toLowerCase();
+  const marker = "_at_";
+  const at = key.indexOf(marker);
+  if (at <= 0) return [];
+  const local = key.slice(0, at);
+  const domain = key.slice(at + marker.length).replace(/-/g, ".");
+  if (!local || !domain || !domain.includes(".")) return [];
+  const candidates = [
+    local + "@" + domain,
+    local.replace(/-/g, ".") + "@" + domain,
+  ];
+  return [...new Set(candidates)].filter((email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email));
+}
+
+function resolveFirstAuthEmailCandidate(candidates, callback) {
+  const list = [...new Set((candidates || []).map((e) => String(e || "").trim().toLowerCase()))]
+    .filter((email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email));
+  const next = (index) => {
+    if (index >= list.length) {
+      callback(new Error("Email not found"));
+      return;
+    }
+    firebaseAdmin
+      .auth()
+      .getUserByEmail(list[index])
+      .then((user) => {
+        const found = String((user && user.email) || list[index]).trim().toLowerCase();
+        callback(null, found);
+      })
+      .catch(() => next(index + 1));
+  };
+  next(0);
+}
+
 function resolveEmailForUserKey(userKey, fallbackEmail, callback) {
   const emailNorm = String(fallbackEmail || "").trim().toLowerCase();
   if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNorm)) {
@@ -408,6 +443,12 @@ function resolveEmailForUserKey(userKey, fallbackEmail, callback) {
     callback(new Error("Firebase not configured"));
     return;
   }
+  const directCandidates = emailCandidatesFromUserKey(userKey);
+  resolveFirstAuthEmailCandidate(directCandidates, (directErr, directEmail) => {
+    if (!directErr && directEmail) {
+      callback(null, directEmail);
+      return;
+    }
   firebaseDb
     .ref("userEmailKeys")
     .orderByValue()
@@ -435,10 +476,13 @@ function resolveEmailForUserKey(userKey, fallbackEmail, callback) {
             }
             callback(null, found);
           })
-          .catch((err) => callback(err || new Error("Email lookup failed")));
+          .catch(() => {
+            resolveFirstAuthEmailCandidate(emailCandidatesFromUserKey(uid), callback);
+          });
       },
       (err) => callback(err || new Error("Email lookup failed"))
     );
+  });
 }
 
 function buildAlarmFallbackEmail(deviceName, bodyText, eventTag) {
@@ -1050,7 +1094,13 @@ function sendPushToUser(userKey, title, body, callback, forcedEventTag) {
       const isNative = entry.key === "native_android" || entry.platform === "android";
       const message = {
         token: entry.token,
-        data: { title: titleStr, body: bodyStr, playSound: playFlag, eventTag: pushEventTag },
+        data: {
+          title: titleStr,
+          body: bodyStr,
+          playSound: playFlag,
+          eventTag: pushEventTag,
+          userKey: String(userKey || ""),
+        },
       };
       if (isNative) {
         message.android = {

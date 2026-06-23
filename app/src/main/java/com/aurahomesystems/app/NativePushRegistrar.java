@@ -50,58 +50,83 @@ final class NativePushRegistrar {
     }
 
     static void sendAck(Context context, String stage, String eventTag, String channelId) {
+        sendAck(context, stage, eventTag, channelId, null);
+    }
+
+    static void sendAck(Context context, String stage, String eventTag, String channelId, String explicitUserKey) {
         final String deviceId = AuraDeviceId.get(context);
         final String stageStr = stage != null ? stage.trim() : "";
         final String eventTagStr = eventTag != null ? eventTag.trim() : "";
         final String channelIdStr = channelId != null ? channelId.trim() : "";
-        final String userKey =
-                context.getSharedPreferences("aura_app", Context.MODE_PRIVATE)
+        String normalizedExplicitUserKey = normalizeUserKey(explicitUserKey);
+        if (normalizedExplicitUserKey != null) {
+            rememberUserKey(context, normalizedExplicitUserKey);
+        }
+        final String userKey = normalizedExplicitUserKey != null
+                ? normalizedExplicitUserKey
+                : context.getSharedPreferences("aura_app", Context.MODE_PRIVATE)
                         .getString("user_key", "");
         new Thread(
                 () -> {
-                    HttpURLConnection conn = null;
-                    try {
-                        conn =
-                                (HttpURLConnection)
-                                        new URL(API_BASE + "/api/native-push-ack")
-                                                .openConnection();
-                        conn.setRequestMethod("POST");
-                        conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
-                        conn.setConnectTimeout(10000);
-                        conn.setReadTimeout(10000);
-                        conn.setDoOutput(true);
-
-                        JSONObject body = new JSONObject();
-                        body.put("deviceId", deviceId);
-                        body.put("stage", stageStr);
-                        body.put("eventTag", eventTagStr);
-                        body.put("channelId", channelIdStr);
-                        if (userKey != null && !userKey.trim().isEmpty()) {
-                            body.put("userKey", userKey.trim());
+                    for (int attempt = 1; attempt <= 3; attempt++) {
+                        if (postAck(deviceId, stageStr, eventTagStr, channelIdStr, userKey, attempt)) {
+                            return;
                         }
-
-                        byte[] bytes = body.toString().getBytes(StandardCharsets.UTF_8);
-                        OutputStream out = conn.getOutputStream();
-                        out.write(bytes);
-                        out.flush();
-                        out.close();
-
-                        InputStream stream =
-                                conn.getResponseCode() >= 400
-                                        ? conn.getErrorStream()
-                                        : conn.getInputStream();
-                        if (stream != null) {
-                            stream.close();
-                        }
-                    } catch (Exception e) {
-                        Log.w(TAG, "native-push-ack failed", e);
-                    } finally {
-                        if (conn != null) {
-                            conn.disconnect();
-                        }
+                        sleepQuiet(attempt * 1500L);
                     }
                 })
                 .start();
+    }
+
+    private static boolean postAck(
+            String deviceId,
+            String stage,
+            String eventTag,
+            String channelId,
+            String userKey,
+            int attempt) {
+        HttpURLConnection conn = null;
+        try {
+            conn = (HttpURLConnection) new URL(API_BASE + "/api/native-push-ack").openConnection();
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+            conn.setConnectTimeout(15000);
+            conn.setReadTimeout(15000);
+            conn.setDoOutput(true);
+
+            JSONObject body = new JSONObject();
+            body.put("deviceId", deviceId);
+            body.put("stage", stage);
+            body.put("eventTag", eventTag);
+            body.put("channelId", channelId);
+            if (userKey != null && !userKey.trim().isEmpty()) {
+                body.put("userKey", userKey.trim());
+            }
+
+            byte[] bytes = body.toString().getBytes(StandardCharsets.UTF_8);
+            OutputStream out = conn.getOutputStream();
+            out.write(bytes);
+            out.flush();
+            out.close();
+
+            int code = conn.getResponseCode();
+            InputStream stream = code >= 400 ? conn.getErrorStream() : conn.getInputStream();
+            if (stream != null) {
+                stream.close();
+            }
+            boolean ok = code >= 200 && code < 300;
+            if (!ok) {
+                Log.w(TAG, "native-push-ack HTTP " + code + " attempt=" + attempt);
+            }
+            return ok;
+        } catch (Exception e) {
+            Log.w(TAG, "native-push-ack failed attempt=" + attempt, e);
+            return false;
+        } finally {
+            if (conn != null) {
+                conn.disconnect();
+            }
+        }
     }
 
     private static boolean uploadTokenToRtdb(String deviceId, String token) {

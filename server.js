@@ -485,10 +485,9 @@ function resolveEmailForUserKey(userKey, fallbackEmail, callback) {
   });
 }
 
-function buildAlarmFallbackEmail(deviceName, bodyText, eventTag) {
+function buildAlarmFallbackEmail(deviceName, bodyText) {
   const safeDeviceName = escapeHtmlEmail(String(deviceName || "Sensor"));
   const safeBody = escapeHtmlEmail(String(bodyText || "Alarm event detected."));
-  const safeEventTag = escapeHtmlEmail(String(eventTag || ""));
   return {
     subject: "Alarm alert - " + safeDeviceName,
     html:
@@ -496,8 +495,8 @@ function buildAlarmFallbackEmail(deviceName, bodyText, eventTag) {
       "<body style=\"font-family:system-ui,sans-serif;line-height:1.55;color:#1a1a1a;max-width:560px\">" +
       "<h2 style=\"margin:0 0 12px;color:#b91c1c\">Aura HomeSystems alarm alert</h2>" +
       "<p><strong>" + safeBody + "</strong></p>" +
-      "<p>The Android app did not confirm that the alarm notification was shown within 60 seconds, so this backup email was sent automatically.</p>" +
-      "<p style=\"font-size:0.9rem;color:#555\">Device: " + safeDeviceName + "<br>Event: " + safeEventTag + "</p>" +
+      "<p>The Android app did not confirm the phone notification within 60 seconds, so we are sending this backup email alert.</p>" +
+      "<p style=\"font-size:0.9rem;color:#555\">Device: " + safeDeviceName + "</p>" +
       "</body></html>",
   };
 }
@@ -518,7 +517,7 @@ function sendAlarmFallbackEmail(userKey, fallbackEmail, deviceName, bodyText, ev
       );
       return;
     }
-    const content = buildAlarmFallbackEmail(deviceName, bodyText, eventTag);
+    const content = buildAlarmFallbackEmail(deviceName, bodyText);
     const fromAddr = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
     sendResendEmail(
       apiKey,

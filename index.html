@@ -81,21 +81,22 @@
                 },
                 "shippingRate": {
                   "@type": "MonetaryAmount",
-                  "value": "0.00",
-                  "currency": "EUR"
+                  "minValue": 5,
+                  "maxValue": 7,
+                  "currency": "BGN"
                 },
                 "deliveryTime": {
                   "@type": "ShippingDeliveryTime",
                   "handlingTime": {
                     "@type": "QuantitativeValue",
-                    "minValue": 0,
-                    "maxValue": 2,
+                    "minValue": 7,
+                    "maxValue": 8,
                     "unitCode": "DAY"
                   },
                   "transitTime": {
                     "@type": "QuantitativeValue",
                     "minValue": 1,
-                    "maxValue": 5,
+                    "maxValue": 2,
                     "unitCode": "DAY"
                   }
                 }
@@ -106,7 +107,7 @@
                 "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
                 "merchantReturnDays": 14,
                 "returnMethod": "https://schema.org/ReturnByMail",
-                "returnFees": "https://schema.org/FreeReturn"
+                "returnFees": "https://schema.org/ReturnShippingFees"
               }
             }
           },

@@ -270,6 +270,37 @@ function sendResendEmail(apiKey, payloadObj, callback) {
   req.end();
 }
 
+const nativePushAckState = new Map();
+const NATIVE_PUSH_EMAIL_FALLBACK_MS = 60 * 1000;
+
+function rememberNativePushAck(eventTag, stage) {
+  const tag = String(eventTag || "").trim();
+  const stageStr = String(stage || "").trim();
+  if (!tag || !stageStr) return;
+  const current = nativePushAckState.get(tag) || { stages: {}, createdAt: Date.now() };
+  current.stages[stageStr] = Date.now();
+  current.updatedAt = Date.now();
+  nativePushAckState.set(tag, current);
+}
+
+function hasNativePushShownAck(eventTag) {
+  const tag = String(eventTag || "").trim();
+  const row = tag ? nativePushAckState.get(tag) : null;
+  if (!row || !row.stages) return false;
+  return Boolean(row.stages.shown || row.stages.alarm_started || row.stages.dismissed);
+}
+
+function cleanupNativePushAckState() {
+  const cutoff = Date.now() - 30 * 60 * 1000;
+  for (const [tag, row] of nativePushAckState.entries()) {
+    if (!row || (row.updatedAt || row.createdAt || 0) < cutoff) {
+      nativePushAckState.delete(tag);
+    }
+  }
+}
+
+setInterval(cleanupNativePushAckState, 10 * 60 * 1000);
+
 const PASSWORD_RESET_CONTINUE_URL =
   process.env.PASSWORD_RESET_CONTINUE_URL || "https://aurahomesystems.eu/reset-password.html";
 
@@ -365,6 +396,124 @@ function normalizeEmailKey(email) {
     .toLowerCase()
     .replace(/\./g, "-")
     .replace(/@/g, "_at_");
+}
+
+function resolveEmailForUserKey(userKey, fallbackEmail, callback) {
+  const emailNorm = String(fallbackEmail || "").trim().toLowerCase();
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNorm)) {
+    callback(null, emailNorm);
+    return;
+  }
+  if (!firebaseDb || !firebaseAdmin) {
+    callback(new Error("Firebase not configured"));
+    return;
+  }
+  firebaseDb
+    .ref("userEmailKeys")
+    .orderByValue()
+    .equalTo(userKey)
+    .limitToFirst(1)
+    .once(
+      "value",
+      (snap) => {
+        let uid = "";
+        snap.forEach((child) => {
+          if (!uid) uid = String(child.key || "").trim();
+        });
+        if (!uid) {
+          callback(new Error("Email not found"));
+          return;
+        }
+        firebaseAdmin
+          .auth()
+          .getUser(uid)
+          .then((user) => {
+            const found = String((user && user.email) || "").trim().toLowerCase();
+            if (!found || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(found)) {
+              callback(new Error("Email not found"));
+              return;
+            }
+            callback(null, found);
+          })
+          .catch((err) => callback(err || new Error("Email lookup failed")));
+      },
+      (err) => callback(err || new Error("Email lookup failed"))
+    );
+}
+
+function buildAlarmFallbackEmail(deviceName, bodyText, eventTag) {
+  const safeDeviceName = escapeHtmlEmail(String(deviceName || "Sensor"));
+  const safeBody = escapeHtmlEmail(String(bodyText || "Alarm event detected."));
+  const safeEventTag = escapeHtmlEmail(String(eventTag || ""));
+  return {
+    subject: "Alarm alert - " + safeDeviceName,
+    html:
+      "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"></head>" +
+      "<body style=\"font-family:system-ui,sans-serif;line-height:1.55;color:#1a1a1a;max-width:560px\">" +
+      "<h2 style=\"margin:0 0 12px;color:#b91c1c\">Aura HomeSystems alarm alert</h2>" +
+      "<p><strong>" + safeBody + "</strong></p>" +
+      "<p>The Android app did not confirm that the alarm notification was shown within 60 seconds, so this backup email was sent automatically.</p>" +
+      "<p style=\"font-size:0.9rem;color:#555\">Device: " + safeDeviceName + "<br>Event: " + safeEventTag + "</p>" +
+      "</body></html>",
+  };
+}
+
+function sendAlarmFallbackEmail(userKey, fallbackEmail, deviceName, bodyText, eventTag) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.warn("[alarm-email-fallback] RESEND_API_KEY missing; skipped", userKey, eventTag);
+    return;
+  }
+  resolveEmailForUserKey(userKey, fallbackEmail, (lookupErr, email) => {
+    if (lookupErr || !email) {
+      console.warn(
+        "[alarm-email-fallback] email lookup failed",
+        userKey,
+        eventTag,
+        lookupErr && lookupErr.message ? lookupErr.message : lookupErr || ""
+      );
+      return;
+    }
+    const content = buildAlarmFallbackEmail(deviceName, bodyText, eventTag);
+    const fromAddr = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
+    sendResendEmail(
+      apiKey,
+      {
+        from: fromAddr,
+        to: [email],
+        subject: content.subject,
+        html: content.html,
+      },
+      (err, status, respBody) => {
+        if (err) {
+          console.error("[alarm-email-fallback] send failed:", err.message);
+        } else if (status && status >= 400) {
+          console.error("[alarm-email-fallback] HTTP:", status, respBody || "");
+        } else {
+          console.log("[alarm-email-fallback] sent", userKey, email, eventTag);
+        }
+      }
+    );
+  });
+}
+
+function scheduleAlarmEmailFallback(details) {
+  const eventTag = String((details && details.eventTag) || "").trim();
+  if (!eventTag) return;
+  setTimeout(() => {
+    if (hasNativePushShownAck(eventTag)) {
+      console.log("[alarm-email-fallback] skipped; Android ACK shown", eventTag);
+      return;
+    }
+    console.warn("[alarm-email-fallback] no Android shown ACK after 60s", eventTag);
+    sendAlarmFallbackEmail(
+      details.userKey,
+      details.email,
+      details.deviceName,
+      details.bodyText,
+      eventTag
+    );
+  }, NATIVE_PUSH_EMAIL_FALLBACK_MS);
 }
 
 function verifyBearerUserKey(req, callback) {
@@ -834,11 +983,14 @@ function logStartupConfig() {
   console.log("[Aura] diagnostics: GET /api/health");
 }
 
-function sendPushToUser(userKey, title, body, callback) {
+function sendPushToUser(userKey, title, body, callback, forcedEventTag) {
   if (!firebaseDb || !firebaseAdmin) {
     callback(new Error("Firebase not configured"));
     return;
   }
+  const pushEventTag =
+    String(forcedEventTag || "").trim() ||
+    "aura-" + Date.now() + "-" + Math.floor(Math.random() * 1000);
   refreshNativeTokenBeforeSend(userKey, () => {
   firebaseDb.ref("users/" + userKey + "/settings/alertSoundEnabled").once("value", (settingSnap) => {
     const playSound = settingSnap.val() !== false;
@@ -894,12 +1046,11 @@ function sendPushToUser(userKey, title, body, callback) {
       }
       const titleStr = String(title || "Aura HomeSystems");
       const bodyStr = String(body || "");
-      const eventTag = "aura-" + Date.now() + "-" + Math.floor(Math.random() * 1000);
       const entry = sendEntries[i];
       const isNative = entry.key === "native_android" || entry.platform === "android";
       const message = {
         token: entry.token,
-        data: { title: titleStr, body: bodyStr, playSound: playFlag, eventTag },
+        data: { title: titleStr, body: bodyStr, playSound: playFlag, eventTag: pushEventTag },
       };
       if (isNative) {
         message.android = {
@@ -1351,6 +1502,7 @@ const server = http.createServer((req, res) => {
       const eventTag = String(parsed.eventTag || "").slice(0, 120);
       const userKey = String(parsed.userKey || "").slice(0, 120);
       const channelId = String(parsed.channelId || "").slice(0, 120);
+      rememberNativePushAck(eventTag, stage);
       console.log(
         "[native-push-ack]",
         stage,
@@ -1396,6 +1548,7 @@ const server = http.createServer((req, res) => {
       const bodyText = isOpen
         ? deviceName + " was opened."
         : deviceName + " was closed.";
+      const eventTag = "aura-" + Date.now() + "-" + Math.floor(Math.random() * 1000);
       if (!firebaseDb || !firebaseAdmin) {
         res.writeHead(503, { "Content-Type": "application/json; charset=utf-8" });
         res.end(JSON.stringify({ error: "Firebase not configured" }));
@@ -1437,10 +1590,19 @@ const server = http.createServer((req, res) => {
               res.end(JSON.stringify({ error: err.message }));
               return;
             }
+            if (String(via || "").split("+").includes("android")) {
+              scheduleAlarmEmailFallback({
+                userKey,
+                email: parsed.email,
+                deviceName,
+                bodyText,
+                eventTag,
+              });
+            }
             console.log("[sensor-event]", userKey, "sent:", sent, "via", via || "none");
             res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-            res.end(JSON.stringify({ success: true, sent, via }));
-          });
+            res.end(JSON.stringify({ success: true, sent, via, eventTag }));
+          }, eventTag);
         })
         .catch((err) => {
           res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });

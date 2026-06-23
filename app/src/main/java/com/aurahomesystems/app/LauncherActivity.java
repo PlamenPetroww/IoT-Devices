@@ -48,6 +48,7 @@ public class LauncherActivity
     @Override
     protected void onResume() {
         super.onResume();
+        AlarmMonitorService.startIfConfigured(this);
         if (NotificationPermissionHelper.areNotificationsEnabled(this)) {
             notificationRequestScheduled = false;
             return;
@@ -103,6 +104,7 @@ public class LauncherActivity
         String userKey = uri.getQueryParameter("aura_user_key");
         if (userKey != null) {
             NativePushRegistrar.rememberUserKey(this, userKey);
+            AlarmMonitorService.startIfConfigured(this);
             com.google.firebase.messaging.FirebaseMessaging.getInstance()
                     .getToken()
                     .addOnCompleteListener(

@@ -271,7 +271,9 @@ function sendResendEmail(apiKey, payloadObj, callback) {
 }
 
 const nativePushAckState = new Map();
+const recentAlarmEvents = [];
 const NATIVE_PUSH_EMAIL_FALLBACK_MS = 60 * 1000;
+const RECENT_ALARM_EVENTS_TTL_MS = 30 * 60 * 1000;
 
 function rememberNativePushAck(eventTag, stage) {
   const tag = String(eventTag || "").trim();
@@ -300,6 +302,32 @@ function cleanupNativePushAckState() {
 }
 
 setInterval(cleanupNativePushAckState, 10 * 60 * 1000);
+
+function cleanupRecentAlarmEvents() {
+  const cutoff = Date.now() - RECENT_ALARM_EVENTS_TTL_MS;
+  while (recentAlarmEvents.length && recentAlarmEvents[0].createdAt < cutoff) {
+    recentAlarmEvents.shift();
+  }
+}
+
+function rememberAlarmEvent(event) {
+  if (!event || !event.userKey || !event.eventTag) return;
+  cleanupRecentAlarmEvents();
+  recentAlarmEvents.push(event);
+  if (recentAlarmEvents.length > 500) {
+    recentAlarmEvents.splice(0, recentAlarmEvents.length - 500);
+  }
+}
+
+function getRecentAlarmEvents(userKey, since) {
+  cleanupRecentAlarmEvents();
+  const sinceNum = Number(since) || 0;
+  return recentAlarmEvents
+    .filter((event) => event.userKey === userKey && event.createdAt > sinceNum)
+    .slice(-20);
+}
+
+setInterval(cleanupRecentAlarmEvents, 10 * 60 * 1000);
 
 const PASSWORD_RESET_CONTINUE_URL =
   process.env.PASSWORD_RESET_CONTINUE_URL || "https://aurahomesystems.eu/reset-password.html";
@@ -1026,7 +1054,7 @@ function logStartupConfig() {
   console.log("[Aura] diagnostics: GET /api/health");
 }
 
-function sendPushToUser(userKey, title, body, callback, forcedEventTag) {
+function sendPushToUser(userKey, title, body, callback, forcedEventTag, forcedEventCreatedAt) {
   if (!firebaseDb || !firebaseAdmin) {
     callback(new Error("Firebase not configured"));
     return;
@@ -1034,6 +1062,7 @@ function sendPushToUser(userKey, title, body, callback, forcedEventTag) {
   const pushEventTag =
     String(forcedEventTag || "").trim() ||
     "aura-" + Date.now() + "-" + Math.floor(Math.random() * 1000);
+  const pushEventCreatedAt = Number(forcedEventCreatedAt) || Date.now();
   refreshNativeTokenBeforeSend(userKey, () => {
   firebaseDb.ref("users/" + userKey + "/settings/alertSoundEnabled").once("value", (settingSnap) => {
     const playSound = settingSnap.val() !== false;
@@ -1098,6 +1127,7 @@ function sendPushToUser(userKey, title, body, callback, forcedEventTag) {
           body: bodyStr,
           playSound: playFlag,
           eventTag: pushEventTag,
+          eventCreatedAt: String(pushEventCreatedAt),
           userKey: String(userKey || ""),
         },
       };
@@ -1158,11 +1188,38 @@ function sendPushToUser(userKey, title, body, callback, forcedEventTag) {
 
 const server = http.createServer((req, res) => {
   const requestPath = (req.url || "/").split("?")[0];
+  const requestUrl = new URL(req.url || "/", "http://localhost");
 
   if (req.method === "OPTIONS") {
     setCors(res, req);
     res.writeHead(204);
     res.end();
+    return;
+  }
+
+  if (requestPath === "/api/alarm-events" && req.method === "GET") {
+    setCors(res, req);
+    const userKey = String(requestUrl.searchParams.get("userKey") || "").trim();
+    const since = Number(requestUrl.searchParams.get("since") || "0") || 0;
+    if (!userKey) {
+      res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+      res.end(JSON.stringify({ error: "Missing userKey" }));
+      return;
+    }
+    const sendEvents = (armed) => {
+      const events = armed ? getRecentAlarmEvents(userKey, since) : [];
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+      res.end(JSON.stringify({ success: true, armed, events }));
+    };
+    if (!firebaseDb) {
+      sendEvents(true);
+      return;
+    }
+    firebaseDb
+      .ref("users/" + userKey + "/systemEnabled")
+      .once("value")
+      .then((snap) => sendEvents(snap.val() === true))
+      .catch(() => sendEvents(true));
     return;
   }
 
@@ -1598,6 +1655,7 @@ const server = http.createServer((req, res) => {
         ? deviceName + " was opened."
         : deviceName + " was closed.";
       const eventTag = "aura-" + Date.now() + "-" + Math.floor(Math.random() * 1000);
+      const eventCreatedAt = Date.now();
       if (!firebaseDb || !firebaseAdmin) {
         res.writeHead(503, { "Content-Type": "application/json; charset=utf-8" });
         res.end(JSON.stringify({ error: "Firebase not configured" }));
@@ -1633,6 +1691,15 @@ const server = http.createServer((req, res) => {
             res.end(JSON.stringify({ success: true, sent: 0, via: "off" }));
             return;
           }
+          rememberAlarmEvent({
+            userKey,
+            eventTag,
+            createdAt: eventCreatedAt,
+            title,
+            body: bodyText,
+            deviceName,
+            state: isOpen ? "open" : "closed",
+          });
           sendPushToUser(userKey, title, bodyText, (err, sent, via) => {
             if (err) {
               res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
@@ -1650,8 +1717,8 @@ const server = http.createServer((req, res) => {
             }
             console.log("[sensor-event]", userKey, "sent:", sent, "via", via || "none");
             res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-            res.end(JSON.stringify({ success: true, sent, via, eventTag }));
-          }, eventTag);
+            res.end(JSON.stringify({ success: true, sent, via, eventTag, eventCreatedAt }));
+          }, eventTag, eventCreatedAt);
         })
         .catch((err) => {
           res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });

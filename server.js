@@ -1211,6 +1211,13 @@ const server = http.createServer((req, res) => {
     }
     const sendEvents = (armed) => {
       const events = armed ? getRecentAlarmEvents(userKey, since) : [];
+      console.log(
+        "[alarm-events]",
+        userKey,
+        "armed=" + armed,
+        "since=" + since,
+        "count=" + events.length
+      );
       res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
       res.end(JSON.stringify({ success: true, armed, events }));
     };

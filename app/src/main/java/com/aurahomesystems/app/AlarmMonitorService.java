@@ -65,7 +65,17 @@ public class AlarmMonitorService extends Service {
     public void onCreate() {
         super.onCreate();
         ensureChannel();
+        ensureLastSeenBaseline();
         startForeground(NOTIFICATION_ID, buildMonitorNotification());
+    }
+
+    private void ensureLastSeenBaseline() {
+        if (!getSharedPreferences("aura_app", Context.MODE_PRIVATE).contains("last_alarm_event_time")) {
+            getSharedPreferences("aura_app", Context.MODE_PRIVATE)
+                    .edit()
+                    .putLong("last_alarm_event_time", System.currentTimeMillis())
+                    .apply();
+        }
     }
 
     @Override
@@ -126,7 +136,7 @@ public class AlarmMonitorService extends Service {
             return new PollResult(false, new AlarmEvent[0]);
         }
         long since = getSharedPreferences("aura_app", Context.MODE_PRIVATE)
-                .getLong("last_alarm_event_time", System.currentTimeMillis());
+                .getLong("last_alarm_event_time", 0L);
         String url = API_BASE + "/api/alarm-events?userKey="
                 + URLEncoder.encode(userKey.trim(), StandardCharsets.UTF_8.name())
                 + "&since=" + since;

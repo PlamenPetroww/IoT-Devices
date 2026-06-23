@@ -673,6 +673,9 @@ function saveNativeTokenForUser(userKey, tokenStr, deviceId, callback) {
         jobs.push(
           firebaseDb.ref("users/" + userKey + "/settings/nativeDeviceId").set(deviceId)
         );
+        jobs.push(
+          firebaseDb.ref("nativeDeviceTokens/" + deviceId + "/userKey").set(userKey)
+        );
       }
       jobs.push(
         firebaseDb.ref("users/" + userKey + "/pushTokens").once("value").then((tokSnap) => {
@@ -1223,6 +1226,51 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  if (requestPath === "/api/native-monitor-user" && req.method === "GET") {
+    setCors(res, req);
+    const deviceId = sanitizeDeviceId(requestUrl.searchParams.get("deviceId"));
+    if (!deviceId) {
+      res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+      res.end(JSON.stringify({ error: "Invalid deviceId" }));
+      return;
+    }
+    if (!firebaseDb) {
+      res.writeHead(503, { "Content-Type": "application/json; charset=utf-8" });
+      res.end(JSON.stringify({ error: "Not configured" }));
+      return;
+    }
+    firebaseDb
+      .ref("nativeDeviceTokens/" + deviceId + "/userKey")
+      .once("value")
+      .then((snap) => {
+        const directUserKey = String(snap.val() || "").trim();
+        if (/^[a-z0-9_-]+_at_[a-z0-9_-]+$/.test(directUserKey)) {
+          res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify({ success: true, userKey: directUserKey }));
+          return;
+        }
+        return firebaseDb.ref("users").once("value").then((usersSnap) => {
+          let found = "";
+          usersSnap.forEach((child) => {
+            const row = child.val() || {};
+            if (!found && row.settings && row.settings.nativeDeviceId === deviceId) {
+              found = child.key;
+            }
+          });
+          if (found) {
+            firebaseDb.ref("nativeDeviceTokens/" + deviceId + "/userKey").set(found).catch(() => {});
+          }
+          res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify({ success: true, userKey: found }));
+        });
+      })
+      .catch((err) => {
+        res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({ error: err.message || "Lookup failed" }));
+      });
+    return;
+  }
+
   if (requestPath === "/api/revolut-config" && req.method === "GET") {
     setCors(res, req);
     res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
@@ -1500,7 +1548,7 @@ const server = http.createServer((req, res) => {
       }
       firebaseDb
         .ref("nativeDeviceTokens/" + deviceId)
-        .set({
+        .update({
           token,
           updatedAt: firebaseAdmin.database.ServerValue.TIMESTAMP,
         })

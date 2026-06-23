@@ -25,6 +25,11 @@ public class NativePushBridgeActivity extends Activity {
 
         Uri uri = getIntent() != null ? getIntent().getData() : null;
         final String nonce = uri != null ? uri.getQueryParameter("nonce") : null;
+        final String userKey = uri != null ? uri.getQueryParameter("userKey") : null;
+        if (userKey != null) {
+            NativePushRegistrar.rememberUserKey(this, userKey);
+            AlarmMonitorService.startIfConfigured(this);
+        }
         if (nonce == null || nonce.trim().isEmpty()) {
             finish();
             return;

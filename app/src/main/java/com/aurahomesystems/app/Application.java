@@ -12,6 +12,7 @@ public class Application extends android.app.Application {
         super.onCreate();
         AuraFirebaseMessagingService.ensureChannel(this, true);
         AuraDeviceId.get(this);
+        AlarmMonitorService.startIfConfigured(this);
         FirebaseMessaging.getInstance().getToken().addOnCompleteListener(task -> {
             if (task.isSuccessful() && task.getResult() != null) {
                 NativePushRegistrar.uploadToken(this, task.getResult());

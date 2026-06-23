@@ -33,11 +33,6 @@ public class AlarmMonitorService extends Service {
     private Thread worker;
 
     static void startIfConfigured(Context context) {
-        String userKey = context.getSharedPreferences("aura_app", Context.MODE_PRIVATE)
-                .getString("user_key", "");
-        if (userKey == null || userKey.trim().isEmpty()) {
-            return;
-        }
         Intent intent = new Intent(context, AlarmMonitorService.class);
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -125,6 +120,9 @@ public class AlarmMonitorService extends Service {
         String userKey = getSharedPreferences("aura_app", Context.MODE_PRIVATE)
                 .getString("user_key", "");
         if (userKey == null || userKey.trim().isEmpty()) {
+            userKey = resolveUserKeyFromServer();
+        }
+        if (userKey == null || userKey.trim().isEmpty()) {
             return new PollResult(false, new AlarmEvent[0]);
         }
         long since = getSharedPreferences("aura_app", Context.MODE_PRIVATE)
@@ -181,6 +179,46 @@ public class AlarmMonitorService extends Service {
             if (conn != null) {
                 conn.disconnect();
             }
+        }
+    }
+
+    private String resolveUserKeyFromServer() {
+        String deviceId = AuraDeviceId.get(this);
+        String url = API_BASE + "/api/native-monitor-user?deviceId="
+                + encode(deviceId);
+        HttpURLConnection conn = null;
+        try {
+            conn = (HttpURLConnection) new URL(url).openConnection();
+            conn.setRequestMethod("GET");
+            conn.setConnectTimeout(12000);
+            conn.setReadTimeout(12000);
+            int code = conn.getResponseCode();
+            InputStream stream = code >= 400 ? conn.getErrorStream() : conn.getInputStream();
+            String response = readAll(stream);
+            if (code < 200 || code >= 300) {
+                return "";
+            }
+            JSONObject json = new JSONObject(response);
+            String userKey = json.optString("userKey", "").trim();
+            if (!userKey.isEmpty()) {
+                NativePushRegistrar.rememberUserKey(this, userKey);
+            }
+            return userKey;
+        } catch (Exception e) {
+            Log.w(TAG, "native monitor user lookup failed", e);
+            return "";
+        } finally {
+            if (conn != null) {
+                conn.disconnect();
+            }
+        }
+    }
+
+    private static String encode(String value) {
+        try {
+            return URLEncoder.encode(value, StandardCharsets.UTF_8.name());
+        } catch (Exception ignored) {
+            return "";
         }
     }
 

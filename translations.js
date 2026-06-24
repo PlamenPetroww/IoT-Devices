@@ -111,7 +111,9 @@ const translations = {
             q5: "Има ли абонамент?",
             a5: "Не. Плащате веднъж за сензорите и приложението – няма месечен абонамент или скрити такси.",
             q6: "Как да инсталирам сензора у дома и да получавам известия на телефона?",
-            a6: "1) Регистрирай се или влез в приложението Aura на телефона си. 2) Поставете сензора на вратата или прозореца: единият модул на рамката, вторият на отварящата част, така че магнитите да са срещуположно при затваряне. 3) В приложението натисни „Добави сензор“ и следвай стъпките: избери домашния си WiFi (2.4 GHz) и въведи паролата. 4) Дай име на сензора (напр. „Входна врата“, „Прозорец детска“) и запази. 5) Разреши известия за Aura в настройките на телефона (Настройки → Приложения → Aura → Известия). След това при всяко отваряне или затваряне ще получаваш мигновено известие на телефона си."
+            a6: "1) Регистрирай се или влез в приложението Aura на телефона си. 2) Поставете сензора на вратата или прозореца: единият модул на рамката, вторият на отварящата част, така че магнитите да са срещуположно при затваряне. 3) В приложението натисни „Добави сензор“ и следвай стъпките: избери домашния си WiFi (2.4 GHz) и въведи паролата. 4) Дай име на сензора (напр. „Входна врата“, „Прозорец детска“) и запази. 5) Разреши известия за Aura в настройките на телефона (Настройки → Приложения → Aura → Известия). След това при всяко отваряне или затваряне ще получаваш мигновено известие на телефона си.",
+            q7: "Какви настройки на телефона са нужни за надеждни известия?",
+            a7: "За надеждни аларми разреши известията за Aura, изключи оптимизацията на батерията за приложението или избери „Неограничено“ използване на батерията, разреши работа във фонов режим и остави мобилни данни или WiFi включени. Ако Android не потвърди до 60 секунди, че алармата е показана, Aura може да изпрати резервен имейл до имейла на акаунта."
         },
         stats: {
             title: "Довериха ни се десетки домакинства",
@@ -258,7 +260,7 @@ const translations = {
             errInvalidEmail: "Невалиден имейл.",
             errUnauthorizedDomain: "Доменът на тази страница не е в списъка „Authorized domains“ в Firebase (Authentication → Settings). Добавете го и опитайте отново.",
             errResetFailed: "Неуспешно изпращане. Опитайте отново.",
-            errSessionLimit: "Този акаунт може да се ползва на до 2 устройства. Ако искаш да влезеш от ново устройство, излез от някое от останалите.",
+            errSessionLimit: "Този акаунт може да се ползва на до 3 устройства. Ако искаш да влезеш от ново устройство, излез от някое от останалите.",
             errNoUser: "Няма потребител с този имейл.",
             errWrongPassword: "Грешна парола или имейл.",
             errLoginFailed: "Грешка при вход.",
@@ -304,6 +306,7 @@ const translations = {
             pushActive: "✓ Известията са активни на този телефон",
             pushNativeActive: "✓ Надеждни native известия (Play Store app)",
             pushNativePending: "Натиснете тук за надеждни известия на телефона",
+            pushNotifyDenied: "Разрешете известията: Настройки → Apps → Aura → Известия",
             pushWebWeak: "⚠ Слаби web известия — натиснете тук за native",
             appVersion: "App версия {v}",
             alertSound: "Звук при известия",
@@ -315,6 +318,9 @@ const translations = {
             statusClosed: "Затворено",
             noBattery: "⚠ Няма батерия",
             noBatteryTitle: "Няма включена батерия",
+            batteryNoSense: "⚠ Няма ADC кабел",
+            batteryNoSenseTitle: "Свържи бaterия + към GPIO0 (D0) през делител 100k/100k",
+            batteryTitle: "Ниво на бaterията",
             lastSeenTitle: "Последна активност",
             duplicateNamesWarning: "⚠️ Два или повече сензора имат еднакви имена (\"{names}\"). Сменете името при конфигурацията на всяко устройство (WiFi Manager на ESP), за да не се презаписват данните във Firebase.",
             devicesError: "Няма достъп до сензорите. Излезте и влезте отново. Ако проблемът остане — обновете Firebase Database Rules (виж firebase-database-rules.json).",
@@ -572,7 +578,9 @@ const translations = {
             q5: "Is there a subscription?",
             a5: "No. You pay once for the sensors and app – no monthly subscription or hidden fees.",
             q6: "How do I install the sensor at home and get notifications on my phone?",
-            a6: "1) Sign up or log in to the Aura app on your phone. 2) Mount the sensor on the door or window: one part on the frame, the other on the opening part, so the magnets face each other when closed. 3) In the app tap \"Add sensor\" and follow the steps: select your home Wi‑Fi (2.4 GHz) and enter the password. 4) Give the sensor a name (e.g. \"Front door\", \"Kids' window\") and save. 5) Enable notifications for Aura in your phone settings (Settings → Apps → Aura → Notifications). After that, you'll get an instant notification on your phone whenever something opens or closes."
+            a6: "1) Sign up or log in to the Aura app on your phone. 2) Mount the sensor on the door or window: one part on the frame, the other on the opening part, so the magnets face each other when closed. 3) In the app tap \"Add sensor\" and follow the steps: select your home Wi‑Fi (2.4 GHz) and enter the password. 4) Give the sensor a name (e.g. \"Front door\", \"Kids' window\") and save. 5) Enable notifications for Aura in your phone settings (Settings → Apps → Aura → Notifications). After that, you'll get an instant notification on your phone whenever something opens or closes.",
+            q7: "What phone settings are needed for reliable alerts?",
+            a7: "For reliable alerts, allow notifications for the Aura app, set battery usage to unrestricted or disable battery optimization for Aura, allow background activity and keep mobile data or WiFi enabled. If Android does not confirm that an alert was shown within 60 seconds, Aura can send a backup email to the account email address."
         },
         stats: {
             title: "Dozens of households trust us",
@@ -719,7 +727,7 @@ const translations = {
             errInvalidEmail: "Invalid email.",
             errUnauthorizedDomain: "This site's domain is not in Firebase Authorized domains (Authentication → Settings). Add it and try again.",
             errResetFailed: "Could not send. Please try again.",
-            errSessionLimit: "This account can be used on up to 2 devices. Sign out on another device to sign in here.",
+            errSessionLimit: "This account can be used on up to 3 devices. Sign out on another device to sign in here.",
             errNoUser: "No user with this email.",
             errWrongPassword: "Wrong password or email.",
             errLoginFailed: "Sign-in failed.",
@@ -765,6 +773,7 @@ const translations = {
             pushActive: "✓ Notifications are active on this phone",
             pushNativeActive: "✓ Reliable native alerts (Play Store app)",
             pushNativePending: "Tap here for reliable phone alerts",
+            pushNotifyDenied: "Allow notifications: Settings → Apps → Aura → Notifications",
             pushWebWeak: "⚠ Weak web alerts — tap here for native",
             appVersion: "App version {v}",
             alertSound: "Alert sound",
@@ -776,6 +785,9 @@ const translations = {
             statusClosed: "Closed",
             noBattery: "⚠ No battery",
             noBatteryTitle: "No battery connected",
+            batteryNoSense: "⚠ No sense wire",
+            batteryNoSenseTitle: "Connect battery + to GPIO0 (D0) via 100k/100k divider",
+            batteryTitle: "Battery level",
             lastSeenTitle: "Last activity",
             duplicateNamesWarning: "⚠️ Two or more sensors share the same name (\"{names}\"). Rename each device in ESP WiFi Manager so Firebase data is not overwritten.",
             devicesError: "Cannot access sensors. Sign out and sign in again. If the problem persists, update Firebase Database Rules (see firebase-database-rules.json).",
@@ -1033,7 +1045,9 @@ const translations = {
             q5: "Gibt es ein Abo?",
             a5: "Nein. Sie zahlen einmal für Sensoren und App – kein monatliches Abo und keine versteckten Gebühren.",
             q6: "Wie installiere ich den Sensor zu Hause und erhalte Benachrichtigungen auf dem Handy?",
-            a6: "1) Registrieren Sie sich oder melden Sie sich in der Aura-App auf dem Handy an. 2) Bringen Sie den Sensor an Tür oder Fenster an: ein Teil am Rahmen, der andere am beweglichen Teil, sodass die Magnete beim Schließen einander zugewandt sind. 3) Tippen Sie in der App auf „Sensor hinzufügen“ und folgen Sie den Schritten: Wählen Sie Ihr WLAN (2,4 GHz) und geben Sie das Passwort ein. 4) Vergeben Sie einen Namen (z. B. „Haustür“, „Kinderzimmerfenster“) und speichern Sie. 5) Erlauben Sie Benachrichtigungen für Aura in den Handy-Einstellungen (Einstellungen → Apps → Aura → Benachrichtigungen). Danach erhalten Sie sofort eine Benachrichtigung, sobald sich etwas öffnet oder schließt."
+            a6: "1) Registrieren Sie sich oder melden Sie sich in der Aura-App auf dem Handy an. 2) Bringen Sie den Sensor an Tür oder Fenster an: ein Teil am Rahmen, der andere am beweglichen Teil, sodass die Magnete beim Schließen einander zugewandt sind. 3) Tippen Sie in der App auf „Sensor hinzufügen“ und folgen Sie den Schritten: Wählen Sie Ihr WLAN (2,4 GHz) und geben Sie das Passwort ein. 4) Vergeben Sie einen Namen (z. B. „Haustür“, „Kinderzimmerfenster“) und speichern Sie. 5) Erlauben Sie Benachrichtigungen für Aura in den Handy-Einstellungen (Einstellungen → Apps → Aura → Benachrichtigungen). Danach erhalten Sie sofort eine Benachrichtigung, sobald sich etwas öffnet oder schließt.",
+            q7: "Welche Handy-Einstellungen sind für zuverlässige Alarme nötig?",
+            a7: "Für zuverlässige Alarme erlauben Sie Benachrichtigungen für die Aura-App, stellen Sie die Akkunutzung auf „Nicht eingeschränkt“ oder deaktivieren Sie die Akku-Optimierung für Aura, erlauben Sie Hintergrundaktivität und lassen Sie mobile Daten oder WLAN eingeschaltet. Wenn Android nicht innerhalb von 60 Sekunden bestätigt, dass der Alarm angezeigt wurde, kann Aura eine Backup-E-Mail an die E-Mail-Adresse des Kontos senden."
         },
         stats: {
             title: "Dutzende Haushalte vertrauen uns",
@@ -1180,7 +1194,7 @@ const translations = {
             errInvalidEmail: "Ungültige E-Mail.",
             errUnauthorizedDomain: "Die Domain dieser Seite steht nicht in den Firebase Authorized domains (Authentication → Settings). Bitte hinzufügen und erneut versuchen.",
             errResetFailed: "Senden fehlgeschlagen. Bitte erneut versuchen.",
-            errSessionLimit: "Dieses Konto kann auf bis zu 2 Geräten genutzt werden. Melden Sie sich auf einem anderen Gerät ab, um sich hier anzumelden.",
+            errSessionLimit: "Dieses Konto kann auf bis zu 3 Geräten genutzt werden. Melden Sie sich auf einem anderen Gerät ab, um sich hier anzumelden.",
             errNoUser: "Kein Benutzer mit dieser E-Mail.",
             errWrongPassword: "Falsches Passwort oder E-Mail.",
             errLoginFailed: "Anmeldung fehlgeschlagen.",
@@ -1226,6 +1240,7 @@ const translations = {
             pushActive: "✓ Benachrichtigungen auf diesem Telefon aktiv",
             pushNativeActive: "✓ Zuverlässige native Benachrichtigungen (Play Store App)",
             pushNativePending: "Hier tippen für zuverlässige Telefon-Benachrichtigungen",
+            pushNotifyDenied: "Benachrichtigungen erlauben: Einstellungen → Apps → Aura → Benachrichtigungen",
             pushWebWeak: "⚠ Schwache Web-Benachrichtigungen — hier tippen für native",
             appVersion: "App-Version {v}",
             alertSound: "Ton bei Benachrichtigungen",

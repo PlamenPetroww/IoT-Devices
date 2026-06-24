@@ -242,7 +242,7 @@
           const snap = await sessionsRef.once("value");
           const sessions = snap.val() || {};
           const knownIds = Object.keys(sessions);
-          if (!sessions[deviceId] && knownIds.length >= 2) {
+          if (!sessions[deviceId] && knownIds.length >= 3) {
             await auth.signOut();
             showError(authT("auth.errSessionLimit"));
             submitBtn.disabled = false;

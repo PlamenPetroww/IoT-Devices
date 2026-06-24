@@ -239,6 +239,9 @@
         emailEl.textContent = user.email;
         emailEl.title = user.email;
         const userPath = "users/" + getSafeEmail(user.email);
+        if (window.AuraPush && AuraPush.syncNativeUserKeyToApp) {
+          AuraPush.syncNativeUserKeyToApp(getSafeEmail(user.email));
+        }
         var headerMenuBtn = document.getElementById("headerMenuBtn");
         var headerMenuDropdown = document.getElementById("headerMenuDropdown");
         function closeHeaderMenu() {
@@ -323,6 +326,8 @@
               d && typeof d.battery === "number"
                 ? Math.max(-1, Math.min(100, Math.round(d.battery)))
                 : null,
+            batteryPinMv:
+              d && typeof d.batteryPinMv === "number" ? d.batteryPinMv : null,
             powerSource: (d && d.powerSource) || "",
           }));
           function formatLastSeen(ms) {
@@ -374,7 +379,34 @@
                   escapeHtml(authT("dashboard.noBattery")) +
                   "</span>";
               } else if (dev.battery != null && dev.battery >= 0) {
-                powerHtml = `<span class="device-battery">${dev.battery}%</span>`;
+                var battTitle =
+                  dev.batteryPinMv != null
+                    ? "GPIO sense: " + dev.batteryPinMv + " mV"
+                    : authT("dashboard.batteryTitle") || "Battery level";
+                if (
+                  dev.battery === 0 &&
+                  dev.batteryPinMv != null &&
+                  dev.batteryPinMv < 120
+                ) {
+                  powerHtml =
+                    '<span class="device-power no-battery" title="' +
+                    escapeHtml(
+                      authT("dashboard.batteryNoSenseTitle") ||
+                        "Connect battery + to GPIO0 via 100k/100k divider"
+                    ) +
+                    '">' +
+                    escapeHtml(
+                      authT("dashboard.batteryNoSense") || "⚠ No sense wire"
+                    ) +
+                    "</span>";
+                } else {
+                  powerHtml =
+                    '<span class="device-battery" title="' +
+                    escapeHtml(battTitle) +
+                    '">' +
+                    dev.battery +
+                    "%</span>";
+                }
               }
               const tintClass =
                 "device-tint-" + getTintIndexForSensor(dev.name || dev.id);

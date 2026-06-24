@@ -127,19 +127,20 @@ public class AlarmMonitorService extends Service {
     }
 
     private PollResult pollAlarmEvents() throws Exception {
+        String deviceId = AuraDeviceId.get(this);
         String userKey = getSharedPreferences("aura_app", Context.MODE_PRIVATE)
                 .getString("user_key", "");
         if (userKey == null || userKey.trim().isEmpty()) {
             userKey = resolveUserKeyFromServer();
         }
-        if (userKey == null || userKey.trim().isEmpty()) {
-            return new PollResult(false, new AlarmEvent[0]);
-        }
         long since = getSharedPreferences("aura_app", Context.MODE_PRIVATE)
                 .getLong("last_alarm_event_time", 0L);
-        String url = API_BASE + "/api/alarm-events?userKey="
-                + URLEncoder.encode(userKey.trim(), StandardCharsets.UTF_8.name())
+        String url = API_BASE + "/api/alarm-events?deviceId="
+                + encode(deviceId)
                 + "&since=" + since;
+        if (userKey != null && !userKey.trim().isEmpty()) {
+            url += "&userKey=" + encode(userKey.trim());
+        }
         HttpURLConnection conn = null;
         try {
             conn = (HttpURLConnection) new URL(url).openConnection();
@@ -154,6 +155,11 @@ public class AlarmMonitorService extends Service {
             }
             JSONObject json = new JSONObject(response);
             boolean armed = json.optBoolean("armed", false);
+            String resolvedUserKey = json.optString("userKey", "").trim();
+            if (!resolvedUserKey.isEmpty()) {
+                NativePushRegistrar.rememberUserKey(this, resolvedUserKey);
+                userKey = resolvedUserKey;
+            }
             JSONArray arr = json.optJSONArray("events");
             if (arr == null || arr.length() == 0) {
                 return new PollResult(armed, new AlarmEvent[0]);

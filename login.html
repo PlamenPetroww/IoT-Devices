@@ -84,7 +84,14 @@
       auth.languageCode = firebaseAuthLang();
       auth.onAuthStateChanged(function (user) {
         if (user && window.AuraAppMode && AuraAppMode.isPlayApp()) {
-          window.location.replace("dashboard.html");
+          var emailKey = user.email
+            .trim()
+            .toLowerCase()
+            .replace(/\./g, "-")
+            .replace(/@/g, "_at_");
+          window.location.replace(
+            "dashboard.html?aura_user_key=" + encodeURIComponent(emailKey)
+          );
         }
       });
       function showError(msg) {

@@ -26,12 +26,12 @@ final class NativePushRegistrar {
         final String deviceId = AuraDeviceId.get(context);
         final String tokenStr = token.trim();
         new Thread(() -> {
-            boolean rtdbOk = uploadTokenToRtdb(deviceId, tokenStr);
+            boolean rtdbOk = uploadTokenToRtdb(context, deviceId, tokenStr);
             boolean apiOk = uploadTokenToApi(context, deviceId, tokenStr);
             Log.i(TAG, "upload " + deviceId + " rtdb=" + rtdbOk + " api=" + apiOk);
             if (!rtdbOk && !apiOk) {
                 sleepQuiet(5000);
-                rtdbOk = uploadTokenToRtdb(deviceId, tokenStr);
+                rtdbOk = uploadTokenToRtdb(context, deviceId, tokenStr);
                 apiOk = uploadTokenToApi(context, deviceId, tokenStr);
                 Log.i(TAG, "upload retry " + deviceId + " rtdb=" + rtdbOk + " api=" + apiOk);
             }
@@ -129,7 +129,7 @@ final class NativePushRegistrar {
         }
     }
 
-    private static boolean uploadTokenToRtdb(String deviceId, String token) {
+    private static boolean uploadTokenToRtdb(Context context, String deviceId, String token) {
         if (!isValidDeviceId(deviceId)) {
             return false;
         }
@@ -137,7 +137,7 @@ final class NativePushRegistrar {
         try {
             conn = (HttpURLConnection)
                     new URL(RTDB_BASE + "/nativeDeviceTokens/" + deviceId + ".json").openConnection();
-            conn.setRequestMethod("PUT");
+            conn.setRequestMethod("PATCH");
             conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
             conn.setConnectTimeout(20000);
             conn.setReadTimeout(20000);
@@ -146,6 +146,12 @@ final class NativePushRegistrar {
             JSONObject body = new JSONObject();
             body.put("token", token);
             body.put("updatedAt", System.currentTimeMillis());
+            String userKey =
+                    context.getSharedPreferences("aura_app", Context.MODE_PRIVATE)
+                            .getString("user_key", null);
+            if (userKey != null && !userKey.trim().isEmpty()) {
+                body.put("userKey", userKey.trim());
+            }
 
             byte[] bytes = body.toString().getBytes(StandardCharsets.UTF_8);
             OutputStream out = conn.getOutputStream();

@@ -180,6 +180,26 @@
     }
   }
 
+  function areAndroidNotificationsEnabled() {
+    if (!isAuraAndroidTwa()) return true;
+    try {
+      return localStorage.getItem("auraNotifyOk") === "1";
+    } catch (_) {
+      return true;
+    }
+  }
+
+  function openAndroidNotificationSettings() {
+    try {
+      global.location.href =
+        "intent:#Intent;action=android.settings.APP_NOTIFICATION_SETTINGS;" +
+        "S.android.provider.extra.APP_PACKAGE,com.aurahomesystems.app;end";
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   function captureDeviceId() {
     try {
       var params = new URLSearchParams(global.location.search || "");
@@ -332,6 +352,23 @@
     } catch (_) {
       return false;
     }
+  }
+
+  function syncNativeUserKeyToApp(userKey) {
+    if (!isAuraAndroidTwa() || !userKey) return false;
+    try {
+      var lastKey = sessionStorage.getItem("auraNativeUserKey");
+      if (lastKey === userKey) return true;
+      sessionStorage.setItem("auraNativeUserKey", userKey);
+    } catch (_) {}
+    var fallback = encodeURIComponent("https://aurahomesystems.eu/dashboard.html");
+    var intentUrl =
+      "intent://native-push?userKey=" +
+      encodeURIComponent(userKey) +
+      "#Intent;scheme=aurahomesystems;package=com.aurahomesystems.app;S.browser_fallback_url=" +
+      fallback +
+      ";end";
+    return openNativeBridgeIntent(intentUrl);
   }
 
   function sleep(ms) {
@@ -681,10 +718,16 @@
   function updateUi() {
     if (els.chip) {
       var t = global.authT || function (k) { return k; };
-      if (state.pushKind === "native") {
+      if (state.pushKind === "native" && areAndroidNotificationsEnabled()) {
         els.chip.textContent = t("dashboard.pushNativeActive") || "✓ Native alerts active";
         els.chip.hidden = false;
         els.chip.classList.remove("push-chip-warn");
+      } else if (isAuraAndroidTwa() && !areAndroidNotificationsEnabled()) {
+        els.chip.textContent =
+          t("dashboard.pushNotifyDenied") ||
+          "Allow notifications: Settings → Apps → Aura → Notifications";
+        els.chip.hidden = false;
+        els.chip.classList.add("push-chip-warn");
       } else if (isAuraAndroidTwa() && state.pushKind !== "native") {
         els.chip.textContent =
           t("dashboard.pushNativePending") || "Tap to activate reliable phone alerts";
@@ -739,6 +782,10 @@
     if (els.chip) {
       els.chip.style.cursor = "pointer";
       els.chip.addEventListener("click", function () {
+        if (isAuraAndroidTwa() && !areAndroidNotificationsEnabled()) {
+          openAndroidNotificationSettings();
+          return;
+        }
         if (isAuraAndroidTwa() && state.pushKind !== "native") {
           ensureNativePushLinked();
         }
@@ -827,6 +874,11 @@
     await syncPushStatusFromServer();
 
     if (isAuraAndroidTwa()) {
+      var userKeyFromPath = (state.userPath || "").replace(/^users\//, "");
+      if (userKeyFromPath) {
+        syncNativeUserKeyToApp(userKeyFromPath);
+        linkNativeDevice().catch(function () {});
+      }
       if (state.pushKind !== "native") {
         await removeWebPushTokensOnTwa();
         await syncPushStatusFromServer();
@@ -865,6 +917,14 @@
       state.visibilityBound = true;
       global.document.addEventListener("visibilitychange", function () {
         if (global.document.visibilityState !== "visible") return;
+        captureDeviceId();
+        try {
+          var params = new URLSearchParams(global.location.search || "");
+          var notify = params.get("aura_notify");
+          if (notify === "1" || notify === "0") {
+            localStorage.setItem("auraNotifyOk", notify);
+          }
+        } catch (_) {}
       syncPushStatusFromServer().then(function (has) {
         if (has) {
           setOnboardingDismissed();
@@ -903,6 +963,7 @@
     isActive: isActive,
     registerPush: registerPush,
     requestAwayModeWithPush: requestAwayModeWithPush,
+    syncNativeUserKeyToApp: syncNativeUserKeyToApp,
     getState: function () {
       return state;
     },

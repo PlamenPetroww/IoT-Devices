@@ -749,6 +749,42 @@ function refreshNativeTokenBeforeSend(userKey, callback) {
   }, callback);
 }
 
+function resolveUserKeyForDeviceId(deviceId, callback) {
+  if (!firebaseDb) {
+    callback(null, "");
+    return;
+  }
+  const id = sanitizeDeviceId(deviceId);
+  if (!id) {
+    callback(null, "");
+    return;
+  }
+  firebaseDb
+    .ref("nativeDeviceTokens/" + id + "/userKey")
+    .once("value")
+    .then((snap) => {
+      const directUserKey = String(snap.val() || "").trim();
+      if (/^[a-z0-9_-]+_at_[a-z0-9_-]+$/.test(directUserKey)) {
+        callback(null, directUserKey);
+        return;
+      }
+      return firebaseDb.ref("users").once("value").then((usersSnap) => {
+        let found = "";
+        usersSnap.forEach((child) => {
+          const row = child.val() || {};
+          if (!found && row.settings && row.settings.nativeDeviceId === id) {
+            found = child.key;
+          }
+        });
+        if (found) {
+          firebaseDb.ref("nativeDeviceTokens/" + id + "/userKey").set(found).catch(() => {});
+        }
+        callback(null, found);
+      });
+    })
+    .catch((err) => callback(err));
+}
+
 function linkNativeDeviceToUser(userKey, deviceId, callback) {
   if (!firebaseDb) {
     callback(new Error("NOT_CONFIGURED"));
@@ -1202,34 +1238,54 @@ const server = http.createServer((req, res) => {
 
   if (requestPath === "/api/alarm-events" && req.method === "GET") {
     setCors(res, req);
-    const userKey = String(requestUrl.searchParams.get("userKey") || "").trim();
+    const userKeyParam = String(requestUrl.searchParams.get("userKey") || "").trim();
+    const deviceIdParam = sanitizeDeviceId(requestUrl.searchParams.get("deviceId"));
     const since = Number(requestUrl.searchParams.get("since") || "0") || 0;
-    if (!userKey) {
-      res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
-      res.end(JSON.stringify({ error: "Missing userKey" }));
-      return;
-    }
-    const sendEvents = (armed) => {
-      const events = armed ? getRecentAlarmEvents(userKey, since) : [];
-      console.log(
-        "[alarm-events]",
-        userKey,
-        "armed=" + armed,
-        "since=" + since,
-        "count=" + events.length
-      );
-      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-      res.end(JSON.stringify({ success: true, armed, events }));
+    const finish = (userKey) => {
+      const sendEvents = (armed) => {
+        const events = armed && userKey ? getRecentAlarmEvents(userKey, since) : [];
+        console.log(
+          "[alarm-events]",
+          userKey || "no-user",
+          deviceIdParam || "no-device",
+          "armed=" + armed,
+          "since=" + since,
+          "count=" + events.length
+        );
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({ success: true, armed, events, userKey: userKey || "" }));
+      };
+      if (!userKey) {
+        sendEvents(false);
+        return;
+      }
+      if (!firebaseDb) {
+        sendEvents(true);
+        return;
+      }
+      firebaseDb
+        .ref("users/" + userKey + "/systemEnabled")
+        .once("value")
+        .then((snap) => sendEvents(snap.val() === true))
+        .catch(() => sendEvents(true));
     };
-    if (!firebaseDb) {
-      sendEvents(true);
+    if (userKeyParam) {
+      finish(userKeyParam);
       return;
     }
-    firebaseDb
-      .ref("users/" + userKey + "/systemEnabled")
-      .once("value")
-      .then((snap) => sendEvents(snap.val() === true))
-      .catch(() => sendEvents(true));
+    if (deviceIdParam) {
+      resolveUserKeyForDeviceId(deviceIdParam, (err, userKey) => {
+        if (err) {
+          res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify({ error: err.message || "Lookup failed" }));
+          return;
+        }
+        finish(userKey);
+      });
+      return;
+    }
+    res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+    res.end(JSON.stringify({ error: "Missing userKey or deviceId" }));
     return;
   }
 
@@ -1246,35 +1302,15 @@ const server = http.createServer((req, res) => {
       res.end(JSON.stringify({ error: "Not configured" }));
       return;
     }
-    firebaseDb
-      .ref("nativeDeviceTokens/" + deviceId + "/userKey")
-      .once("value")
-      .then((snap) => {
-        const directUserKey = String(snap.val() || "").trim();
-        if (/^[a-z0-9_-]+_at_[a-z0-9_-]+$/.test(directUserKey)) {
-          res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-          res.end(JSON.stringify({ success: true, userKey: directUserKey }));
-          return;
-        }
-        return firebaseDb.ref("users").once("value").then((usersSnap) => {
-          let found = "";
-          usersSnap.forEach((child) => {
-            const row = child.val() || {};
-            if (!found && row.settings && row.settings.nativeDeviceId === deviceId) {
-              found = child.key;
-            }
-          });
-          if (found) {
-            firebaseDb.ref("nativeDeviceTokens/" + deviceId + "/userKey").set(found).catch(() => {});
-          }
-          res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-          res.end(JSON.stringify({ success: true, userKey: found }));
-        });
-      })
-      .catch((err) => {
+    resolveUserKeyForDeviceId(deviceId, (err, userKey) => {
+      if (err) {
         res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
         res.end(JSON.stringify({ error: err.message || "Lookup failed" }));
-      });
+        return;
+      }
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+      res.end(JSON.stringify({ success: true, userKey: userKey || "" }));
+    });
     return;
   }
 

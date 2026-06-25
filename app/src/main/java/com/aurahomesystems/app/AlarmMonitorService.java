@@ -179,12 +179,6 @@ public class AlarmMonitorService extends Service {
                 events[count++] = event;
                 maxSeen = Math.max(maxSeen, event.createdAt);
             }
-            if (maxSeen > since) {
-                getSharedPreferences("aura_app", Context.MODE_PRIVATE)
-                        .edit()
-                        .putLong("last_alarm_event_time", maxSeen)
-                        .apply();
-            }
             if (count == events.length) {
                 return new PollResult(armed, events);
             }

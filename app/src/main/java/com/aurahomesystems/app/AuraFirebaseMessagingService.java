@@ -18,6 +18,37 @@ import java.util.Map;
 
 public class AuraFirebaseMessagingService extends FirebaseMessagingService {
     public static final String CHANNEL_ID = "aura_alarm_alerts_v2";
+    private static final String PREFS = "aura_app";
+    private static final String KEY_SHOWN_EVENT_TAGS = "shown_event_tags";
+
+    static boolean claimEventForNotification(Context context, String eventTag) {
+        if (eventTag == null || eventTag.trim().isEmpty()) {
+            return true;
+        }
+        String tag = eventTag.trim();
+        synchronized (AuraFirebaseMessagingService.class) {
+            android.content.SharedPreferences prefs =
+                    context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+            String stored = prefs.getString(KEY_SHOWN_EVENT_TAGS, "");
+            if (("\n" + stored + "\n").contains("\n" + tag + "\n")) {
+                return false;
+            }
+            String updated = stored.isEmpty() ? tag : stored + "\n" + tag;
+            String[] parts = updated.split("\n");
+            if (parts.length > 40) {
+                StringBuilder trimmed = new StringBuilder();
+                for (int i = parts.length - 40; i < parts.length; i++) {
+                    if (trimmed.length() > 0) {
+                        trimmed.append("\n");
+                    }
+                    trimmed.append(parts[i]);
+                }
+                updated = trimmed.toString();
+            }
+            prefs.edit().putString(KEY_SHOWN_EVENT_TAGS, updated).apply();
+            return true;
+        }
+    }
 
     @Override
     public void onMessageReceived(RemoteMessage remoteMessage) {
@@ -31,7 +62,6 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
                         ? data.get("eventCreatedAt")
                         : "");
         NativePushRegistrar.sendAck(this, "received", eventTag, "", userKey);
-        AlarmMonitorService.rememberSeenEvent(this, eventTag, eventCreatedAt);
         if (remoteMessage.getNotification() != null) {
             RemoteMessage.Notification n = remoteMessage.getNotification();
             showAlarmNotification(
@@ -41,6 +71,9 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
                     true,
                     eventTag,
                     userKey);
+            if (eventCreatedAt > 0L || (eventTag != null && !eventTag.isEmpty())) {
+                AlarmMonitorService.rememberSeenEvent(this, eventTag, eventCreatedAt);
+            }
             return;
         }
 
@@ -52,6 +85,9 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
         String body = data.containsKey("body") ? data.get("body") : "";
         boolean playSound = !"0".equals(data.get("playSound"));
         showAlarmNotification(this, title, body, playSound, eventTag, userKey);
+        if (eventCreatedAt > 0L || (eventTag != null && !eventTag.isEmpty())) {
+            AlarmMonitorService.rememberSeenEvent(this, eventTag, eventCreatedAt);
+        }
     }
 
     public static void showAlarmNotification(
@@ -61,6 +97,11 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
             boolean playSound,
             String eventTag,
             String userKey) {
+        if (!claimEventForNotification(context, eventTag)) {
+            android.util.Log.i("AuraFCM", "skip duplicate notification " + eventTag);
+            NativePushRegistrar.sendAck(context, "skipped_duplicate", eventTag, "", userKey);
+            return;
+        }
         if (!NotificationPermissionHelper.areNotificationsEnabled(context)) {
             android.util.Log.w("AuraFCM", "Notifications disabled — enable in phone Settings");
             NativePushRegistrar.sendAck(
@@ -96,7 +137,10 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
             builder.setSilent(true);
         }
 
-        nm.notify((int) (System.currentTimeMillis() & 0xfffffff), builder.build());
+        int notificationId = (eventTag != null && !eventTag.isEmpty())
+                ? (eventTag.hashCode() & 0x7fffffff)
+                : (int) (System.currentTimeMillis() & 0xfffffff);
+        nm.notify(notificationId, builder.build());
         NativePushRegistrar.sendAck(context, "shown", eventTag, CHANNEL_ID, userKey);
     }
 

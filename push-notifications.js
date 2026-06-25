@@ -361,14 +361,8 @@
       if (lastKey === userKey) return true;
       sessionStorage.setItem("auraNativeUserKey", userKey);
     } catch (_) {}
-    var fallback = encodeURIComponent("https://aurahomesystems.eu/dashboard.html");
-    var intentUrl =
-      "intent://native-push?userKey=" +
-      encodeURIComponent(userKey) +
-      "#Intent;scheme=aurahomesystems;package=com.aurahomesystems.app;S.browser_fallback_url=" +
-      fallback +
-      ";end";
-    return openNativeBridgeIntent(intentUrl);
+    linkNativeDevice().catch(function () {});
+    return true;
   }
 
   function sleep(ms) {
@@ -877,7 +871,6 @@
       var userKeyFromPath = (state.userPath || "").replace(/^users\//, "");
       if (userKeyFromPath) {
         syncNativeUserKeyToApp(userKeyFromPath);
-        linkNativeDevice().catch(function () {});
       }
       if (state.pushKind !== "native") {
         await removeWebPushTokensOnTwa();

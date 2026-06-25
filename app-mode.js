@@ -69,6 +69,10 @@
       if (did) global.localStorage.setItem("auraDeviceId", did);
       var ver = params.get("aura_app_ver");
       if (ver) global.localStorage.setItem("auraAppVersion", ver);
+      var notify = params.get("aura_notify");
+      if (notify === "1" || notify === "0") {
+        global.localStorage.setItem("auraNotifyOk", notify);
+      }
     } catch (_) {}
   }
 
@@ -139,6 +143,8 @@
   };
 
   if (!playApp) return;
+
+  captureAppMeta();
 
   var page = pageName();
 

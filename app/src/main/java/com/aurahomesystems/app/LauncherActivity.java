@@ -49,6 +49,18 @@ public class LauncherActivity
     protected void onResume() {
         super.onResume();
         AlarmMonitorService.startIfConfigured(this);
+        String storedUserKey =
+                getSharedPreferences("aura_app", MODE_PRIVATE).getString("user_key", "");
+        if (storedUserKey != null && !storedUserKey.trim().isEmpty()) {
+            com.google.firebase.messaging.FirebaseMessaging.getInstance()
+                    .getToken()
+                    .addOnCompleteListener(
+                            task -> {
+                                if (task.isSuccessful() && task.getResult() != null) {
+                                    NativePushRegistrar.uploadToken(this, task.getResult());
+                                }
+                            });
+        }
         if (NotificationPermissionHelper.areNotificationsEnabled(this)) {
             notificationRequestScheduled = false;
             return;

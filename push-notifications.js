@@ -233,9 +233,13 @@
 
   async function linkNativeDeviceViaRtdb(deviceId) {
     if (!state.db || !deviceId) return false;
+    var userKey = (state.userPath || "").replace(/^users\//, "");
+    if (!userKey) return false;
     var snap = await state.db.ref("nativeDeviceTokens/" + deviceId).once("value");
     var row = snap.val();
     if (!row || !row.token) return false;
+    await state.db.ref("nativeDeviceTokens/" + deviceId + "/userKey").set(userKey);
+    await state.db.ref(state.userPath + "/settings/nativeDeviceId").set(deviceId);
     return saveNativeAndroidToken(row.token);
   }
 
@@ -354,13 +358,39 @@
     }
   }
 
+  function notifyNativeUserKey(userKey) {
+    if (!userKey) return false;
+    var intentUrl =
+      "intent://native-push?userKey=" +
+      encodeURIComponent(userKey) +
+      "#Intent;scheme=aurahomesystems;package=com.aurahomesystems.app;end";
+    try {
+      var iframe = global.document.createElement("iframe");
+      iframe.style.display = "none";
+      iframe.src = intentUrl;
+      global.document.body.appendChild(iframe);
+      setTimeout(function () {
+        try {
+          iframe.remove();
+        } catch (_) {}
+      }, 1500);
+      return true;
+    } catch (_) {
+      return openNativeBridgeIntent(intentUrl);
+    }
+  }
+
   function syncNativeUserKeyToApp(userKey) {
     if (!isAuraAndroidTwa() || !userKey) return false;
+    var shouldNotifyNative = true;
     try {
       var lastKey = sessionStorage.getItem("auraNativeUserKey");
-      if (lastKey === userKey) return true;
+      shouldNotifyNative = lastKey !== userKey;
       sessionStorage.setItem("auraNativeUserKey", userKey);
     } catch (_) {}
+    if (shouldNotifyNative) {
+      notifyNativeUserKey(userKey);
+    }
     linkNativeDevice().catch(function () {});
     return true;
   }
@@ -878,6 +908,8 @@
       }
       if (state.pushKind !== "native") {
         ensureNativePushLinked().catch(function () {});
+      } else {
+        linkNativeDevice().catch(function () {});
       }
     }
 

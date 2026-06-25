@@ -89,9 +89,14 @@
             .toLowerCase()
             .replace(/\./g, "-")
             .replace(/@/g, "_at_");
-          window.location.replace(
-            "dashboard.html?aura_user_key=" + encodeURIComponent(emailKey)
-          );
+          var dashTarget = "dashboard.html?aura_user_key=" + encodeURIComponent(emailKey);
+          try {
+            var storedDid = localStorage.getItem("auraDeviceId");
+            if (storedDid) {
+              dashTarget += "&aura_did=" + encodeURIComponent(storedDid);
+            }
+          } catch (_) {}
+          window.location.replace(dashTarget);
         }
       });
       function showError(msg) {
@@ -260,8 +265,15 @@
           const target =
             next && allowedNext.includes(next) ? next : "dashboard.html";
           const sep = target.indexOf("?") === -1 ? "?" : "&";
-          window.location.href =
+          let loginTarget =
             target + sep + "aura_user_key=" + encodeURIComponent(emailKey);
+          try {
+            const storedDid = localStorage.getItem("auraDeviceId");
+            if (storedDid) {
+              loginTarget += "&aura_did=" + encodeURIComponent(storedDid);
+            }
+          } catch (_) {}
+          window.location.href = loginTarget;
         } catch (err) {
           if (err.code === "auth/user-not-found")
             showError(authT("auth.errNoUser"));

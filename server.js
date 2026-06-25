@@ -760,27 +760,43 @@ function resolveUserKeyForDeviceId(deviceId, callback) {
     return;
   }
   firebaseDb
-    .ref("nativeDeviceTokens/" + id + "/userKey")
+    .ref("nativeDeviceTokens/" + id)
     .once("value")
     .then((snap) => {
-      const directUserKey = String(snap.val() || "").trim();
+      const row = snap.val() || {};
+      const directUserKey = String(row.userKey || "").trim();
       if (/^[a-z0-9_-]+_at_[a-z0-9_-]+$/.test(directUserKey)) {
         callback(null, directUserKey);
         return;
       }
-      return firebaseDb.ref("users").once("value").then((usersSnap) => {
-        let found = "";
-        usersSnap.forEach((child) => {
-          const row = child.val() || {};
-          if (!found && row.settings && row.settings.nativeDeviceId === id) {
-            found = child.key;
+      const token = String(row.token || "").trim();
+      const finishScan = () =>
+        firebaseDb.ref("users").once("value").then((usersSnap) => {
+          let found = "";
+          usersSnap.forEach((child) => {
+            if (found) return;
+            const userRow = child.val() || {};
+            const nativeTok =
+              userRow.pushTokens &&
+              userRow.pushTokens.native_android &&
+              userRow.pushTokens.native_android.token;
+            if (token && nativeTok === token) {
+              found = child.key;
+              return;
+            }
+            if (userRow.settings && userRow.settings.nativeDeviceId === id) {
+              found = child.key;
+            }
+          });
+          if (found) {
+            firebaseDb.ref("nativeDeviceTokens/" + id + "/userKey").set(found).catch(() => {});
           }
+          callback(null, found);
         });
-        if (found) {
-          firebaseDb.ref("nativeDeviceTokens/" + id + "/userKey").set(found).catch(() => {});
-        }
-        callback(null, found);
-      });
+      if (token) {
+        return finishScan();
+      }
+      return finishScan();
     })
     .catch((err) => callback(err));
 }

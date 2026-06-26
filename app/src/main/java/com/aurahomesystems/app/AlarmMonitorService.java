@@ -65,17 +65,7 @@ public class AlarmMonitorService extends Service {
     public void onCreate() {
         super.onCreate();
         ensureChannel();
-        ensureLastSeenBaseline();
         startForeground(NOTIFICATION_ID, buildMonitorNotification());
-    }
-
-    private void ensureLastSeenBaseline() {
-        if (!getSharedPreferences("aura_app", Context.MODE_PRIVATE).contains("last_alarm_event_time")) {
-            getSharedPreferences("aura_app", Context.MODE_PRIVATE)
-                    .edit()
-                    .putLong("last_alarm_event_time", System.currentTimeMillis())
-                    .apply();
-        }
     }
 
     @Override

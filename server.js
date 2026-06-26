@@ -317,14 +317,79 @@ function rememberAlarmEvent(event) {
   if (recentAlarmEvents.length > 500) {
     recentAlarmEvents.splice(0, recentAlarmEvents.length - 500);
   }
+  if (firebaseDb) {
+    firebaseDb
+      .ref("users/" + event.userKey + "/pendingAlarmEvents/" + event.eventTag)
+      .set({
+        eventTag: event.eventTag,
+        createdAt: event.createdAt,
+        title: event.title || "Aura HomeSystems",
+        body: event.body || "",
+        userKey: event.userKey,
+      })
+      .catch(() => {});
+  }
+}
+
+function clearPendingAlarmEvent(userKey, eventTag) {
+  const key = String(userKey || "").trim();
+  const tag = String(eventTag || "").trim();
+  if (!firebaseDb || !key || !tag) return;
+  firebaseDb
+    .ref("users/" + key + "/pendingAlarmEvents/" + tag)
+    .remove()
+    .catch(() => {});
 }
 
 function getRecentAlarmEvents(userKey, since) {
   cleanupRecentAlarmEvents();
-  const sinceNum = Number(since) || 0;
+  const serverNow = Date.now();
+  let sinceNum = Number(since) || 0;
+  if (sinceNum > serverNow + 60000) {
+    sinceNum = 0;
+  }
   return recentAlarmEvents
     .filter((event) => event.userKey === userKey && event.createdAt > sinceNum)
     .slice(-20);
+}
+
+function fetchPendingAlarmEvents(userKey, since, callback) {
+  const sinceNum = (() => {
+    const serverNow = Date.now();
+    let value = Number(since) || 0;
+    if (value > serverNow + 60000) value = 0;
+    return value;
+  })();
+  const fromMemory = getRecentAlarmEvents(userKey, sinceNum);
+  if (!firebaseDb) {
+    callback(null, fromMemory);
+    return;
+  }
+  firebaseDb
+    .ref("users/" + userKey + "/pendingAlarmEvents")
+    .once("value")
+    .then((snap) => {
+      const merged = new Map();
+      fromMemory.forEach((event) => {
+        merged.set(event.eventTag, event);
+      });
+      snap.forEach((child) => {
+        const event = child.val();
+        if (!event || !event.eventTag || event.createdAt <= sinceNum) return;
+        merged.set(event.eventTag, {
+          userKey: event.userKey || userKey,
+          eventTag: event.eventTag,
+          createdAt: event.createdAt,
+          title: event.title || "Aura HomeSystems",
+          body: event.body || "",
+        });
+      });
+      const events = Array.from(merged.values()).sort(
+        (a, b) => a.createdAt - b.createdAt
+      );
+      callback(null, events.slice(-20));
+    })
+    .catch(() => callback(null, fromMemory));
 }
 
 setInterval(cleanupRecentAlarmEvents, 10 * 60 * 1000);
@@ -1187,9 +1252,19 @@ function sendPushToUser(userKey, title, body, callback, forcedEventTag, forcedEv
         },
       };
       if (isNative) {
+        message.notification = {
+          title: titleStr,
+          body: bodyStr,
+        };
         message.android = {
           priority: "high",
-          ttl: 60000,
+          ttl: 86400000,
+          notification: {
+            channelId: "aura_alarm_alerts_v2",
+            priority: "HIGH",
+            defaultVibrateTimings: true,
+            defaultSound: playSound,
+          },
         };
       } else {
         message.webpush = {
@@ -1259,17 +1334,32 @@ const server = http.createServer((req, res) => {
     const since = Number(requestUrl.searchParams.get("since") || "0") || 0;
     const finish = (userKey) => {
       const sendEvents = (armed) => {
-        const events = armed && userKey ? getRecentAlarmEvents(userKey, since) : [];
-        console.log(
-          "[alarm-events]",
-          userKey || "no-user",
-          deviceIdParam || "no-device",
-          "armed=" + armed,
-          "since=" + since,
-          "count=" + events.length
-        );
-        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-        res.end(JSON.stringify({ success: true, armed, events, userKey: userKey || "" }));
+        if (!armed || !userKey) {
+          console.log(
+            "[alarm-events]",
+            userKey || "no-user",
+            deviceIdParam || "no-device",
+            "armed=" + armed,
+            "since=" + since,
+            "count=0"
+          );
+          res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify({ success: true, armed, events: [], userKey: userKey || "" }));
+          return;
+        }
+        fetchPendingAlarmEvents(userKey, since, (err, events) => {
+          const list = err ? getRecentAlarmEvents(userKey, since) : events;
+          console.log(
+            "[alarm-events]",
+            userKey || "no-user",
+            deviceIdParam || "no-device",
+            "armed=" + armed,
+            "since=" + since,
+            "count=" + list.length
+          );
+          res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify({ success: true, armed, events: list, userKey: userKey || "" }));
+        });
       };
       if (!userKey) {
         sendEvents(false);
@@ -1716,6 +1806,9 @@ const server = http.createServer((req, res) => {
       const userKey = String(parsed.userKey || "").slice(0, 120);
       const channelId = String(parsed.channelId || "").slice(0, 120);
       rememberNativePushAck(eventTag, stage);
+      if (stage === "shown" && userKey) {
+        clearPendingAlarmEvent(userKey, eventTag);
+      }
       console.log(
         "[native-push-ack]",
         stage,
@@ -1821,6 +1914,15 @@ const server = http.createServer((req, res) => {
                 bodyText,
                 eventTag,
               });
+            } else if (!sent) {
+              console.warn("[sensor-event] no push token; sending email fallback", userKey, eventTag);
+              sendAlarmFallbackEmail(
+                userKey,
+                parsed.email,
+                deviceName,
+                bodyText,
+                eventTag
+              );
             }
             console.log("[sensor-event]", userKey, "sent:", sent, "via", via || "none");
             res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });

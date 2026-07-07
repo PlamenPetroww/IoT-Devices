@@ -70,12 +70,53 @@ function loadShippingZones() {
   }
 }
 
-const CHECKOUT_TEST_PRICES = process.env.CHECKOUT_TEST_PRICES === "1";
-const UNIT_PRICE_EUR = CHECKOUT_TEST_PRICES ? 0.01 : 59;
-const BUNDLES = CHECKOUT_TEST_PRICES
-  ? { 1: 0.01, 3: 0.03, 5: 0.05 }
-  : { 1: 59, 3: 159, 5: 249 };
-const TEST_DELIVERY_EUR = 0.01;
+function loadPricingConfig() {
+  const production = {
+    testMode: false,
+    unitPriceEur: 59,
+    bundles: { 1: 59, 3: 159, 5: 249 },
+    testDeliveryEur: 0.01,
+  };
+  try {
+    const raw = fs.readFileSync(path.join(__dirname, "pricing-config.json"), "utf8");
+    const j = JSON.parse(raw);
+    const envFlag = String(process.env.CHECKOUT_TEST_PRICES || "").trim();
+    const testMode =
+      envFlag === "1" ? true : envFlag === "0" ? false : !!j.testMode;
+    const rawBundles = j.bundles && typeof j.bundles === "object" ? j.bundles : {};
+    const bundles = {};
+    Object.keys(rawBundles).forEach((key) => {
+      const qty = parseInt(key, 10);
+      const price = Number(rawBundles[key]);
+      if (Number.isFinite(qty) && qty > 0 && Number.isFinite(price)) bundles[qty] = price;
+    });
+    const unitPriceEur = Number(j.unitPriceEur);
+    const testDeliveryEur = Number(j.testDeliveryEur);
+    return {
+      testMode,
+      unitPriceEur: Number.isFinite(unitPriceEur) ? unitPriceEur : production.unitPriceEur,
+      bundles: Object.keys(bundles).length ? bundles : production.bundles,
+      testDeliveryEur: Number.isFinite(testDeliveryEur) ? testDeliveryEur : production.testDeliveryEur,
+    };
+  } catch (e) {
+    const envFlag = String(process.env.CHECKOUT_TEST_PRICES || "").trim();
+    if (envFlag === "1") {
+      return {
+        testMode: true,
+        unitPriceEur: 0.01,
+        bundles: { 1: 0.01, 3: 0.03, 5: 0.05 },
+        testDeliveryEur: 0.01,
+      };
+    }
+    return production;
+  }
+}
+
+const pricingConfig = loadPricingConfig();
+const CHECKOUT_TEST_PRICES = pricingConfig.testMode;
+const UNIT_PRICE_EUR = pricingConfig.unitPriceEur;
+const BUNDLES = pricingConfig.bundles;
+const TEST_DELIVERY_EUR = pricingConfig.testDeliveryEur;
 const BGN_TO_EUR = 1.95583;
 
 function getTotalForQtyOrder(q) {
@@ -1326,7 +1367,13 @@ function logStartupConfig() {
   );
   console.log("[Aura] diagnostics: GET /api/health");
   if (CHECKOUT_TEST_PRICES) {
-    console.log("[Aura] CHECKOUT_TEST_PRICES=1 — symbolic prices (0.01 EUR/unit, 0.01 EUR delivery)");
+    console.log(
+      "[Aura] checkout test prices — unit:",
+      UNIT_PRICE_EUR,
+      "EUR, delivery:",
+      TEST_DELIVERY_EUR,
+      "EUR"
+    );
   }
 }
 
@@ -1576,6 +1623,7 @@ const server = http.createServer((req, res) => {
           String(process.env.REVOLUT_CHECKOUT_MODE || "prod").toLowerCase() === "sandbox"
             ? "sandbox"
             : "prod",
+        checkoutTestMode: CHECKOUT_TEST_PRICES,
       })
     );
     return;
@@ -1713,6 +1761,8 @@ const server = http.createServer((req, res) => {
         firebaseAdmin: !!firebaseAdmin,
         resend: hasResend,
         passwordResetRoute: true,
+        checkoutTestMode: CHECKOUT_TEST_PRICES,
+        unitPriceEur: UNIT_PRICE_EUR,
       })
     );
     return;

@@ -1024,7 +1024,12 @@ function initBuyPanel() {
             if (cardMount) cardMount.hidden = true;
             if (cardFieldHintEl) cardFieldHintEl.hidden = true;
             if (buyStatus) {
-                buyStatus.textContent = (err && err.message) || tBuy("buyPanel.cardPayInitError") || "";
+                let errMsg = (err && err.message) || tBuy("buyPanel.cardPayInitError") || "";
+                if (errMsg === "Invalid amount or currency" && pricingCfg.testMode) {
+                    errMsg =
+                        "Сървърът още не е с тестовите цени. Изчакай 2–3 мин след deploy на Render и презареди страницата.";
+                }
+                buyStatus.textContent = errMsg;
                 buyStatus.className = "form-status form-status-error";
             }
             resetSubmitButtonLabel();

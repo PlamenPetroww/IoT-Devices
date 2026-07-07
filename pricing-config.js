@@ -1,5 +1,5 @@
 (function (global) {
-    // Set to false before production launch.
+    // Keep in sync with pricing-config.json (backend reads the same file).
     var TEST = true;
 
     global.AURA_PRICING = {

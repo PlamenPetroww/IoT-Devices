@@ -1,0 +1,6 @@
+{
+  "testMode": true,
+  "unitPriceEur": 0.01,
+  "bundles": { "1": 0.01, "3": 0.03, "5": 0.05 },
+  "testDeliveryEur": 0.01
+}

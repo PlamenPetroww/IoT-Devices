@@ -1296,25 +1296,25 @@
             </div>
             <p id="buyPanelStatus" class="form-status" aria-live="polite"></p>
             <div class="buy-panel-pay-section" id="buyPanelPaySection">
-            <label class="form-label" id="cardholderField" style="display: none">
-              <span class="form-label-text" data-i18n="buyPanel.cardholderName">Име на картодържателя</span>
-              <input
-                type="text"
-                name="cardholderName"
-                id="buyCardholderName"
-                class="form-input"
-                autocomplete="cc-name"
-                maxlength="80"
-                data-i18n-placeholder="buyPanel.cardholderPlaceholder"
-                placeholder="Име Фамилия (както на картата)"
-              />
-            </label>
             <div class="buy-card-shell" id="buyCardShell" hidden>
               <div class="buy-card-shell-header">
                 <span class="buy-card-shell-title" data-i18n="buyPanel.cardDetailsTitle">Данни на картата</span>
                 <span class="buy-card-shell-badge" data-i18n="buyPanel.cardSecureBadge">Защитено плащане</span>
               </div>
               <div class="buy-card-shell-body">
+                <label class="form-label buy-card-shell-cardholder" id="cardholderField" style="display: none">
+                  <span class="form-label-text" data-i18n="buyPanel.cardholderName">Име на картодържателя</span>
+                  <input
+                    type="text"
+                    name="cardholderName"
+                    id="buyCardholderName"
+                    class="form-input"
+                    autocomplete="cc-name"
+                    maxlength="80"
+                    data-i18n-placeholder="buyPanel.cardholderPlaceholder"
+                    placeholder="Име Фамилия (както на картата)"
+                  />
+                </label>
                 <div id="buyCardFieldLoading" class="buy-card-field-loading" hidden>
                   <div class="buy-checkout-spinner buy-checkout-spinner--sm" aria-hidden="true">
                     <img src="icons/icon-192.png" alt="" width="36" height="36" />

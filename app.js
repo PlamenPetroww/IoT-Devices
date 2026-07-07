@@ -706,16 +706,18 @@ function initBuyPanel() {
         }
     }
 
-    function setCardFieldMounting(active) {
-        if (buyCardShell) buyCardShell.hidden = !active;
+    function setCardFieldLoading(loading) {
+        if (loading && buyCardShell) buyCardShell.hidden = false;
         if (buyCardFieldLoading) {
-            buyCardFieldLoading.hidden = !active;
-            if (active) {
+            buyCardFieldLoading.hidden = !loading;
+            if (loading) {
                 const loadingText = buyCardFieldLoading.querySelector(".buy-card-field-loading-text");
-                if (loadingText) loadingText.textContent = tBuy("buyPanel.cardFieldLoading") || loadingText.textContent;
+                if (loadingText) {
+                    loadingText.textContent = tBuy("buyPanel.cardFieldLoading") || loadingText.textContent;
+                }
             }
         }
-        if (active && cardMount) cardMount.hidden = true;
+        if (loading && cardMount) cardMount.hidden = true;
     }
 
     function resetSubmitButtonLabel() {
@@ -735,7 +737,7 @@ function initBuyPanel() {
         revolutPayModeActive = false;
         lastCardMountKey = "";
         setBuyCheckoutLoading(false);
-        setCardFieldMounting(false);
+        setCardFieldLoading(false);
         if (cardFieldInstance) {
             try {
                 cardFieldInstance.destroy();
@@ -1021,7 +1023,7 @@ function initBuyPanel() {
                 cardFieldInstance = null;
             }
             cardPayModeActive = false;
-            setCardFieldMounting(false);
+            setCardFieldLoading(false);
             if (buyCardShell) buyCardShell.hidden = true;
             if (cardMount) {
                 cardMount.innerHTML = "";
@@ -1051,8 +1053,7 @@ function initBuyPanel() {
         }
         cardMount.innerHTML = "";
         cardPayModeActive = false;
-        setCardFieldMounting(true);
-        if (buyCardShell) buyCardShell.hidden = false;
+        setCardFieldLoading(true);
 
         if (buyStatus) {
             buyStatus.textContent = "";
@@ -1096,7 +1097,8 @@ function initBuyPanel() {
                     buySubmitBtn.setAttribute("aria-disabled", "false");
                 },
             });
-            setCardFieldMounting(false);
+            setCardFieldLoading(false);
+            if (buyCardShell) buyCardShell.hidden = false;
             cardMount.hidden = false;
             if (cardFieldHintEl) {
                 cardFieldHintEl.hidden = false;
@@ -1125,7 +1127,7 @@ function initBuyPanel() {
         } catch (err) {
             cardPayModeActive = false;
             lastCardMountKey = "";
-            setCardFieldMounting(false);
+            setCardFieldLoading(false);
             if (buyCardShell) buyCardShell.hidden = true;
             if (cardMount) cardMount.hidden = true;
             if (cardFieldHintEl) cardFieldHintEl.hidden = true;

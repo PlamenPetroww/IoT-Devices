@@ -353,14 +353,49 @@ function getRecentAlarmEvents(userKey, since) {
     .slice(-20);
 }
 
+const historyWatchAttached = new Set();
+const recentAlarmDispatch = new Map();
+const ALARM_DEDUPE_MS = 20000;
+
+function alarmDispatchKey(userKey, deviceId, deviceName, isOpen) {
+  const deviceKey = String(deviceId || deviceName || "sensor")
+    .trim()
+    .toLowerCase()
+    .replace(/[.$#[\]/]/g, "_");
+  return userKey + "|" + deviceKey + "|" + (isOpen ? "open" : "closed");
+}
+
+function shouldDispatchAlarm(userKey, deviceId, deviceName, isOpen, source) {
+  const key = alarmDispatchKey(userKey, deviceId, deviceName, isOpen);
+  const now = Date.now();
+  const last = recentAlarmDispatch.get(key) || 0;
+  if (now - last < ALARM_DEDUPE_MS) {
+    console.log("[alarm-dedupe] skipped duplicate", source, key);
+    return false;
+  }
+  recentAlarmDispatch.set(key, now);
+  if (recentAlarmDispatch.size > 500) {
+    for (const [entryKey, ts] of recentAlarmDispatch.entries()) {
+      if (now - ts > ALARM_DEDUPE_MS) recentAlarmDispatch.delete(entryKey);
+    }
+  }
+  return true;
+}
+
 function dispatchUserAlarm(options, callback) {
   const userKey = String((options && options.userKey) || "").trim();
   if (!userKey) {
     callback(new Error("Missing userKey"));
     return;
   }
+  const deviceId = String((options && options.deviceId) || "").trim();
   const deviceName = String((options && options.deviceName) || "Sensor");
   const isOpen = !!(options && options.isOpen);
+  const source = String((options && options.source) || "sensor-event");
+  if (!shouldDispatchAlarm(userKey, deviceId, deviceName, isOpen, source)) {
+    callback(null, { sent: 0, via: "dedupe", eventTag: "", eventCreatedAt: Date.now() });
+    return;
+  }
   const title = "Aura HomeSystems";
   const bodyText = isOpen
     ? deviceName + " was opened."
@@ -370,7 +405,6 @@ function dispatchUserAlarm(options, callback) {
     "aura-" + Date.now() + "-" + Math.floor(Math.random() * 1000);
   const eventCreatedAt = Number((options && options.eventCreatedAt) || Date.now());
   const email = String((options && options.email) || "");
-  const source = String((options && options.source) || "sensor-event");
 
   rememberAlarmEvent({
     userKey,
@@ -420,8 +454,6 @@ function dispatchUserAlarm(options, callback) {
   );
 }
 
-const historyWatchAttached = new Set();
-
 function attachHistoryWatcher(userKey) {
   if (!firebaseDb || !userKey || historyWatchAttached.has(userKey)) return;
   historyWatchAttached.add(userKey);
@@ -446,6 +478,7 @@ function attachHistoryWatcher(userKey) {
         dispatchUserAlarm(
           {
             userKey,
+            deviceId: entry.deviceId || "",
             deviceName: entry.deviceName || entry.deviceId || "Sensor",
             isOpen: status === "open",
             source: "history-alarm",
@@ -1367,19 +1400,9 @@ function sendPushToUser(userKey, title, body, callback, forcedEventTag, forcedEv
         },
       };
       if (isNative) {
-        message.notification = {
-          title: titleStr,
-          body: bodyStr,
-        };
         message.android = {
           priority: "high",
           ttl: 86400000,
-          notification: {
-            channelId: "aura_alarm_alerts_v2",
-            priority: "HIGH",
-            defaultVibrateTimings: true,
-            defaultSound: playSound,
-          },
         };
       } else {
         message.webpush = {
@@ -2004,6 +2027,7 @@ const server = http.createServer((req, res) => {
           dispatchUserAlarm(
             {
               userKey,
+              deviceId: safeDeviceId,
               deviceName,
               isOpen,
               email: parsed.email,

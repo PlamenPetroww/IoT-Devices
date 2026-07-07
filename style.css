@@ -2645,19 +2645,9 @@ main {
     background: #ffffff;
 }
 
-.buy-card-shell-cardholder {
-    margin: 0;
-    padding: 14px 16px 0;
-}
-
-.buy-card-shell-cardholder .form-input {
-    background: #f8fafc;
-    border-color: rgba(148, 163, 184, 0.45);
-    color: #0f172a;
-}
-
-.buy-card-shell-cardholder .form-label-text {
-    color: #334155;
+.buy-cardholder-field {
+    max-width: 360px;
+    margin: 0 auto;
 }
 
 .buy-card-field-loading {

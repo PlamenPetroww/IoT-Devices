@@ -778,6 +778,26 @@ function initBuyPanel() {
         ].join("|");
     }
 
+    function showCardPaymentUi() {
+        if (!paymentSelect || paymentSelect.value !== "card") return;
+        if (cardholderField) cardholderField.style.display = "flex";
+    }
+
+    function isBuyFormReadyForCardMount() {
+        if (!buyForm) return false;
+        const country = deliveryCountrySelect && deliveryCountrySelect.value.trim();
+        const cityEl = buyForm.querySelector('[name="deliveryCity"]');
+        const streetEl = buyForm.querySelector('[name="deliveryStreet"]');
+        const phoneEl = buyForm.querySelector('[name="phone"]');
+        const emailEl = buyForm.querySelector('[name="_replyto"]');
+        if (!country) return false;
+        if (!cityEl || !cityEl.value.trim()) return false;
+        if (!streetEl || !streetEl.value.trim()) return false;
+        if (!phoneEl || !phoneEl.value.trim()) return false;
+        if (!emailEl || !emailEl.value.trim() || !emailEl.checkValidity()) return false;
+        return true;
+    }
+
     function tryScheduleCardMountWhenReady() {
         if (!paymentSelect || paymentSelect.value !== "card") return;
         scheduleOnlinePayRefresh();
@@ -1003,7 +1023,6 @@ function initBuyPanel() {
         if (!zoneId) return;
 
         if (cardholderField) cardholderField.style.display = "flex";
-        if (cardholderInput) cardholderInput.required = true;
 
         const cfg = await fetchRevolutConfig();
         if (!cfg || !cfg.publicKey) {
@@ -1015,7 +1034,7 @@ function initBuyPanel() {
             return;
         }
 
-        if (!buyForm.checkValidity()) {
+        if (!isBuyFormReadyForCardMount()) {
             if (cardFieldInstance) {
                 try {
                     cardFieldInstance.destroy();
@@ -1277,6 +1296,12 @@ function initBuyPanel() {
                 payHintEl.textContent = "";
             }
         }
+        if (method === "card") {
+            showCardPaymentUi();
+            if (cardholderInput) cardholderInput.required = false;
+        } else if (cardholderField) {
+            cardholderField.style.display = "none";
+        }
         if (method !== "card" && method !== "revolut") {
             if (cardholderInput) cardholderInput.required = false;
             teardownOnlinePay();
@@ -1340,6 +1365,7 @@ function initBuyPanel() {
     }
     [
         cardholderInput,
+        buyForm.querySelector('input[name="phone"]'),
         buyForm.querySelector('input[name="_replyto"]'),
         buyForm.querySelector('input[name="deliveryCity"]'),
         buyForm.querySelector('input[name="deliveryStreet"]'),

@@ -2653,6 +2653,14 @@ main {
     color: var(--danger);
 }
 
+.buy-card-ready-hint {
+    max-width: 360px;
+    align-self: center;
+    text-align: center;
+    color: var(--accent-strong);
+    font-weight: 500;
+}
+
 .buy-checkout-spinner {
     position: relative;
     width: 64px;

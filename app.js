@@ -655,6 +655,45 @@ function initBuyPanel() {
     const buyPayFooter = document.getElementById("buyPanelPayFooter");
     const cardholderField = document.getElementById("cardholderField");
     const cardholderInput = document.getElementById("buyCardholderName");
+    let lastCardFieldStatus = null;
+
+    function isCardholderFilled() {
+        return !!(cardholderInput && cardholderInput.value.trim());
+    }
+
+    function updateCardCheckoutHint(status) {
+        if (!cardValidationHintEl) return;
+        if (status) lastCardFieldStatus = status;
+
+        const s = status || lastCardFieldStatus;
+        if (!s || !cardPayModeActive) {
+            cardValidationHintEl.hidden = true;
+            return;
+        }
+
+        if (s.completed && !s.invalid && isCardholderFilled()) {
+            cardValidationHintEl.hidden = false;
+            cardValidationHintEl.className = "buy-panel-play-note buy-card-ready-hint";
+            cardValidationHintEl.textContent = tBuy("buyPanel.cardReadyHint") || "";
+            return;
+        }
+
+        if (s.completed && !isCardholderFilled()) {
+            cardValidationHintEl.hidden = false;
+            cardValidationHintEl.className = "buy-panel-play-note buy-card-validation-hint";
+            cardValidationHintEl.textContent = tBuy("buyPanel.cardholderMissingHint") || "";
+            return;
+        }
+
+        if (s.invalid && !s.completed) {
+            cardValidationHintEl.hidden = false;
+            cardValidationHintEl.className = "buy-panel-play-note buy-card-validation-hint";
+            cardValidationHintEl.textContent = tBuy("buyPanel.cardValidationHint") || "";
+            return;
+        }
+
+        cardValidationHintEl.hidden = true;
+    }
 
     function tBuy(key) {
         const lang = document.documentElement.lang || "en";
@@ -754,6 +793,7 @@ function initBuyPanel() {
         cardPayModeActive = false;
         revolutPayModeActive = false;
         lastCardMountKey = "";
+        lastCardFieldStatus = null;
         setBuyCheckoutLoading(false);
         if (cardFieldInstance) {
             try {
@@ -1111,16 +1151,8 @@ function initBuyPanel() {
                         buyStatus.className = "form-status form-status-error";
                     }
                 },
-                onValidation: function (errors) {
-                    const invalid = Array.isArray(errors) && errors.length > 0;
-                    if (cardValidationHintEl) {
-                        cardValidationHintEl.hidden = !invalid;
-                        if (invalid) {
-                            cardValidationHintEl.textContent =
-                                tBuy("buyPanel.cardValidationHint") ||
-                                cardValidationHintEl.textContent;
-                        }
-                    }
+                onStatusChange: function (status) {
+                    updateCardCheckoutHint(status);
                     if (!buySubmitBtn) return;
                     buySubmitBtn.disabled = false;
                     buySubmitBtn.setAttribute("aria-disabled", "false");
@@ -1378,6 +1410,11 @@ function initBuyPanel() {
         if (!el) return;
         el.addEventListener("blur", tryScheduleCardMountWhenReady);
     });
+    if (cardholderInput) {
+        cardholderInput.addEventListener("input", function () {
+            updateCardCheckoutHint(lastCardFieldStatus);
+        });
+    }
 
     buyForm.addEventListener("submit", async (e) => {
         e.preventDefault();

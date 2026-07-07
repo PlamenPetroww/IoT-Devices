@@ -551,6 +551,14 @@ function initBuyPanel() {
     window.addEventListener("aura-lang-applied", function () {
         populateDeliveryCountryOptions();
         updateDeliveryEstimate();
+        if (cardPayModeActive && buySubmitBtn) {
+            buySubmitBtn.textContent =
+                tBuy("buyPanel.payWithCardConfirm") ||
+                tBuy("buyPanel.payWithCard") ||
+                "Pay with card";
+        } else {
+            resetSubmitButtonLabel();
+        }
     });
 
     const UNIT_PRICE_EUR = 59;
@@ -590,6 +598,8 @@ function initBuyPanel() {
     const revolutMount = document.getElementById("buyRevolutPayMount");
     const payHintEl = document.getElementById("buyPayHint");
     const cardFieldHintEl = document.getElementById("buyCardFieldHint");
+    const cardValidationHintEl = document.getElementById("buyCardValidationHint");
+    const buyPayFooter = document.getElementById("buyPanelPayFooter");
     const cardholderField = document.getElementById("cardholderField");
     const cardholderInput = document.getElementById("buyCardholderName");
 
@@ -622,6 +632,7 @@ function initBuyPanel() {
         }
         if (cardholderField) cardholderField.style.display = "none";
         if (cardFieldHintEl) cardFieldHintEl.hidden = true;
+        if (cardValidationHintEl) cardValidationHintEl.hidden = true;
         if (buySubmitBtn) {
             buySubmitBtn.hidden = false;
             resetSubmitButtonLabel();
@@ -873,6 +884,7 @@ function initBuyPanel() {
                 cardMount.hidden = true;
             }
             if (cardFieldHintEl) cardFieldHintEl.hidden = true;
+            if (cardValidationHintEl) cardValidationHintEl.hidden = true;
             if (buyStatus) {
                 buyStatus.textContent = tBuy("buyPanel.payFillFormFirst") || "";
                 buyStatus.className = "form-status";
@@ -922,10 +934,18 @@ function initBuyPanel() {
                     }
                 },
                 onValidation: function (errors) {
-                    if (!buySubmitBtn) return;
                     const invalid = Array.isArray(errors) && errors.length > 0;
-                    buySubmitBtn.disabled = invalid;
-                    buySubmitBtn.setAttribute("aria-disabled", invalid ? "true" : "false");
+                    if (cardValidationHintEl) {
+                        cardValidationHintEl.hidden = !invalid;
+                        if (invalid) {
+                            cardValidationHintEl.textContent =
+                                tBuy("buyPanel.cardValidationHint") ||
+                                cardValidationHintEl.textContent;
+                        }
+                    }
+                    if (!buySubmitBtn) return;
+                    buySubmitBtn.disabled = false;
+                    buySubmitBtn.setAttribute("aria-disabled", "false");
                 },
             });
             cardMount.hidden = false;
@@ -939,7 +959,15 @@ function initBuyPanel() {
                 buySubmitBtn.hidden = false;
                 buySubmitBtn.disabled = false;
                 buySubmitBtn.setAttribute("aria-disabled", "false");
-                buySubmitBtn.textContent = tBuy("buyPanel.payWithCard") || "Pay with card";
+                buySubmitBtn.textContent =
+                    tBuy("buyPanel.payWithCardConfirm") ||
+                    tBuy("buyPanel.payWithCard") ||
+                    "Pay with card";
+            }
+            if (buyPayFooter) {
+                requestAnimationFrame(function () {
+                    buyPayFooter.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                });
             }
         } catch (err) {
             cardPayModeActive = false;

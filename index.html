@@ -137,6 +137,14 @@
                   "@type": "Answer",
                   "text": "No. You pay once for the sensors and the app – no monthly subscription or hidden fees."
                 }
+              },
+              {
+                "@type": "Question",
+                "name": "What phone settings are needed for reliable alerts?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "For reliable alerts, allow notifications for the Aura app, set battery usage to unrestricted or disable battery optimization for Aura, allow background activity and keep mobile data or WiFi enabled. If Android does not confirm that an alert was shown within 60 seconds, Aura can send a backup email to the account email address."
+                }
               }
             ]
           }
@@ -982,6 +990,31 @@
                     1) Регистрирай се или влез в приложението Aura на телефона си. 2) Поставете сензора на вратата или прозореца: единият модул на рамката, вторият на отварящата част, така че магнитите да са срещуположно при затваряне. 3) В приложението натисни „Добави сензор“ и следвай стъпките: избери домашния си WiFi (2.4 GHz) и въведи паролата. 4) Дай име на сензора (напр. „Входна врата“, „Прозорец детска“) и запази. 5) Разреши известия за Aura в настройките на телефона (Настройки → Приложения → Aura → Известия). След това при всяко отваряне или затваряне ще получаваш мигновено известие на телефона си.
                   </dd>
                 </div>
+                <div class="faq-item">
+                  <dt class="faq-q">
+                    <button
+                      type="button"
+                      class="faq-trigger"
+                      aria-expanded="false"
+                      aria-controls="faq-a7"
+                      id="faq-q7"
+                    >
+                      <span data-i18n="faq.q7"
+                        >Какви настройки на телефона са нужни за надеждни известия?</span
+                      >
+                      <span class="faq-chevron" aria-hidden="true"></span>
+                    </button>
+                  </dt>
+                  <dd
+                    class="faq-a"
+                    id="faq-a7"
+                    role="region"
+                    aria-labelledby="faq-q7"
+                    data-i18n="faq.a7"
+                  >
+                    За надеждни аларми разреши известията за Aura, изключи оптимизацията на батерията за приложението или избери „Неограничено“ използване на батерията, разреши работа във фонов режим и остави мобилни данни или WiFi включени. Ако Android не потвърди до 60 секунди, че алармата е показана, Aura може да изпрати резервен имейл до имейла на акаунта.
+                  </dd>
+                </div>
               </dl>
             </div>
           </div>
@@ -1262,6 +1295,7 @@
               </div>
             </div>
             <p id="buyPanelStatus" class="form-status" aria-live="polite"></p>
+            <div class="buy-panel-pay-section" id="buyPanelPaySection">
             <label class="form-label" id="cardholderField" style="display: none">
               <span class="form-label-text" data-i18n="buyPanel.cardholderName">Име на картодържателя</span>
               <input
@@ -1281,23 +1315,28 @@
               hidden
             ></div>
             <p id="buyCardFieldHint" class="buy-panel-play-note buy-card-field-hint" hidden data-i18n="buyPanel.cardFieldHint">
-              Въведете номер на карта, срок (MM/YY) и CVV в полето по-горе. IBAN не е нужен.
+              Въведете номер на карта, срок (MM/YY) и CVV. После натиснете „Плати с карта“ по-долу.
+            </p>
+            <p id="buyCardValidationHint" class="buy-panel-play-note buy-card-validation-hint" hidden data-i18n="buyPanel.cardValidationHint">
+              Попълнете всички полета на картата (номер, срок, CVV).
             </p>
             <div
               id="buyRevolutPayMount"
               class="buy-revolut-pay-mount"
               hidden
             ></div>
+            <div class="buy-panel-pay-footer" id="buyPanelPayFooter">
             <button
               type="submit"
               class="cta-primary-link cta-submit"
               id="buyPanelSubmitBtn"
               disabled
               aria-disabled="true"
-              data-i18n="buyPanel.submit"
             >
               Поръчай
             </button>
+            </div>
+            </div>
           </form>
         </div>
       </aside>

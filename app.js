@@ -646,13 +646,11 @@ function initBuyPanel() {
     let lastCardMountKey = "";
     const cardMount = document.getElementById("buyCardPayMount");
     const buyCardShell = document.getElementById("buyCardShell");
-    const buyCardFieldLoading = document.getElementById("buyCardFieldLoading");
     const buyCheckoutLoading = document.getElementById("buyCheckoutLoading");
     const buyCheckoutLoadingText = document.getElementById("buyCheckoutLoadingText");
     const buyPaySection = document.getElementById("buyPanelPaySection");
     const revolutMount = document.getElementById("buyRevolutPayMount");
     const payHintEl = document.getElementById("buyPayHint");
-    const cardFieldHintEl = document.getElementById("buyCardFieldHint");
     const cardValidationHintEl = document.getElementById("buyCardValidationHint");
     const buyPayFooter = document.getElementById("buyPanelPayFooter");
     const cardholderField = document.getElementById("cardholderField");
@@ -706,18 +704,38 @@ function initBuyPanel() {
         }
     }
 
-    function setCardFieldLoading(loading) {
-        if (loading && buyCardShell) buyCardShell.hidden = false;
-        if (buyCardFieldLoading) {
-            buyCardFieldLoading.hidden = !loading;
-            if (loading) {
-                const loadingText = buyCardFieldLoading.querySelector(".buy-card-field-loading-text");
-                if (loadingText) {
-                    loadingText.textContent = tBuy("buyPanel.cardFieldLoading") || loadingText.textContent;
-                }
-            }
-        }
-        if (loading && cardMount) cardMount.hidden = true;
+    function getRevolutCardFieldLocale() {
+        const lang = document.documentElement.lang || "en";
+        if (lang === "bg") return "bg-BG";
+        if (lang === "de") return "de-DE";
+        return "en-GB";
+    }
+
+    function getRevolutCardFieldOptions() {
+        return {
+            theme: "dark",
+            showLoadingIndicator: false,
+            hidePostcodeField: true,
+            locale: getRevolutCardFieldLocale(),
+            classes: {
+                default: "aura-rc-card-field",
+                focused: "aura-rc-card-field aura-rc-card-field--focused",
+                invalid: "aura-rc-card-field aura-rc-card-field--invalid",
+                empty: "aura-rc-card-field",
+                autofilled: "aura-rc-card-field aura-rc-card-field--autofilled",
+                completed: "aura-rc-card-field aura-rc-card-field--completed",
+            },
+            styles: {
+                default: {
+                    color: "#f1f5f9",
+                    fontSize: "14px",
+                    fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
+                    fontWeight: "500",
+                },
+                invalid: { color: "#fca5a5" },
+                placeholder: { color: "#94a3b8" },
+            },
+        };
     }
 
     function resetSubmitButtonLabel() {
@@ -737,7 +755,6 @@ function initBuyPanel() {
         revolutPayModeActive = false;
         lastCardMountKey = "";
         setBuyCheckoutLoading(false);
-        setCardFieldLoading(false);
         if (cardFieldInstance) {
             try {
                 cardFieldInstance.destroy();
@@ -746,16 +763,13 @@ function initBuyPanel() {
         }
         if (cardMount) {
             cardMount.innerHTML = "";
-            cardMount.hidden = true;
         }
         if (buyCardShell) buyCardShell.hidden = true;
-        if (buyCardFieldLoading) buyCardFieldLoading.hidden = true;
         if (revolutMount) {
             revolutMount.innerHTML = "";
             revolutMount.hidden = true;
         }
         if (cardholderField) cardholderField.style.display = "none";
-        if (cardFieldHintEl) cardFieldHintEl.hidden = true;
         if (cardValidationHintEl) cardValidationHintEl.hidden = true;
         if (buySubmitBtn) {
             buySubmitBtn.hidden = false;
@@ -1042,13 +1056,10 @@ function initBuyPanel() {
                 cardFieldInstance = null;
             }
             cardPayModeActive = false;
-            setCardFieldLoading(false);
             if (buyCardShell) buyCardShell.hidden = true;
             if (cardMount) {
                 cardMount.innerHTML = "";
-                cardMount.hidden = true;
             }
-            if (cardFieldHintEl) cardFieldHintEl.hidden = true;
             if (cardValidationHintEl) cardValidationHintEl.hidden = true;
             if (buyStatus) {
                 buyStatus.textContent = tBuy("buyPanel.payFillFormFirst") || "";
@@ -1072,7 +1083,7 @@ function initBuyPanel() {
         }
         cardMount.innerHTML = "";
         cardPayModeActive = false;
-        setCardFieldLoading(true);
+        if (buyCardShell) buyCardShell.hidden = false;
 
         if (buyStatus) {
             buyStatus.textContent = "";
@@ -1085,10 +1096,9 @@ function initBuyPanel() {
             const RevolutCheckout = mod.default;
             const checkoutMode = cfg.mode === "sandbox" ? "sandbox" : "prod";
             const checkout = await RevolutCheckout(orderToken, checkoutMode);
-            cardFieldInstance = checkout.createCardField({
+            const cardFieldBase = getRevolutCardFieldOptions();
+            cardFieldInstance = checkout.createCardField(Object.assign({}, cardFieldBase, {
                 target: cardMount,
-                theme: "light",
-                locale: document.documentElement.lang || "auto",
                 onSuccess: function () {
                     setBuyCheckoutLoading(true, "buyPanel.orderProcessing");
                     submitBuyPanelOrder({ fromCardPay: true });
@@ -1115,14 +1125,8 @@ function initBuyPanel() {
                     buySubmitBtn.disabled = false;
                     buySubmitBtn.setAttribute("aria-disabled", "false");
                 },
-            });
-            setCardFieldLoading(false);
+            }));
             if (buyCardShell) buyCardShell.hidden = false;
-            cardMount.hidden = false;
-            if (cardFieldHintEl) {
-                cardFieldHintEl.hidden = false;
-                cardFieldHintEl.textContent = tBuy("buyPanel.cardFieldHint") || cardFieldHintEl.textContent;
-            }
             cardPayModeActive = true;
             lastCardMountKey = mountKey;
             if (buySubmitBtn) {
@@ -1146,10 +1150,9 @@ function initBuyPanel() {
         } catch (err) {
             cardPayModeActive = false;
             lastCardMountKey = "";
-            setCardFieldLoading(false);
             if (buyCardShell) buyCardShell.hidden = true;
-            if (cardMount) cardMount.hidden = true;
-            if (cardFieldHintEl) cardFieldHintEl.hidden = true;
+            if (cardMount) cardMount.innerHTML = "";
+            if (cardValidationHintEl) cardValidationHintEl.hidden = true;
             if (buyStatus) {
                 let errMsg = (err && err.message) || tBuy("buyPanel.cardPayInitError") || "";
                 if (errMsg === "Invalid amount or currency" && pricingCfg.testMode) {

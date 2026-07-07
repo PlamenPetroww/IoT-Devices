@@ -1309,29 +1309,11 @@
                 placeholder="Име Фамилия (както на картата)"
               />
             </label>
-            <div class="buy-card-shell" id="buyCardShell" hidden>
-              <div class="buy-card-shell-header">
-                <span class="buy-card-shell-title" data-i18n="buyPanel.cardDetailsTitle">Данни на картата</span>
-                <span class="buy-card-shell-badge" data-i18n="buyPanel.cardSecureBadge">Защитено плащане</span>
-              </div>
-              <div class="buy-card-shell-body">
-                <div id="buyCardFieldLoading" class="buy-card-field-loading" hidden>
-                  <div class="buy-checkout-spinner buy-checkout-spinner--sm" aria-hidden="true">
-                    <img src="icons/icon-192.png" alt="" width="36" height="36" />
-                    <span class="buy-checkout-spinner-ring"></span>
-                  </div>
-                  <p class="buy-card-field-loading-text" data-i18n="buyPanel.cardFieldLoading">Подготвяме полето за карта…</p>
-                </div>
-                <div
-                  id="buyCardPayMount"
-                  class="buy-card-pay-mount"
-                  hidden
-                ></div>
-              </div>
-            </div>
-            <p id="buyCardFieldHint" class="buy-panel-play-note buy-card-field-hint" hidden data-i18n="buyPanel.cardFieldHint">
-              Въведете номер на карта, срок (MM/YY) и CVV. После натиснете „Плати с карта“ по-долу.
-            </p>
+            <label class="form-label buy-card-entry" id="buyCardShell" hidden>
+              <span class="form-label-text" data-i18n="buyPanel.cardDetailsLabel">Номер на карта, срок и CVV</span>
+              <div id="buyCardPayMount" class="buy-card-pay-mount"></div>
+              <span class="buy-card-trust" data-i18n="buyPanel.cardSecureNote">Плащането е защитено чрез Revolut</span>
+            </label>
             <p id="buyCardValidationHint" class="buy-panel-play-note buy-card-validation-hint" hidden data-i18n="buyPanel.cardValidationHint">
               Попълнете всички полета на картата (номер, срок, CVV).
             </p>

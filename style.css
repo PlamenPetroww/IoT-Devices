@@ -2582,109 +2582,68 @@ main {
     justify-content: center;
 }
 
+.buy-card-entry {
+    max-width: 360px;
+    margin: 0 auto;
+}
+
 .buy-card-pay-mount {
     width: 100%;
-    max-width: 360px;
-    min-height: 156px;
-    margin: 0 auto;
-    padding: 18px 16px 14px;
-    border-radius: 0;
-    background: #ffffff;
+    min-height: 44px;
+    margin: 0;
+    padding: 0;
+    background: transparent;
     border: none;
 }
 
-.buy-card-pay-mount:not([hidden]) {
+.buy-card-pay-mount .aura-rc-card-field {
     display: block;
-}
-
-.buy-card-shell {
     width: 100%;
-    max-width: 360px;
-    margin: 8px auto 0;
-    border-radius: 16px;
-    overflow: hidden;
-    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-    border: 1px solid rgba(148, 163, 184, 0.45);
-    box-shadow:
-        0 10px 28px rgba(15, 23, 42, 0.14),
-        0 0 0 1px rgba(255, 255, 255, 0.65) inset;
+    min-height: 44px;
+    padding: 10px 14px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-subtle);
+    background: rgba(15, 23, 42, 0.95);
+    box-sizing: border-box;
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
-.buy-card-shell-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 11px 16px;
-    background: rgba(15, 23, 42, 0.04);
-    border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+.buy-card-pay-mount .aura-rc-card-field--focused {
+    border-color: rgba(34, 197, 94, 0.7);
+    box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
-.buy-card-shell-title {
+.buy-card-pay-mount .aura-rc-card-field--invalid {
+    border-color: rgba(239, 68, 68, 0.75);
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
+}
+
+.buy-card-pay-mount .aura-rc-card-field--completed {
+    border-color: rgba(34, 197, 94, 0.55);
+}
+
+.buy-card-pay-mount iframe {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 22px !important;
+    border: 0 !important;
+}
+
+.buy-card-trust {
+    display: block;
+    margin-top: 8px;
     font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: #0f172a;
+    line-height: 1.4;
+    color: var(--text-muted, rgba(255, 255, 255, 0.62));
 }
 
-.buy-card-shell-badge {
-    font-size: 11px;
-    font-weight: 600;
-    color: #059669;
-    white-space: nowrap;
-}
-
-.buy-card-shell-badge::before {
+.buy-card-trust::before {
     content: "🔒 ";
-}
-
-.buy-card-shell-body {
-    position: relative;
-    min-height: 156px;
-    background: #ffffff;
 }
 
 .buy-cardholder-field {
     max-width: 360px;
     margin: 0 auto;
-}
-
-.buy-card-field-loading {
-    min-height: 156px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 14px;
-    padding: 28px 20px;
-    text-align: center;
-}
-
-.buy-card-field-loading-text {
-    margin: 0;
-    font-size: 13px;
-    line-height: 1.45;
-    color: #475569;
-}
-
-.buy-card-pay-mount > div,
-.buy-card-pay-mount iframe {
-    width: 100% !important;
-    max-width: 100% !important;
-}
-
-#cardholderField {
-    max-width: 360px;
-    margin-left: auto;
-    margin-right: auto;
-}
-
-.buy-card-field-hint {
-    max-width: 360px;
-    align-self: center;
-    text-align: center;
-    margin-top: 10px;
 }
 
 .buy-card-validation-hint {

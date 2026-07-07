@@ -125,6 +125,10 @@ public class AlarmMonitorService extends Service {
         }
         long since = getSharedPreferences("aura_app", Context.MODE_PRIVATE)
                 .getLong("last_alarm_event_time", 0L);
+        long now = System.currentTimeMillis();
+        if (since > now + 300000L) {
+            since = 0L;
+        }
         String url = API_BASE + "/api/alarm-events?deviceId="
                 + encode(deviceId)
                 + "&since=" + since;

@@ -345,7 +345,7 @@ function getRecentAlarmEvents(userKey, since) {
   cleanupRecentAlarmEvents();
   const serverNow = Date.now();
   let sinceNum = Number(since) || 0;
-  if (sinceNum > serverNow + 60000) {
+  if (sinceNum > serverNow + 300000) {
     sinceNum = 0;
   }
   return recentAlarmEvents
@@ -353,11 +353,126 @@ function getRecentAlarmEvents(userKey, since) {
     .slice(-20);
 }
 
+function dispatchUserAlarm(options, callback) {
+  const userKey = String((options && options.userKey) || "").trim();
+  if (!userKey) {
+    callback(new Error("Missing userKey"));
+    return;
+  }
+  const deviceName = String((options && options.deviceName) || "Sensor");
+  const isOpen = !!(options && options.isOpen);
+  const title = "Aura HomeSystems";
+  const bodyText = isOpen
+    ? deviceName + " was opened."
+    : deviceName + " was closed.";
+  const eventTag =
+    String((options && options.eventTag) || "").trim() ||
+    "aura-" + Date.now() + "-" + Math.floor(Math.random() * 1000);
+  const eventCreatedAt = Number((options && options.eventCreatedAt) || Date.now());
+  const email = String((options && options.email) || "");
+  const source = String((options && options.source) || "sensor-event");
+
+  rememberAlarmEvent({
+    userKey,
+    eventTag,
+    createdAt: eventCreatedAt,
+    title,
+    body: bodyText,
+    deviceName,
+    state: isOpen ? "open" : "closed",
+  });
+
+  sendPushToUser(
+    userKey,
+    title,
+    bodyText,
+    (err, sent, via) => {
+      if (err) {
+        callback(err);
+        return;
+      }
+      if (String(via || "").split("+").includes("android")) {
+        scheduleAlarmEmailFallback({
+          userKey,
+          email,
+          deviceName,
+          bodyText,
+          eventTag,
+        });
+      } else if (!sent) {
+        console.warn("[" + source + "] no push token; email fallback", userKey, eventTag);
+        sendAlarmFallbackEmail(userKey, email, deviceName, bodyText, eventTag);
+      }
+      console.log(
+        "[" + source + "]",
+        userKey,
+        "sent:",
+        sent,
+        "via",
+        via || "none",
+        deviceName,
+        isOpen ? "open" : "closed"
+      );
+      callback(null, { sent, via, eventTag, eventCreatedAt });
+    },
+    eventTag,
+    eventCreatedAt
+  );
+}
+
+const historyWatchAttached = new Set();
+
+function attachHistoryWatcher(userKey) {
+  if (!firebaseDb || !userKey || historyWatchAttached.has(userKey)) return;
+  historyWatchAttached.add(userKey);
+  firebaseDb.ref("users/" + userKey + "/history").on("child_added", (snap) => {
+    const entry = snap.val();
+    if (!entry || entry.fromServerApi) return;
+    const status = String(entry.status || "").toLowerCase();
+    if (status !== "open" && status !== "closed") return;
+    firebaseDb
+      .ref("users/" + userKey + "/systemEnabled")
+      .once("value")
+      .then((enabledSnap) => {
+        if (enabledSnap.val() !== true) {
+          console.log(
+            "[history-alarm] skipped; system off",
+            userKey,
+            entry.deviceName || entry.deviceId || "Sensor",
+            status
+          );
+          return;
+        }
+        dispatchUserAlarm(
+          {
+            userKey,
+            deviceName: entry.deviceName || entry.deviceId || "Sensor",
+            isOpen: status === "open",
+            source: "history-alarm",
+          },
+          () => {}
+        );
+      })
+      .catch(() => {});
+  });
+}
+
+function startFirebaseHistoryWatchers() {
+  if (!firebaseDb) return;
+  firebaseDb.ref("users").once("value", (snap) => {
+    snap.forEach((child) => attachHistoryWatcher(child.key));
+  });
+  firebaseDb.ref("users").on("child_added", (userSnap) => {
+    attachHistoryWatcher(userSnap.key);
+  });
+  console.log("[history-alarm] Firebase history watchers started");
+}
+
 function fetchPendingAlarmEvents(userKey, since, callback) {
   const sinceNum = (() => {
     const serverNow = Date.now();
     let value = Number(since) || 0;
-    if (value > serverNow + 60000) value = 0;
+    if (value > serverNow + 300000) value = 0;
     return value;
   })();
   const fromMemory = getRecentAlarmEvents(userKey, sinceNum);
@@ -1850,12 +1965,6 @@ const server = http.createServer((req, res) => {
         return;
       }
       const isOpen = state === "open" || state === true;
-      const title = "Aura HomeSystems";
-      const bodyText = isOpen
-        ? deviceName + " was opened."
-        : deviceName + " was closed.";
-      const eventTag = "aura-" + Date.now() + "-" + Math.floor(Math.random() * 1000);
-      const eventCreatedAt = Date.now();
       if (!firebaseDb || !firebaseAdmin) {
         res.writeHead(503, { "Content-Type": "application/json; charset=utf-8" });
         res.end(JSON.stringify({ error: "Firebase not configured" }));
@@ -1880,6 +1989,7 @@ const server = http.createServer((req, res) => {
           deviceName,
           status: isOpen ? "open" : "closed",
           timestamp,
+          fromServerApi: true,
         }),
         firebaseDb.ref("users/" + userKey + "/systemEnabled").once("value"),
       ])
@@ -1891,43 +2001,24 @@ const server = http.createServer((req, res) => {
             res.end(JSON.stringify({ success: true, sent: 0, via: "off" }));
             return;
           }
-          rememberAlarmEvent({
-            userKey,
-            eventTag,
-            createdAt: eventCreatedAt,
-            title,
-            body: bodyText,
-            deviceName,
-            state: isOpen ? "open" : "closed",
-          });
-          sendPushToUser(userKey, title, bodyText, (err, sent, via) => {
-            if (err) {
-              res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
-              res.end(JSON.stringify({ error: err.message }));
-              return;
+          dispatchUserAlarm(
+            {
+              userKey,
+              deviceName,
+              isOpen,
+              email: parsed.email,
+              source: "sensor-event",
+            },
+            (alarmErr, result) => {
+              if (alarmErr) {
+                res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+                res.end(JSON.stringify({ error: alarmErr.message }));
+                return;
+              }
+              res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+              res.end(JSON.stringify({ success: true, ...(result || {}) }));
             }
-            if (String(via || "").split("+").includes("android")) {
-              scheduleAlarmEmailFallback({
-                userKey,
-                email: parsed.email,
-                deviceName,
-                bodyText,
-                eventTag,
-              });
-            } else if (!sent) {
-              console.warn("[sensor-event] no push token; sending email fallback", userKey, eventTag);
-              sendAlarmFallbackEmail(
-                userKey,
-                parsed.email,
-                deviceName,
-                bodyText,
-                eventTag
-              );
-            }
-            console.log("[sensor-event]", userKey, "sent:", sent, "via", via || "none");
-            res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-            res.end(JSON.stringify({ success: true, sent, via, eventTag, eventCreatedAt }));
-          }, eventTag, eventCreatedAt);
+          );
         })
         .catch((err) => {
           res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
@@ -1987,4 +2078,5 @@ const server = http.createServer((req, res) => {
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   logStartupConfig();
+  startFirebaseHistoryWatchers();
 });

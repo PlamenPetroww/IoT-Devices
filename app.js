@@ -500,7 +500,11 @@ function initBuyPanel() {
                 return;
             }
             const { zone: zoneResult, totalDaysMin, totalDaysMax } = result;
-            const deliveryEur = zoneResult.currency === "BGN" ? zoneResult.priceMax / BGN_TO_EUR : zoneResult.priceMax;
+            const deliveryEur = pricingCfg.testMode
+                ? pricingCfg.testDeliveryEur
+                : zoneResult.currency === "BGN"
+                  ? zoneResult.priceMax / BGN_TO_EUR
+                  : zoneResult.priceMax;
             const priceStr = formatPriceCents(Math.round(deliveryEur * 100) / 100);
             const orderDate = new Date();
             const deliveryStart = addWorkingDays(orderDate, totalDaysMin);
@@ -517,6 +521,7 @@ function initBuyPanel() {
     const BGN_TO_EUR = 1.95583;
 
     function getDeliveryAmountEur() {
+        if (pricingCfg.testMode) return pricingCfg.testDeliveryEur;
         const zoneId = shippingZoneSelect && shippingZoneSelect.value ? shippingZoneSelect.value.trim() : "";
         const method = (shippingMethodSelect && shippingMethodSelect.value) || "standard";
         const result = zoneId ? getShippingForZone(zoneId, method) : null;
@@ -561,8 +566,14 @@ function initBuyPanel() {
         }
     });
 
-    const UNIT_PRICE_EUR = 59;
-    const BUNDLES = { 1: 59, 3: 159, 5: 249 };
+    const pricingCfg = window.AURA_PRICING || {
+        testMode: false,
+        unitPriceEur: 59,
+        bundles: { 1: 59, 3: 159, 5: 249 },
+        testDeliveryEur: 0.01,
+    };
+    const UNIT_PRICE_EUR = pricingCfg.unitPriceEur;
+    const BUNDLES = pricingCfg.bundles;
 
     function formatPrice(amount) {
         const lang = document.documentElement.lang || "en";
@@ -587,6 +598,44 @@ function initBuyPanel() {
         if (BUNDLES[q]) return BUNDLES[q];
         return q * UNIT_PRICE_EUR;
     }
+
+    function applyStaticPricingDisplay() {
+        document.querySelectorAll(".pricing-card").forEach((card) => {
+            const packBtn = card.querySelector("[data-pack]");
+            const qty = packBtn ? parseInt(packBtn.getAttribute("data-pack"), 10) : 0;
+            const priceEl = card.querySelector(".pricing-card-price");
+            if (!priceEl || !qty) return;
+            priceEl.textContent = formatPrice(getTotalForQty(qty)).replace(" €", "\u00a0€");
+        });
+
+        const buyPanelPrice = document.querySelector(".buy-panel-price");
+        if (buyPanelPrice) {
+            buyPanelPrice.textContent = formatPrice(UNIT_PRICE_EUR).replace(" €", "\u00a0€");
+        }
+
+        const schemaScript = document.querySelector('script[type="application/ld+json"]');
+        if (schemaScript && pricingCfg.testMode) {
+            try {
+                const data = JSON.parse(schemaScript.textContent);
+                if (data && data.offers) {
+                    data.offers.price = UNIT_PRICE_EUR.toFixed(2);
+                    schemaScript.textContent = JSON.stringify(data);
+                }
+            } catch (_) {}
+        }
+
+        if (pricingCfg.testMode && !document.getElementById("checkoutTestBanner")) {
+            const banner = document.createElement("div");
+            banner.id = "checkoutTestBanner";
+            banner.style.cssText =
+                "position:fixed;bottom:0;left:0;right:0;background:#f59e0b;color:#111;text-align:center;padding:8px 12px;font-size:14px;z-index:9999;";
+            banner.textContent =
+                "Тестови цени (0.01 €) – само за проверка на плащането с карта";
+            document.body.appendChild(banner);
+        }
+    }
+
+    applyStaticPricingDisplay();
 
     let cardPayModeActive = false;
     let revolutPayModeActive = false;

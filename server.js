@@ -70,8 +70,12 @@ function loadShippingZones() {
   }
 }
 
-const UNIT_PRICE_EUR = 59;
-const BUNDLES = { 1: 59, 3: 159, 5: 249 };
+const CHECKOUT_TEST_PRICES = process.env.CHECKOUT_TEST_PRICES === "1";
+const UNIT_PRICE_EUR = CHECKOUT_TEST_PRICES ? 0.01 : 59;
+const BUNDLES = CHECKOUT_TEST_PRICES
+  ? { 1: 0.01, 3: 0.03, 5: 0.05 }
+  : { 1: 59, 3: 159, 5: 249 };
+const TEST_DELIVERY_EUR = 0.01;
 const BGN_TO_EUR = 1.95583;
 
 function getTotalForQtyOrder(q) {
@@ -86,6 +90,7 @@ function hasExpressZone(zone) {
 }
 
 function getDeliveryEurForZone(zone, method) {
+  if (CHECKOUT_TEST_PRICES) return TEST_DELIVERY_EUR;
   if (!zone) return null;
   const useExpress = method === "express" && hasExpressZone(zone);
   const priceMax = useExpress ? zone.expressPriceMax : zone.priceMax;
@@ -1320,6 +1325,9 @@ function logStartupConfig() {
     hasResend ? "configured" : "missing RESEND_API_KEY"
   );
   console.log("[Aura] diagnostics: GET /api/health");
+  if (CHECKOUT_TEST_PRICES) {
+    console.log("[Aura] CHECKOUT_TEST_PRICES=1 — symbolic prices (0.01 EUR/unit, 0.01 EUR delivery)");
+  }
 }
 
 function sendPushToUser(userKey, title, body, callback, forcedEventTag, forcedEventCreatedAt) {
@@ -1597,7 +1605,13 @@ const server = http.createServer((req, res) => {
         ? String(parsed.description).slice(0, 255)
         : "Aura HomeSystems order";
 
-      if (currency !== "EUR" || !Number.isFinite(amountMinor) || amountMinor < 100 || amountMinor > 10000000) {
+      const minAmountMinor = CHECKOUT_TEST_PRICES ? 1 : 100;
+      if (
+        currency !== "EUR" ||
+        !Number.isFinite(amountMinor) ||
+        amountMinor < minAmountMinor ||
+        amountMinor > 10000000
+      ) {
         res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
         res.end(JSON.stringify({ error: "Invalid amount or currency" }));
         return;

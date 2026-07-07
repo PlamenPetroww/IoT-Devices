@@ -557,10 +557,11 @@ function initBuyPanel() {
         populateDeliveryCountryOptions();
         updateDeliveryEstimate();
         if (cardPayModeActive && buySubmitBtn) {
-            buySubmitBtn.textContent =
+            setSubmitButtonText(
                 tBuy("buyPanel.payWithCardConfirm") ||
-                tBuy("buyPanel.payWithCard") ||
-                "Pay with card";
+                    tBuy("buyPanel.payWithCard") ||
+                    "Pay with card"
+            );
         } else {
             resetSubmitButtonLabel();
         }
@@ -644,6 +645,11 @@ function initBuyPanel() {
     let cardFieldInstance = null;
     let lastCardMountKey = "";
     const cardMount = document.getElementById("buyCardPayMount");
+    const buyCardShell = document.getElementById("buyCardShell");
+    const buyCardFieldLoading = document.getElementById("buyCardFieldLoading");
+    const buyCheckoutLoading = document.getElementById("buyCheckoutLoading");
+    const buyCheckoutLoadingText = document.getElementById("buyCheckoutLoadingText");
+    const buyPaySection = document.getElementById("buyPanelPaySection");
     const revolutMount = document.getElementById("buyRevolutPayMount");
     const payHintEl = document.getElementById("buyPayHint");
     const cardFieldHintEl = document.getElementById("buyCardFieldHint");
@@ -657,14 +663,79 @@ function initBuyPanel() {
         return typeof getTranslation === "function" ? getTranslation(lang, key) : "";
     }
 
+    function getSubmitButtonLabelEl() {
+        return buySubmitBtn ? buySubmitBtn.querySelector(".buy-submit-label") : null;
+    }
+
+    function setSubmitButtonText(text) {
+        if (!buySubmitBtn) return;
+        const label = getSubmitButtonLabelEl();
+        if (label) label.textContent = text;
+        else buySubmitBtn.textContent = text;
+    }
+
+    function getSubmitButtonText() {
+        if (!buySubmitBtn) return "";
+        const label = getSubmitButtonLabelEl();
+        return label ? label.textContent : buySubmitBtn.textContent;
+    }
+
+    function setSubmitButtonBusy(busy, messageKey) {
+        if (!buySubmitBtn) return;
+        const spinner = buySubmitBtn.querySelector(".buy-submit-spinner");
+        buySubmitBtn.disabled = busy;
+        buySubmitBtn.classList.toggle("is-busy", busy);
+        buySubmitBtn.setAttribute("aria-disabled", busy ? "true" : "false");
+        if (spinner) spinner.hidden = !busy;
+        if (busy && messageKey) setSubmitButtonText(tBuy(messageKey));
+    }
+
+    function setBuyCheckoutLoading(active, messageKey) {
+        if (!buyCheckoutLoading) return;
+        if (active) {
+            buyCheckoutLoading.hidden = false;
+            buyCheckoutLoading.classList.add("is-visible");
+            if (buyCheckoutLoadingText) {
+                buyCheckoutLoadingText.textContent = messageKey ? tBuy(messageKey) : "";
+            }
+            if (buyPaySection) buyPaySection.setAttribute("aria-busy", "true");
+        } else {
+            buyCheckoutLoading.classList.remove("is-visible");
+            buyCheckoutLoading.hidden = true;
+            if (buyPaySection) buyPaySection.removeAttribute("aria-busy");
+        }
+    }
+
+    function setCardFieldMounting(active) {
+        if (buyCardShell) buyCardShell.hidden = !active;
+        if (buyCardFieldLoading) {
+            buyCardFieldLoading.hidden = !active;
+            if (active) {
+                const loadingText = buyCardFieldLoading.querySelector(".buy-card-field-loading-text");
+                if (loadingText) loadingText.textContent = tBuy("buyPanel.cardFieldLoading") || loadingText.textContent;
+            }
+        }
+        if (active && cardMount) cardMount.hidden = true;
+    }
+
     function resetSubmitButtonLabel() {
-        if (buySubmitBtn) buySubmitBtn.textContent = tBuy("buyPanel.submit") || "Order";
+        if (cardPayModeActive) {
+            setSubmitButtonText(
+                tBuy("buyPanel.payWithCardConfirm") ||
+                    tBuy("buyPanel.payWithCard") ||
+                    "Pay with card"
+            );
+            return;
+        }
+        setSubmitButtonText(tBuy("buyPanel.submit") || "Order");
     }
 
     function teardownOnlinePay() {
         cardPayModeActive = false;
         revolutPayModeActive = false;
         lastCardMountKey = "";
+        setBuyCheckoutLoading(false);
+        setCardFieldMounting(false);
         if (cardFieldInstance) {
             try {
                 cardFieldInstance.destroy();
@@ -675,6 +746,8 @@ function initBuyPanel() {
             cardMount.innerHTML = "";
             cardMount.hidden = true;
         }
+        if (buyCardShell) buyCardShell.hidden = true;
+        if (buyCardFieldLoading) buyCardFieldLoading.hidden = true;
         if (revolutMount) {
             revolutMount.innerHTML = "";
             revolutMount.hidden = true;
@@ -684,6 +757,9 @@ function initBuyPanel() {
         if (cardValidationHintEl) cardValidationHintEl.hidden = true;
         if (buySubmitBtn) {
             buySubmitBtn.hidden = false;
+            buySubmitBtn.classList.remove("is-busy");
+            const spinner = buySubmitBtn.querySelector(".buy-submit-spinner");
+            if (spinner) spinner.hidden = true;
             resetSubmitButtonLabel();
         }
         updateOrderButtonState();
@@ -796,8 +872,13 @@ function initBuyPanel() {
             return false;
         }
 
-        const origLabel = buySubmitBtn ? buySubmitBtn.textContent : "";
-        if (buySubmitBtn && !revolutPayModeActive && !cardPayModeActive) { buySubmitBtn.disabled = true; buySubmitBtn.textContent = "..."; }
+        const origLabel = getSubmitButtonText();
+        if (buySubmitBtn && !revolutPayModeActive && !cardPayModeActive) {
+            setSubmitButtonBusy(true, "buyPanel.orderProcessing");
+        }
+        if (fromCardPay || fromRevolutPay) {
+            setBuyCheckoutLoading(true, "buyPanel.orderProcessing");
+        }
         if (buyStatus && !fromRevolutPay && !fromCardPay) {
             buyStatus.textContent = "";
             buyStatus.className = "form-status";
@@ -888,7 +969,19 @@ function initBuyPanel() {
             }
             return false;
         } finally {
-            if (buySubmitBtn && !revolutPayModeActive && !cardPayModeActive) { buySubmitBtn.disabled = false; buySubmitBtn.textContent = origLabel; }
+            setBuyCheckoutLoading(false);
+            if (buySubmitBtn) {
+                buySubmitBtn.classList.remove("is-busy");
+                const spinner = buySubmitBtn.querySelector(".buy-submit-spinner");
+                if (spinner) spinner.hidden = true;
+                if (cardPayModeActive) {
+                    buySubmitBtn.disabled = false;
+                    resetSubmitButtonLabel();
+                } else if (!revolutPayModeActive) {
+                    buySubmitBtn.disabled = false;
+                    setSubmitButtonText(origLabel);
+                }
+            }
         }
     }
 
@@ -928,6 +1021,8 @@ function initBuyPanel() {
                 cardFieldInstance = null;
             }
             cardPayModeActive = false;
+            setCardFieldMounting(false);
+            if (buyCardShell) buyCardShell.hidden = true;
             if (cardMount) {
                 cardMount.innerHTML = "";
                 cardMount.hidden = true;
@@ -956,6 +1051,8 @@ function initBuyPanel() {
         }
         cardMount.innerHTML = "";
         cardPayModeActive = false;
+        setCardFieldMounting(true);
+        if (buyCardShell) buyCardShell.hidden = false;
 
         if (buyStatus) {
             buyStatus.textContent = "";
@@ -973,10 +1070,12 @@ function initBuyPanel() {
                 theme: "light",
                 locale: document.documentElement.lang || "auto",
                 onSuccess: function () {
+                    setBuyCheckoutLoading(true, "buyPanel.orderProcessing");
                     submitBuyPanelOrder({ fromCardPay: true });
                 },
                 onError: function (err) {
-                    if (buySubmitBtn) buySubmitBtn.disabled = false;
+                    setBuyCheckoutLoading(false);
+                    setSubmitButtonBusy(false);
                     if (buyStatus) {
                         buyStatus.textContent = (err && err.message) || tBuy("buyPanel.cardPayInitError") || "";
                         buyStatus.className = "form-status form-status-error";
@@ -997,6 +1096,7 @@ function initBuyPanel() {
                     buySubmitBtn.setAttribute("aria-disabled", "false");
                 },
             });
+            setCardFieldMounting(false);
             cardMount.hidden = false;
             if (cardFieldHintEl) {
                 cardFieldHintEl.hidden = false;
@@ -1008,10 +1108,14 @@ function initBuyPanel() {
                 buySubmitBtn.hidden = false;
                 buySubmitBtn.disabled = false;
                 buySubmitBtn.setAttribute("aria-disabled", "false");
-                buySubmitBtn.textContent =
+                buySubmitBtn.classList.remove("is-busy");
+                const spinner = buySubmitBtn.querySelector(".buy-submit-spinner");
+                if (spinner) spinner.hidden = true;
+                setSubmitButtonText(
                     tBuy("buyPanel.payWithCardConfirm") ||
-                    tBuy("buyPanel.payWithCard") ||
-                    "Pay with card";
+                        tBuy("buyPanel.payWithCard") ||
+                        "Pay with card"
+                );
             }
             if (buyPayFooter) {
                 requestAnimationFrame(function () {
@@ -1021,6 +1125,8 @@ function initBuyPanel() {
         } catch (err) {
             cardPayModeActive = false;
             lastCardMountKey = "";
+            setCardFieldMounting(false);
+            if (buyCardShell) buyCardShell.hidden = true;
             if (cardMount) cardMount.hidden = true;
             if (cardFieldHintEl) cardFieldHintEl.hidden = true;
             if (buyStatus) {
@@ -1264,7 +1370,8 @@ function initBuyPanel() {
                 return;
             }
             const address = getRevolutAddressMeta();
-            if (buySubmitBtn) buySubmitBtn.disabled = true;
+            setBuyCheckoutLoading(true, "buyPanel.paymentProcessing");
+            setSubmitButtonBusy(true, "buyPanel.paymentProcessing");
             cardFieldInstance.submit({
                 name: name,
                 email: email,
@@ -1273,7 +1380,11 @@ function initBuyPanel() {
             });
             return;
         }
+        setBuyCheckoutLoading(true, "buyPanel.orderProcessing");
+        setSubmitButtonBusy(true, "buyPanel.orderProcessing");
         await submitBuyPanelOrder({});
+        setBuyCheckoutLoading(false);
+        setSubmitButtonBusy(false);
     });
 }
 

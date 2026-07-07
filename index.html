@@ -1309,11 +1309,26 @@
                 placeholder="Име Фамилия (както на картата)"
               />
             </label>
-            <div
-              id="buyCardPayMount"
-              class="buy-revolut-pay-mount buy-card-pay-mount"
-              hidden
-            ></div>
+            <div class="buy-card-shell" id="buyCardShell" hidden>
+              <div class="buy-card-shell-header">
+                <span class="buy-card-shell-title" data-i18n="buyPanel.cardDetailsTitle">Данни на картата</span>
+                <span class="buy-card-shell-badge" data-i18n="buyPanel.cardSecureBadge">Защитено плащане</span>
+              </div>
+              <div class="buy-card-shell-body">
+                <div id="buyCardFieldLoading" class="buy-card-field-loading" hidden>
+                  <div class="buy-checkout-spinner buy-checkout-spinner--sm" aria-hidden="true">
+                    <img src="icons/icon-192.png" alt="" width="36" height="36" />
+                    <span class="buy-checkout-spinner-ring"></span>
+                  </div>
+                  <p class="buy-card-field-loading-text" data-i18n="buyPanel.cardFieldLoading">Подготвяме полето за карта…</p>
+                </div>
+                <div
+                  id="buyCardPayMount"
+                  class="buy-card-pay-mount"
+                  hidden
+                ></div>
+              </div>
+            </div>
             <p id="buyCardFieldHint" class="buy-panel-play-note buy-card-field-hint" hidden data-i18n="buyPanel.cardFieldHint">
               Въведете номер на карта, срок (MM/YY) и CVV. После натиснете „Плати с карта“ по-долу.
             </p>
@@ -1325,6 +1340,21 @@
               class="buy-revolut-pay-mount"
               hidden
             ></div>
+            <div
+              id="buyCheckoutLoading"
+              class="buy-checkout-loading"
+              hidden
+              aria-live="polite"
+              aria-busy="true"
+            >
+              <div class="buy-checkout-loading-card">
+                <div class="buy-checkout-spinner" aria-hidden="true">
+                  <img src="icons/icon-192.png" alt="" width="48" height="48" />
+                  <span class="buy-checkout-spinner-ring"></span>
+                </div>
+                <p id="buyCheckoutLoadingText" class="buy-checkout-loading-text"></p>
+              </div>
+            </div>
             <div class="buy-panel-pay-footer" id="buyPanelPayFooter">
             <button
               type="submit"
@@ -1333,7 +1363,10 @@
               disabled
               aria-disabled="true"
             >
-              Поръчай
+              <span class="buy-submit-btn-content">
+                <span class="buy-submit-label" data-i18n="buyPanel.submit">Поръчай</span>
+                <span class="buy-submit-spinner" hidden aria-hidden="true"></span>
+              </span>
             </button>
             </div>
             </div>

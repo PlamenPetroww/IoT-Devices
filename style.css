@@ -2583,24 +2583,155 @@ main {
 }
 
 .buy-card-pay-mount {
-    min-height: 132px;
-    padding: 12px 14px;
-    border-radius: 10px;
-    background: #f1f5f9;
+    width: 100%;
+    max-width: 360px;
+    min-height: 156px;
+    margin: 0 auto;
+    padding: 18px 16px 14px;
+    border-radius: 0;
+    background: #ffffff;
+    border: none;
+}
+
+.buy-card-pay-mount:not([hidden]) {
+    display: block;
+}
+
+.buy-card-shell {
+    width: 100%;
+    max-width: 360px;
+    margin: 8px auto 0;
+    border-radius: 16px;
+    overflow: hidden;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
     border: 1px solid rgba(148, 163, 184, 0.45);
+    box-shadow:
+        0 10px 28px rgba(15, 23, 42, 0.14),
+        0 0 0 1px rgba(255, 255, 255, 0.65) inset;
+}
+
+.buy-card-shell-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 11px 16px;
+    background: rgba(15, 23, 42, 0.04);
+    border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+}
+
+.buy-card-shell-title {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #0f172a;
+}
+
+.buy-card-shell-badge {
+    font-size: 11px;
+    font-weight: 600;
+    color: #059669;
+    white-space: nowrap;
+}
+
+.buy-card-shell-badge::before {
+    content: "🔒 ";
+}
+
+.buy-card-shell-body {
+    position: relative;
+    min-height: 156px;
+    background: #ffffff;
+}
+
+.buy-card-field-loading {
+    min-height: 156px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    padding: 28px 20px;
+    text-align: center;
+}
+
+.buy-card-field-loading-text {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.45;
+    color: #475569;
+}
+
+.buy-card-pay-mount > div,
+.buy-card-pay-mount iframe {
+    width: 100% !important;
+    max-width: 100% !important;
+}
+
+#cardholderField {
+    max-width: 360px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .buy-card-field-hint {
-    max-width: 320px;
+    max-width: 360px;
     align-self: center;
     text-align: center;
+    margin-top: 10px;
 }
 
 .buy-card-validation-hint {
-    max-width: 320px;
+    max-width: 360px;
     align-self: center;
     text-align: center;
     color: var(--danger);
+}
+
+.buy-checkout-spinner {
+    position: relative;
+    width: 64px;
+    height: 64px;
+    flex-shrink: 0;
+}
+
+.buy-checkout-spinner--sm {
+    width: 52px;
+    height: 52px;
+}
+
+.buy-checkout-spinner img {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    object-fit: cover;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+}
+
+.buy-checkout-spinner--sm img {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+}
+
+.buy-checkout-spinner-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 3px solid rgba(34, 197, 94, 0.18);
+    border-top-color: var(--accent-strong, #22c55e);
+    animation: buy-checkout-spin 0.85s linear infinite;
+}
+
+@keyframes buy-checkout-spin {
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .buy-panel-pay-section {
@@ -2608,6 +2739,69 @@ main {
     flex-direction: column;
     gap: 12px;
     margin-top: 4px;
+    position: relative;
+}
+
+.buy-checkout-loading {
+    position: absolute;
+    inset: -4px 0 0;
+    z-index: 6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+    background: rgba(2, 6, 23, 0.78);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border-radius: 14px;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+
+.buy-checkout-loading.is-visible {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+.buy-checkout-loading-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    max-width: 280px;
+    text-align: center;
+}
+
+.buy-checkout-loading-text {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.92);
+}
+
+.buy-submit-btn-content {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.buy-submit-spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: buy-checkout-spin 0.7s linear infinite;
+    flex-shrink: 0;
+}
+
+.cta-submit.is-busy {
+    opacity: 0.94;
+    cursor: wait;
 }
 
 .buy-panel-pay-footer {

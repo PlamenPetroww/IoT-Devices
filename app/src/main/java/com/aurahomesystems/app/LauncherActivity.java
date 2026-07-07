@@ -15,6 +15,7 @@
  */
 package com.aurahomesystems.app;
 
+import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.net.Uri;
 import android.content.pm.PackageManager;
@@ -34,6 +35,7 @@ public class LauncherActivity
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        handleAlarmNotificationIntent(getIntent());
         // Setting an orientation crashes the app due to the transparent background on Android 8.0
         // Oreo and below. We only set the orientation on Oreo and above. This only affects the
         // splash screen and Chrome will still respect the orientation.
@@ -43,6 +45,32 @@ public class LauncherActivity
         } else {
             setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
         }
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleAlarmNotificationIntent(intent);
+    }
+
+    private void handleAlarmNotificationIntent(Intent intent) {
+        if (intent == null) {
+            return;
+        }
+        String eventTag = intent.getStringExtra(AuraFirebaseMessagingService.EXTRA_EVENT_TAG);
+        if (eventTag == null || eventTag.trim().isEmpty()) {
+            return;
+        }
+        String userKey = intent.getStringExtra(AuraFirebaseMessagingService.EXTRA_USER_KEY);
+        NativePushRegistrar.sendAck(
+                this,
+                "opened",
+                eventTag.trim(),
+                AuraFirebaseMessagingService.CHANNEL_ID,
+                userKey);
+        intent.removeExtra(AuraFirebaseMessagingService.EXTRA_EVENT_TAG);
+        intent.removeExtra(AuraFirebaseMessagingService.EXTRA_USER_KEY);
     }
 
     @Override

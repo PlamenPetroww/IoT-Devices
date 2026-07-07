@@ -8,6 +8,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.media.AudioAttributes;
 import android.os.Build;
+import android.service.notification.StatusBarNotification;
 
 import androidx.core.app.NotificationCompat;
 
@@ -18,6 +19,8 @@ import java.util.Map;
 
 public class AuraFirebaseMessagingService extends FirebaseMessagingService {
     public static final String CHANNEL_ID = "aura_alarm_alerts_v2";
+    public static final String EXTRA_EVENT_TAG = "alarm_event_tag";
+    public static final String EXTRA_USER_KEY = "alarm_user_key";
     private static final String PREFS = "aura_app";
     private static final String KEY_SHOWN_EVENT_TAGS = "shown_event_tags";
 
@@ -64,14 +67,14 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
         NativePushRegistrar.sendAck(this, "received", eventTag, "", userKey);
         if (remoteMessage.getNotification() != null) {
             RemoteMessage.Notification n = remoteMessage.getNotification();
-            showAlarmNotification(
+            boolean shown = showAlarmNotification(
                     this,
                     n.getTitle() != null ? n.getTitle() : "Aura HomeSystems",
                     n.getBody() != null ? n.getBody() : "",
                     true,
                     eventTag,
                     userKey);
-            if (eventCreatedAt > 0L || (eventTag != null && !eventTag.isEmpty())) {
+            if (shown && (eventCreatedAt > 0L || (eventTag != null && !eventTag.isEmpty()))) {
                 AlarmMonitorService.rememberSeenEvent(this, eventTag, eventCreatedAt);
             }
             return;
@@ -84,13 +87,13 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
         String title = data.containsKey("title") ? data.get("title") : "Aura HomeSystems";
         String body = data.containsKey("body") ? data.get("body") : "";
         boolean playSound = !"0".equals(data.get("playSound"));
-        showAlarmNotification(this, title, body, playSound, eventTag, userKey);
-        if (eventCreatedAt > 0L || (eventTag != null && !eventTag.isEmpty())) {
+        boolean shown = showAlarmNotification(this, title, body, playSound, eventTag, userKey);
+        if (shown && (eventCreatedAt > 0L || (eventTag != null && !eventTag.isEmpty()))) {
             AlarmMonitorService.rememberSeenEvent(this, eventTag, eventCreatedAt);
         }
     }
 
-    public static void showAlarmNotification(
+    public static boolean showAlarmNotification(
             Context context,
             String title,
             String body,
@@ -100,23 +103,42 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
         if (!claimEventForNotification(context, eventTag)) {
             android.util.Log.i("AuraFCM", "skip duplicate notification " + eventTag);
             NativePushRegistrar.sendAck(context, "skipped_duplicate", eventTag, "", userKey);
-            return;
+            return false;
         }
         if (!NotificationPermissionHelper.areNotificationsEnabled(context)) {
             android.util.Log.w("AuraFCM", "Notifications disabled — enable in phone Settings");
             NativePushRegistrar.sendAck(
                     context, "blocked_notifications_disabled", eventTag, "", userKey);
-            return;
+            return false;
         }
         ensureChannel(context, playSound);
 
         NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         Intent intent = new Intent(context, LauncherActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        if (eventTag != null && !eventTag.isEmpty()) {
+            intent.putExtra(EXTRA_EVENT_TAG, eventTag);
+        }
+        if (userKey != null && !userKey.isEmpty()) {
+            intent.putExtra(EXTRA_USER_KEY, userKey);
+        }
         PendingIntent pendingIntent = PendingIntent.getActivity(
                 context,
-                (int) (System.currentTimeMillis() & 0xffff),
+                notificationRequestCode(eventTag),
                 intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        Intent dismissIntent = new Intent(context, NotificationDismissReceiver.class);
+        if (eventTag != null && !eventTag.isEmpty()) {
+            dismissIntent.putExtra(NotificationDismissReceiver.EXTRA_EVENT_TAG, eventTag);
+        }
+        if (userKey != null && !userKey.isEmpty()) {
+            dismissIntent.putExtra(NotificationDismissReceiver.EXTRA_USER_KEY, userKey);
+        }
+        PendingIntent deleteIntent = PendingIntent.getBroadcast(
+                context,
+                notificationRequestCode(eventTag) + 1,
+                dismissIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
@@ -125,6 +147,7 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
                 .setContentText(body)
                 .setAutoCancel(true)
                 .setContentIntent(pendingIntent)
+                .setDeleteIntent(deleteIntent)
                 .setPriority(NotificationCompat.PRIORITY_MAX)
                 .setCategory(NotificationCompat.CATEGORY_ALARM)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
@@ -137,11 +160,46 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
             builder.setSilent(true);
         }
 
-        int notificationId = (eventTag != null && !eventTag.isEmpty())
+        int notificationId = notificationIdForEvent(eventTag);
+        nm.notify(notificationId, builder.build());
+        if (!isNotificationActive(nm, notificationId)) {
+            android.util.Log.w("AuraFCM", "notification not active after notify " + eventTag);
+            NativePushRegistrar.sendAck(context, "notify_post_failed", eventTag, "", userKey);
+            return false;
+        }
+        NativePushRegistrar.sendAck(context, "shown", eventTag, CHANNEL_ID, userKey);
+        return true;
+    }
+
+    private static int notificationRequestCode(String eventTag) {
+        return (eventTag != null && !eventTag.isEmpty())
                 ? (eventTag.hashCode() & 0x7fffffff)
                 : (int) (System.currentTimeMillis() & 0xfffffff);
-        nm.notify(notificationId, builder.build());
-        NativePushRegistrar.sendAck(context, "shown", eventTag, CHANNEL_ID, userKey);
+    }
+
+    private static int notificationIdForEvent(String eventTag) {
+        return notificationRequestCode(eventTag);
+    }
+
+    private static boolean isNotificationActive(NotificationManager nm, int notificationId) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M || nm == null) {
+            return true;
+        }
+        try {
+            StatusBarNotification[] active = nm.getActiveNotifications();
+            if (active == null) {
+                return false;
+            }
+            for (StatusBarNotification sbn : active) {
+                if (sbn.getId() == notificationId) {
+                    return true;
+                }
+            }
+        } catch (Exception e) {
+            android.util.Log.w("AuraFCM", "getActiveNotifications failed", e);
+            return true;
+        }
+        return false;
     }
 
     private static long parseLong(String value) {

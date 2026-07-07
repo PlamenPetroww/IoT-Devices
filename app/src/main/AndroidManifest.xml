@@ -82,6 +82,7 @@
 
         <activity android:name="LauncherActivity"
             android:alwaysRetainTaskState="true"
+            android:launchMode="singleTop"
             android:label="@string/launcherName"
             android:exported="true">
             <meta-data android:name="android.support.customtabs.trusted.DEFAULT_URL"
@@ -190,6 +191,10 @@
             android:name=".AlarmMonitorService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
+
+        <receiver
+            android:name=".NotificationDismissReceiver"
+            android:exported="false" />
 
         <activity
             android:name=".NativePushBridgeActivity"

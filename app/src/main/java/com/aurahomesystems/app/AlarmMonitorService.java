@@ -31,6 +31,7 @@ public class AlarmMonitorService extends Service {
 
     private volatile boolean running;
     private Thread worker;
+    private int pollFailures;
 
     static void startIfConfigured(Context context) {
         Intent intent = new Intent(context, AlarmMonitorService.class);
@@ -97,20 +98,27 @@ public class AlarmMonitorService extends Service {
             long delay = POLL_WHILE_DISARMED_MS;
             try {
                 PollResult result = pollAlarmEvents();
+                pollFailures = 0;
                 delay = result.armed ? POLL_WHILE_ARMED_MS : POLL_WHILE_DISARMED_MS;
                 for (AlarmEvent event : result.events) {
                     NativePushRegistrar.sendAck(this, "received", event.eventTag, "", event.userKey);
-                    AuraFirebaseMessagingService.showAlarmNotification(
+                    boolean shown = AuraFirebaseMessagingService.showAlarmNotification(
                             this,
                             event.title,
                             event.body,
                             true,
                             event.eventTag,
                             event.userKey);
-                    rememberSeenEvent(this, event.eventTag, event.createdAt);
+                    if (shown) {
+                        rememberSeenEvent(this, event.eventTag, event.createdAt);
+                    }
                 }
             } catch (Exception e) {
+                pollFailures++;
                 Log.w(TAG, "monitor poll failed", e);
+                if (pollFailures <= 12) {
+                    delay = 2000L;
+                }
             }
             sleepQuiet(delay);
         }

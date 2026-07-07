@@ -40,10 +40,15 @@ if (/^https?:\/\//.test(KEEP_ALIVE_URL)) {
   const pingMod = KEEP_ALIVE_URL.startsWith("https") ? https : http;
   setInterval(() => {
     pingMod
-      .get(KEEP_ALIVE_URL, (r) => r.resume())
-      .on("error", () => {});
-  }, 10 * 60 * 1000);
-  console.log("[keep-alive] Pinging", KEEP_ALIVE_URL, "every 10 min");
+      .get(KEEP_ALIVE_URL, (r) => {
+        r.on("data", () => {});
+        r.on("end", () => {});
+      })
+      .on("error", (err) => {
+        console.warn("[keep-alive] ping failed:", err && err.message ? err.message : err);
+      });
+  }, 5 * 60 * 1000);
+  console.log("[keep-alive] Pinging", KEEP_ALIVE_URL, "every 5 min");
 }
 
 /** Strip accidental "sandbox " prefix from pasted Revolut keys. */
@@ -331,11 +336,12 @@ function rememberNativePushAck(eventTag, stage) {
   nativePushAckState.set(tag, current);
 }
 
-function hasNativePushShownAck(eventTag) {
+function shouldSkipAlarmEmailFallback(eventTag) {
   const tag = String(eventTag || "").trim();
   const row = tag ? nativePushAckState.get(tag) : null;
   if (!row || !row.stages) return false;
-  return Boolean(row.stages.shown || row.stages.alarm_started || row.stages.dismissed);
+  // Do not treat notify() "shown" as proof the user saw the alert after Doze/standby.
+  return Boolean(row.stages.opened || row.stages.dismissed);
 }
 
 function cleanupNativePushAckState() {
@@ -782,7 +788,7 @@ function buildAlarmFallbackEmail(deviceName, bodyText) {
       "<body style=\"font-family:system-ui,sans-serif;line-height:1.55;color:#1a1a1a;max-width:560px\">" +
       "<h2 style=\"margin:0 0 12px;color:#b91c1c\">Aura HomeSystems alarm alert</h2>" +
       "<p><strong>" + safeBody + "</strong></p>" +
-      "<p>The Android app did not confirm the phone notification within 60 seconds, so we are sending this backup email alert.</p>" +
+      "<p>No interaction with the phone alert was detected within 60 seconds, so we are sending this backup email.</p>" +
       "<p style=\"font-size:0.9rem;color:#555\">Device: " + safeDeviceName + "</p>" +
       "</body></html>",
   };
@@ -821,6 +827,7 @@ function sendAlarmFallbackEmail(userKey, fallbackEmail, deviceName, bodyText, ev
           console.error("[alarm-email-fallback] HTTP:", status, respBody || "");
         } else {
           console.log("[alarm-email-fallback] sent", userKey, email, eventTag);
+          clearPendingAlarmEvent(userKey, eventTag);
         }
       }
     );
@@ -831,11 +838,11 @@ function scheduleAlarmEmailFallback(details) {
   const eventTag = String((details && details.eventTag) || "").trim();
   if (!eventTag) return;
   setTimeout(() => {
-    if (hasNativePushShownAck(eventTag)) {
-      console.log("[alarm-email-fallback] skipped; Android ACK shown", eventTag);
+    if (shouldSkipAlarmEmailFallback(eventTag)) {
+      console.log("[alarm-email-fallback] skipped; user opened/dismissed notification", eventTag);
       return;
     }
-    console.warn("[alarm-email-fallback] no Android shown ACK after 60s", eventTag);
+    console.warn("[alarm-email-fallback] no user interaction after 60s", eventTag);
     sendAlarmFallbackEmail(
       details.userKey,
       details.email,
@@ -1455,9 +1462,19 @@ function sendPushToUser(userKey, title, body, callback, forcedEventTag, forcedEv
         },
       };
       if (isNative) {
+        message.notification = {
+          title: titleStr,
+          body: bodyStr,
+        };
         message.android = {
           priority: "high",
           ttl: 86400000,
+          notification: {
+            channelId: "aura_alarm_alerts_v2",
+            notificationPriority: "PRIORITY_MAX",
+            defaultSound: playSound,
+            defaultVibrateTimings: playSound,
+          },
         };
       } else {
         message.webpush = {
@@ -2008,7 +2025,7 @@ const server = http.createServer((req, res) => {
       const userKey = String(parsed.userKey || "").slice(0, 120);
       const channelId = String(parsed.channelId || "").slice(0, 120);
       rememberNativePushAck(eventTag, stage);
-      if (stage === "shown" && userKey) {
+      if ((stage === "opened" || stage === "dismissed") && userKey) {
         clearPendingAlarmEvent(userKey, eventTag);
       }
       console.log(

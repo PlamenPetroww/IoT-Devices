@@ -117,6 +117,12 @@
     state.foregroundBound = true;
     messaging.onMessage(function (payload) {
       try {
+        if (
+          isAuraAndroidTwa() ||
+          (payload && payload.data && payload.data.skipWeb === "1")
+        ) {
+          return;
+        }
         var title =
           (payload && payload.data && payload.data.title) || "Aura HomeSystems";
         var body = (payload && payload.data && payload.data.body) || "";
@@ -287,10 +293,24 @@
     Object.keys(val).forEach(function (k) {
       if (k === "native_android") return;
       var row = val[k];
-      if (row && row.token && row.platform !== "android") {
+      if (row && row.token) {
         state.db.ref(state.userPath + "/pushTokens/" + k).remove().catch(function () {});
       }
     });
+  }
+
+  async function disableWebPushOnTwa() {
+    if (!isAuraAndroidTwa()) return;
+    await removeWebPushTokensOnTwa();
+    try {
+      if (typeof firebase !== "undefined" && firebase.messaging) {
+        await firebase.messaging().deleteToken();
+      }
+    } catch (_) {}
+    try {
+      localStorage.removeItem("auraPushToken");
+      localStorage.removeItem("auraPushRegistered");
+    } catch (_) {}
   }
 
   async function ensureNativePushLinked() {
@@ -906,6 +926,7 @@
         await removeWebPushTokensOnTwa();
         await syncPushStatusFromServer();
       }
+      await disableWebPushOnTwa();
       if (state.pushKind !== "native") {
         ensureNativePushLinked().catch(function () {});
       } else {

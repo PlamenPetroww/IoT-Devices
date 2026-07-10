@@ -1,12 +1,337 @@
 import { initializeApp } from "firebase-admin/app";
 import { getDatabase } from "firebase-admin/database";
+import { getMessaging } from "firebase-admin/messaging";
 import { onRequest } from "firebase-functions/v2/https";
+import { onValueCreated } from "firebase-functions/v2/database";
 import { Resend } from "resend";
 import crypto from "crypto";
 
 initializeApp();
 const rtdb = getDatabase();
-const resend = new Resend(process.env.RESEND_API_KEY || "");
+const messaging = getMessaging();
+
+function getResendClient() {
+    const apiKey = String(process.env.RESEND_API_KEY || "").trim();
+    if (!apiKey) return null;
+    return new Resend(apiKey);
+}
+
+const RTDB_INSTANCE = "cleverhaus-petrov-default-rtdb";
+const ALARM_DEDUPE_MS = 45000;
+const ALARM_EMAIL_FALLBACK_MS = 60000;
+
+function emailFromUserKey(userKey) {
+    const marker = "_at_";
+    const at = userKey.indexOf(marker);
+    if (at <= 0) return "";
+    const local = userKey.slice(0, at).replace(/-/g, ".");
+    const domain = userKey.slice(at + marker.length).replace(/-/g, ".");
+    const email = `${local}@${domain}`;
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : "";
+}
+
+async function pushWasShownOnDevice(userKey, eventTag) {
+    const snap = await rtdb.ref(`users/${userKey}/pushAcks/${eventTag}`).get();
+    const stages = snap.val() || {};
+    return Boolean(stages.shown || stages.opened || stages.dismissed);
+}
+
+async function sendAlarmFallbackEmail(userKey, deviceName, bodyText, eventTag) {
+    const resend = getResendClient();
+    if (!resend) {
+        console.warn("[sensor-alarm] email skipped; RESEND_API_KEY missing", userKey, eventTag);
+        return;
+    }
+    const email = emailFromUserKey(userKey);
+    if (!email) {
+        console.warn("[sensor-alarm] email skipped; no email for", userKey, eventTag);
+        return;
+    }
+    const fromAddr = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
+    await resend.emails.send({
+        from: fromAddr,
+        to: [email],
+        subject: `Alarm alert - ${deviceName}`,
+        html:
+            `<p><strong>${bodyText}</strong></p>` +
+            `<p>No phone alert was confirmed within 60 seconds, so this backup email was sent.</p>`,
+    });
+    await rtdb.ref(`users/${userKey}/pendingAlarmEvents/${eventTag}`).remove();
+    console.log("[sensor-alarm] email fallback sent", userKey, email, eventTag);
+}
+
+function safeDeviceKey(deviceId, deviceName) {
+    return String(deviceId || deviceName || "sensor")
+        .trim()
+        .toLowerCase()
+        .replace(/[.$#[\]/]/g, "_");
+}
+
+function alarmDeviceKey(deviceName, deviceId) {
+    const name = String(deviceName || deviceId || "sensor").trim();
+    return safeDeviceKey("", name);
+}
+
+async function claimRecentBodyPush(userKey, bodyText) {
+    const ref = rtdb.ref(`users/${userKey}/settings/lastBodyPush`);
+    const now = Date.now();
+    const bodyKey = String(bodyText || "").trim();
+    const result = await ref.transaction((current) => {
+        const prev = current || {};
+        const prevBody = String(prev.body || "");
+        const prevAt = Number(prev.at) || 0;
+        if (prevBody === bodyKey && now - prevAt < ALARM_DEDUPE_MS) {
+            return;
+        }
+        return { body: bodyKey, at: now };
+    });
+    return !!result.committed;
+}
+
+async function claimAlarmGate(userKey, deviceKey, status, historyId) {
+    const ref = rtdb.ref(`users/${userKey}/settings/alarmGate/${deviceKey}`);
+    const now = Date.now();
+    const result = await ref.transaction((current) => {
+        const prev = current || {};
+        const prevAt = Number(prev.at) || 0;
+        const prevStatus = String(prev.status || "");
+        if (prevStatus === status && now - prevAt < ALARM_DEDUPE_MS) {
+            return;
+        }
+        return { status, at: now, historyId: historyId || "" };
+    });
+    return !!result.committed;
+}
+
+function safeEventTagKey(eventTag) {
+    return String(eventTag || "")
+        .trim()
+        .replace(/[.$#[\]/]/g, "_");
+}
+
+async function claimDispatchedEventTag(userKey, eventTag) {
+    const ref = rtdb.ref(`users/${userKey}/settings/dispatchedEventTags/${safeEventTagKey(eventTag)}`);
+    const now = Date.now();
+    const result = await ref.transaction((current) => {
+        const prev = Number(current) || 0;
+        if (prev && now - prev < ALARM_DEDUPE_MS) {
+            return;
+        }
+        return now;
+    });
+    return !!result.committed;
+}
+
+async function claimDispatchedHistory(userKey, historyId) {
+    if (!historyId) return true;
+    const ref = rtdb.ref(`users/${userKey}/settings/dispatchedHistory/${historyId}`);
+    const result = await ref.transaction((current) => (current ? undefined : Date.now()));
+    return !!result.committed;
+}
+
+function parseHistoryTimestamp(entry) {
+    const ts = entry && entry.timestamp;
+    if (typeof ts === "number" && Number.isFinite(ts) && ts > 0) return ts;
+    if (typeof ts === "string" && /^\d+$/.test(ts)) return Number(ts);
+    return 0;
+}
+
+async function purgeWebPushTokens(userKey) {
+    const snap = await rtdb.ref(`users/${userKey}/pushTokens`).get();
+    const val = snap.val();
+    if (!val || typeof val !== "object") return;
+    const removes = [];
+    for (const key of Object.keys(val)) {
+        if (key === "native_android") continue;
+        removes.push(rtdb.ref(`users/${userKey}/pushTokens/${key}`).remove());
+    }
+    if (removes.length) {
+        await Promise.all(removes);
+        console.log("[sensor-alarm] removed web push tokens", userKey, removes.length);
+    }
+}
+
+async function claimPushSendLock(userKey, eventTag) {
+    const ref = rtdb.ref(`users/${userKey}/settings/pushSendLock/${safeEventTagKey(eventTag)}`);
+    const now = Date.now();
+    const result = await ref.transaction((current) => {
+        const prev = Number(current) || 0;
+        if (prev && now - prev < ALARM_DEDUPE_MS) {
+            return;
+        }
+        return now;
+    });
+    return !!result.committed;
+}
+
+async function sendAlarmPushToUser(userKey, title, body, eventTag, eventCreatedAt) {
+    const snap = await rtdb.ref(`users/${userKey}/pushTokens`).get();
+    const val = snap.val();
+    if (!val || typeof val !== "object") return 0;
+
+    const soundSnap = await rtdb.ref(`users/${userKey}/settings/alertSoundEnabled`).get();
+    const playSound = soundSnap.val() !== false;
+    const playFlag = playSound ? "1" : "0";
+
+    const nativeToken = val.native_android && val.native_android.token;
+    let targetToken = nativeToken ? String(nativeToken).trim() : "";
+    let isNative = Boolean(targetToken);
+
+    if (!targetToken) {
+        const webEntries = Object.keys(val)
+            .map((key) => ({
+                key,
+                token: val[key] && val[key].token,
+                platform: (val[key] && val[key].platform) || "web",
+                createdAt: Number((val[key] && val[key].createdAt) || 0),
+            }))
+            .filter((entry) => entry.token && entry.platform !== "android" && entry.key !== "native_android")
+            .sort((a, b) => b.createdAt - a.createdAt);
+        if (webEntries.length > 0) {
+            targetToken = String(webEntries[0].token).trim();
+        }
+    }
+
+    if (!targetToken) return 0;
+
+    if (isNative) {
+        await purgeWebPushTokens(userKey);
+    }
+
+    const sendLockOk = await claimPushSendLock(userKey, eventTag);
+    if (!sendLockOk) {
+        console.log("[sensor-alarm] push send lock blocked", userKey, eventTag);
+        return 0;
+    }
+
+    const bodyLockOk = await claimRecentBodyPush(userKey, body);
+    if (!bodyLockOk) {
+        console.log("[sensor-alarm] body push lock blocked", userKey, body);
+        return 0;
+    }
+
+    const titleStr = String(title || "Aura HomeSystems");
+    const bodyStr = String(body || "");
+    const tagKey = safeEventTagKey(eventTag) || "aura-alarm";
+
+    const message = {
+        token: targetToken,
+        data: {
+            title: titleStr,
+            body: bodyStr,
+            playSound: playFlag,
+            eventTag: String(eventTag || ""),
+            eventCreatedAt: String(eventCreatedAt || Date.now()),
+            userKey: String(userKey || ""),
+            skipWeb: isNative ? "1" : "0",
+        },
+    };
+    if (isNative) {
+        message.android = {
+            priority: "high",
+            ttl: 86400000,
+            collapseKey: tagKey,
+        };
+    } else {
+        message.webpush = { headers: { Urgency: "high" } };
+    }
+    try {
+        await messaging.send(message);
+        console.log("[sensor-alarm] FCM sent once", userKey, eventTag, isNative ? "native" : "web");
+        return 1;
+    } catch (err) {
+        console.warn("[sensor-alarm] FCM failed", userKey, isNative ? "native_android" : "web", err.message || err);
+        return 0;
+    }
+}
+
+export const onSensorHistoryAlarm = onValueCreated(
+    {
+        ref: "/users/{userKey}/history/{historyId}",
+        instance: RTDB_INSTANCE,
+        region: "europe-west1",
+        timeoutSeconds: 120,
+    },
+    async (event) => {
+        const entry = event.data.val();
+        if (!entry || entry.fromServerApi) return;
+        const status = String(entry.status || "").toLowerCase();
+        if (status !== "open" && status !== "closed") return;
+
+        const userKey = String(event.params.userKey || "").trim();
+        if (!userKey) return;
+
+        const historyId = String(event.params.historyId || "").trim();
+        const historyOk = await claimDispatchedHistory(userKey, historyId);
+        if (!historyOk) {
+            console.log("[sensor-alarm] history already dispatched", userKey, historyId);
+            return;
+        }
+
+        const enabledSnap = await rtdb.ref(`users/${userKey}/systemEnabled`).get();
+        if (enabledSnap.val() !== true) {
+            console.log("[sensor-alarm] skipped; system off", userKey, entry.deviceName || entry.deviceId || "Sensor", status);
+            return;
+        }
+
+        const deviceId = String(entry.deviceId || entry.deviceName || "sensor");
+        const deviceName = String(entry.deviceName || deviceId || "Sensor");
+        const isOpen = status === "open";
+        const eventCreatedAt = parseHistoryTimestamp(entry) || Date.now();
+        const deviceKey = alarmDeviceKey(deviceName, deviceId);
+        const eventTag = "cf-" + deviceKey + "-" + status;
+
+        const gateOk = await claimAlarmGate(userKey, deviceKey, status, historyId);
+        if (!gateOk) {
+            console.log("[sensor-alarm] gate blocked duplicate", userKey, deviceName, status, historyId);
+            return;
+        }
+
+        const tagOk = await claimDispatchedEventTag(userKey, eventTag);
+        if (!tagOk) {
+            console.log("[sensor-alarm] eventTag already dispatched", userKey, eventTag, historyId);
+            return;
+        }
+
+        const title = "Aura HomeSystems";
+        const bodyText = isOpen ? `${deviceName} was opened.` : `${deviceName} was closed.`;
+
+        const sent = await sendAlarmPushToUser(userKey, title, bodyText, eventTag, eventCreatedAt);
+        console.log(
+            "[sensor-alarm]",
+            userKey,
+            deviceName,
+            status,
+            "historyId:",
+            historyId,
+            "eventTag:",
+            eventTag,
+            "sent:",
+            sent
+        );
+
+        if (sent === 0) {
+            await rtdb.ref(`users/${userKey}/pendingAlarmEvents/${eventTag}`).set({
+                eventTag,
+                createdAt: eventCreatedAt,
+                title,
+                body: bodyText,
+                userKey,
+            });
+            await sendAlarmFallbackEmail(userKey, deviceName, bodyText, eventTag);
+            return;
+        }
+
+        await rtdb.ref(`users/${userKey}/pendingAlarmEvents/${eventTag}`).remove().catch(() => {});
+
+        await new Promise((resolve) => setTimeout(resolve, ALARM_EMAIL_FALLBACK_MS));
+        if (await pushWasShownOnDevice(userKey, eventTag)) {
+            console.log("[sensor-alarm] skip email; push confirmed on phone", eventTag);
+            return;
+        }
+        await sendAlarmFallbackEmail(userKey, deviceName, bodyText, eventTag);
+    }
+);
 
 const OWNER_EMAIL = "solutions.petrov@gmail.com";
 const FROM_EMAIL = "onboarding@resend.dev";
@@ -127,7 +452,8 @@ export const submitInquiry = onRequest(
             return;
         }
 
-        if (!resend.ApiKey) {
+        const resend = getResendClient();
+        if (!resend) {
             res.status(500).json({ error: "RESEND_API_KEY not configured" });
             return;
         }
@@ -203,7 +529,8 @@ export const confirmInquiry = onRequest(
             return;
         }
 
-        if (resend.ApiKey) {
+        const resend = getResendClient();
+        if (resend) {
             try {
                 await resend.emails.send({
                     from: FROM_EMAIL,

@@ -326,7 +326,7 @@ const recentAlarmEvents = [];
 const NATIVE_PUSH_EMAIL_FALLBACK_MS = 60 * 1000;
 const RECENT_ALARM_EVENTS_TTL_MS = 30 * 60 * 1000;
 
-function rememberNativePushAck(eventTag, stage) {
+function rememberNativePushAck(eventTag, stage, userKey) {
   const tag = String(eventTag || "").trim();
   const stageStr = String(stage || "").trim();
   if (!tag || !stageStr) return;
@@ -334,14 +334,42 @@ function rememberNativePushAck(eventTag, stage) {
   current.stages[stageStr] = Date.now();
   current.updatedAt = Date.now();
   nativePushAckState.set(tag, current);
+  const key = String(userKey || "").trim();
+  if (firebaseDb && key) {
+    firebaseDb
+      .ref("users/" + key + "/pushAcks/" + tag + "/" + stageStr)
+      .set(Date.now())
+      .catch(() => {});
+  }
 }
 
-function shouldSkipAlarmEmailFallback(eventTag) {
+function shouldSkipAlarmEmailFallback(eventTag, userKey) {
   const tag = String(eventTag || "").trim();
   const row = tag ? nativePushAckState.get(tag) : null;
-  if (!row || !row.stages) return false;
-  // Do not treat notify() "shown" as proof the user saw the alert after Doze/standby.
-  return Boolean(row.stages.opened || row.stages.dismissed);
+  if (row && row.stages) {
+    if (row.stages.shown || row.stages.opened || row.stages.dismissed) {
+      return true;
+    }
+  }
+  return false;
+}
+
+async function shouldSkipAlarmEmailFallbackAsync(eventTag, userKey) {
+  if (shouldSkipAlarmEmailFallback(eventTag, userKey)) {
+    return true;
+  }
+  const tag = String(eventTag || "").trim();
+  const key = String(userKey || "").trim();
+  if (!firebaseDb || !tag || !key) {
+    return false;
+  }
+  try {
+    const snap = await firebaseDb.ref("users/" + key + "/pushAcks/" + tag).get();
+    const stages = snap.val() || {};
+    return Boolean(stages.shown || stages.opened || stages.dismissed);
+  } catch (e) {
+    return false;
+  }
 }
 
 function cleanupNativePushAckState() {
@@ -405,33 +433,59 @@ function getRecentAlarmEvents(userKey, since) {
     .slice(-20);
 }
 
-const historyWatchAttached = new Set();
 const recentAlarmDispatch = new Map();
-const ALARM_DEDUPE_MS = 20000;
+const ALARM_DEDUPE_MS = 45000;
 
-function alarmDispatchKey(userKey, deviceId, deviceName, isOpen) {
+function alarmDispatchKey(userKey, deviceId, deviceName) {
   const deviceKey = String(deviceId || deviceName || "sensor")
     .trim()
     .toLowerCase()
     .replace(/[.$#[\]/]/g, "_");
-  return userKey + "|" + deviceKey + "|" + (isOpen ? "open" : "closed");
+  return userKey + "|" + deviceKey;
 }
 
-function shouldDispatchAlarm(userKey, deviceId, deviceName, isOpen, source) {
-  const key = alarmDispatchKey(userKey, deviceId, deviceName, isOpen);
+function alarmDispatchDedupeRef(userKey, deviceId, deviceName) {
+  const deviceKey = String(deviceId || deviceName || "sensor")
+    .trim()
+    .toLowerCase()
+    .replace(/[.$#[\]/]/g, "_");
+  return "users/" + userKey + "/settings/lastAlarmDispatch/" + deviceKey;
+}
+
+function claimAlarmDispatchSlot(userKey, deviceId, deviceName, isOpen, source, callback) {
+  const key = alarmDispatchKey(userKey, deviceId, deviceName);
   const now = Date.now();
-  const last = recentAlarmDispatch.get(key) || 0;
-  if (now - last < ALARM_DEDUPE_MS) {
+  const lastLocal = recentAlarmDispatch.get(key) || 0;
+  if (now - lastLocal < ALARM_DEDUPE_MS) {
     console.log("[alarm-dedupe] skipped duplicate", source, key);
-    return false;
+    callback(null, false);
+    return;
   }
-  recentAlarmDispatch.set(key, now);
-  if (recentAlarmDispatch.size > 500) {
-    for (const [entryKey, ts] of recentAlarmDispatch.entries()) {
-      if (now - ts > ALARM_DEDUPE_MS) recentAlarmDispatch.delete(entryKey);
-    }
+  if (!firebaseDb) {
+    recentAlarmDispatch.set(key, now);
+    callback(null, true);
+    return;
   }
-  return true;
+  firebaseDb
+    .ref(alarmDispatchDedupeRef(userKey, deviceId, deviceName))
+    .transaction((current) => {
+      const last = Number(current) || 0;
+      if (now - last < ALARM_DEDUPE_MS) return;
+      return now;
+    })
+    .then((result) => {
+      if (!result.committed) {
+        console.log("[alarm-dedupe] skipped duplicate", source, key);
+        callback(null, false);
+        return;
+      }
+      recentAlarmDispatch.set(key, now);
+      callback(null, true);
+    })
+    .catch((err) => {
+      console.warn("[alarm-dedupe] transaction failed", source, err.message || err);
+      callback(null, true);
+    });
 }
 
 function dispatchUserAlarm(options, callback) {
@@ -444,7 +498,8 @@ function dispatchUserAlarm(options, callback) {
   const deviceName = String((options && options.deviceName) || "Sensor");
   const isOpen = !!(options && options.isOpen);
   const source = String((options && options.source) || "sensor-event");
-  if (!shouldDispatchAlarm(userKey, deviceId, deviceName, isOpen, source)) {
+  claimAlarmDispatchSlot(userKey, deviceId, deviceName, isOpen, source, (claimErr, claimed) => {
+  if (claimErr || !claimed) {
     callback(null, { sent: 0, via: "dedupe", eventTag: "", eventCreatedAt: Date.now() });
     return;
   }
@@ -504,53 +559,7 @@ function dispatchUserAlarm(options, callback) {
     eventTag,
     eventCreatedAt
   );
-}
-
-function attachHistoryWatcher(userKey) {
-  if (!firebaseDb || !userKey || historyWatchAttached.has(userKey)) return;
-  historyWatchAttached.add(userKey);
-  firebaseDb.ref("users/" + userKey + "/history").on("child_added", (snap) => {
-    const entry = snap.val();
-    if (!entry || entry.fromServerApi) return;
-    const status = String(entry.status || "").toLowerCase();
-    if (status !== "open" && status !== "closed") return;
-    firebaseDb
-      .ref("users/" + userKey + "/systemEnabled")
-      .once("value")
-      .then((enabledSnap) => {
-        if (enabledSnap.val() !== true) {
-          console.log(
-            "[history-alarm] skipped; system off",
-            userKey,
-            entry.deviceName || entry.deviceId || "Sensor",
-            status
-          );
-          return;
-        }
-        dispatchUserAlarm(
-          {
-            userKey,
-            deviceId: entry.deviceId || "",
-            deviceName: entry.deviceName || entry.deviceId || "Sensor",
-            isOpen: status === "open",
-            source: "history-alarm",
-          },
-          () => {}
-        );
-      })
-      .catch(() => {});
   });
-}
-
-function startFirebaseHistoryWatchers() {
-  if (!firebaseDb) return;
-  firebaseDb.ref("users").once("value", (snap) => {
-    snap.forEach((child) => attachHistoryWatcher(child.key));
-  });
-  firebaseDb.ref("users").on("child_added", (userSnap) => {
-    attachHistoryWatcher(userSnap.key);
-  });
-  console.log("[history-alarm] Firebase history watchers started");
 }
 
 function fetchPendingAlarmEvents(userKey, since, callback) {
@@ -560,23 +569,19 @@ function fetchPendingAlarmEvents(userKey, since, callback) {
     if (value > serverNow + 300000) value = 0;
     return value;
   })();
-  const fromMemory = getRecentAlarmEvents(userKey, sinceNum);
   if (!firebaseDb) {
-    callback(null, fromMemory);
+    callback(null, []);
     return;
   }
   firebaseDb
     .ref("users/" + userKey + "/pendingAlarmEvents")
     .once("value")
     .then((snap) => {
-      const merged = new Map();
-      fromMemory.forEach((event) => {
-        merged.set(event.eventTag, event);
-      });
+      const events = [];
       snap.forEach((child) => {
         const event = child.val();
         if (!event || !event.eventTag || event.createdAt <= sinceNum) return;
-        merged.set(event.eventTag, {
+        events.push({
           userKey: event.userKey || userKey,
           eventTag: event.eventTag,
           createdAt: event.createdAt,
@@ -584,9 +589,7 @@ function fetchPendingAlarmEvents(userKey, since, callback) {
           body: event.body || "",
         });
       });
-      const events = Array.from(merged.values()).sort(
-        (a, b) => a.createdAt - b.createdAt
-      );
+      events.sort((a, b) => a.createdAt - b.createdAt);
       callback(null, events.slice(-20));
     })
     .catch(() => callback(null, fromMemory));
@@ -836,20 +839,33 @@ function sendAlarmFallbackEmail(userKey, fallbackEmail, deviceName, bodyText, ev
 
 function scheduleAlarmEmailFallback(details) {
   const eventTag = String((details && details.eventTag) || "").trim();
+  const userKey = String((details && details.userKey) || "").trim();
   if (!eventTag) return;
   setTimeout(() => {
-    if (shouldSkipAlarmEmailFallback(eventTag)) {
-      console.log("[alarm-email-fallback] skipped; user opened/dismissed notification", eventTag);
-      return;
-    }
-    console.warn("[alarm-email-fallback] no user interaction after 60s", eventTag);
-    sendAlarmFallbackEmail(
-      details.userKey,
-      details.email,
-      details.deviceName,
-      details.bodyText,
-      eventTag
-    );
+    shouldSkipAlarmEmailFallbackAsync(eventTag, userKey)
+      .then((skip) => {
+        if (skip) {
+          console.log("[alarm-email-fallback] skipped; push reached the phone", eventTag);
+          return;
+        }
+        console.warn("[alarm-email-fallback] no push confirmation after 60s", eventTag);
+        sendAlarmFallbackEmail(
+          details.userKey,
+          details.email,
+          details.deviceName,
+          details.bodyText,
+          eventTag
+        );
+      })
+      .catch(() => {
+        sendAlarmFallbackEmail(
+          details.userKey,
+          details.email,
+          details.deviceName,
+          details.bodyText,
+          eventTag
+        );
+      });
   }, NATIVE_PUSH_EMAIL_FALLBACK_MS);
 }
 
@@ -948,14 +964,10 @@ function saveNativeTokenForUser(userKey, tokenStr, deviceId, callback) {
           const all = tokSnap.val() || {};
           Object.keys(all).forEach((key) => {
             if (key === "native_android") return;
-            const row = all[key];
-            if (!row || !row.token) return;
-            if (row.platform !== "android" || row.token === tokenStr) {
-              firebaseDb
-                .ref("users/" + userKey + "/pushTokens/" + key)
-                .remove()
-                .catch(() => {});
-            }
+            firebaseDb
+              .ref("users/" + userKey + "/pushTokens/" + key)
+              .remove()
+              .catch(() => {});
           });
         })
       );
@@ -1433,7 +1445,19 @@ function sendPushToUser(userKey, title, body, callback, forcedEventTag, forcedEv
         uniqueEntries.map((e) => e.platform).join(",")
       );
     }
-    const sendEntries = uniqueEntries;
+    const nativeToken =
+      val.native_android && val.native_android.token
+        ? String(val.native_android.token).trim()
+        : "";
+    let sendEntries;
+    if (nativeToken) {
+      sendEntries = [{ key: "native_android", token: nativeToken, platform: "android" }];
+    } else {
+      const webEntries = uniqueEntries
+        .filter((e) => e.key !== "native_android" && e.platform !== "android")
+        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      sendEntries = webEntries.length > 0 ? [webEntries[0]] : uniqueEntries.slice(0, 1);
+    }
     if (sendEntries.length === 0) {
       callback(null, 0, "none");
       return;
@@ -1462,19 +1486,10 @@ function sendPushToUser(userKey, title, body, callback, forcedEventTag, forcedEv
         },
       };
       if (isNative) {
-        message.notification = {
-          title: titleStr,
-          body: bodyStr,
-        };
         message.android = {
           priority: "high",
           ttl: 86400000,
-          notification: {
-            channelId: "aura_alarm_alerts_v2",
-            notificationPriority: "PRIORITY_MAX",
-            defaultSound: playSound,
-            defaultVibrateTimings: playSound,
-          },
+          collapseKey: String(pushEventTag || "aura-alarm").replace(/[.$#[\]/]/g, "_"),
         };
       } else {
         message.webpush = {
@@ -2024,7 +2039,7 @@ const server = http.createServer((req, res) => {
       const eventTag = String(parsed.eventTag || "").slice(0, 120);
       const userKey = String(parsed.userKey || "").slice(0, 120);
       const channelId = String(parsed.channelId || "").slice(0, 120);
-      rememberNativePushAck(eventTag, stage);
+      rememberNativePushAck(eventTag, stage, userKey);
       if ((stage === "opened" || stage === "dismissed") && userKey) {
         clearPendingAlarmEvent(userKey, eventTag);
       }
@@ -2105,25 +2120,10 @@ const server = http.createServer((req, res) => {
             res.end(JSON.stringify({ success: true, sent: 0, via: "off" }));
             return;
           }
-          dispatchUserAlarm(
-            {
-              userKey,
-              deviceId: safeDeviceId,
-              deviceName,
-              isOpen,
-              email: parsed.email,
-              source: "sensor-event",
-            },
-            (alarmErr, result) => {
-              if (alarmErr) {
-                res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
-                res.end(JSON.stringify({ error: alarmErr.message }));
-                return;
-              }
-              res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-              res.end(JSON.stringify({ success: true, ...(result || {}) }));
-            }
-          );
+          // Push is handled by Cloud Function onSensorHistoryAlarm (firmware history write).
+          console.log("[sensor-event]", userKey, "recorded; push via Cloud Function", deviceName, isOpen ? "open" : "closed");
+          res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify({ success: true, sent: 0, via: "cloud-function" }));
         })
         .catch((err) => {
           res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
@@ -2183,5 +2183,5 @@ const server = http.createServer((req, res) => {
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   logStartupConfig();
-  startFirebaseHistoryWatchers();
+  console.log("[alarms] Render handles /api/sensor-event; RTDB history alarms run in Cloud Functions.");
 });

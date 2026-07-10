@@ -20,8 +20,8 @@
     "path": "C:\\Private\\Projects\\IoT\\IoT-Devices\\android.keystore",
     "alias": "android"
   },
-  "appVersionName": "15",
-  "appVersionCode": 15,
+  "appVersionName": "16",
+  "appVersionCode": 16,
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
   "webManifestUrl": "https://aurahomesystems.eu/manifest.json",
@@ -43,5 +43,5 @@
   "fileHandlers": [],
   "launchHandlerClientMode": "",
   "displayOverride": [],
-  "appVersion": "15"
+  "appVersion": "16"
 }

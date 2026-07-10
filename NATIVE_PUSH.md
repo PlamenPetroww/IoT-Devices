@@ -8,13 +8,13 @@ Version **10+** adds **native Firebase Cloud Messaging (FCM)** – same path as 
 1. [Firebase Console](https://console.firebase.google.com/) → project **cleverhaus-petrov**
 2. **Project settings** → **Your apps** → **Add app** → **Android**
 3. Package name: `com.aurahomesystems.app`
-4. Download **google-services.json** → copy to project root as `google-services.json` (same folder as `build.gradle`)
+4. Download **google-services.json** → copy to **`app/google-services.json`** (inside the `app` folder, not project root)
 5. Do **not** commit `google-services.json` (it is in `.gitignore`)
 
 ## Build new AAB (version 10)
 
 ```bash
-# From project root, with google-services.json in place
+# From project root, with google-services.json in app/
 ./gradlew bundleRelease
 ```
 

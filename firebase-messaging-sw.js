@@ -27,6 +27,10 @@ self.addEventListener("activate", (event) => {
 
 firebase.messaging().onBackgroundMessage((payload) => {
   const data = (payload && payload.data) || {};
+  // Alarms are handled by the Android app (native FCM). Web must never duplicate them.
+  if (data.skipWeb === "1" || (data.eventTag && String(data.eventTag).indexOf("cf-") === 0)) {
+    return null;
+  }
   const playSound = data.playSound !== "0";
   const title = data.title || "Aura HomeSystems";
   const body = data.body || "";

@@ -18,7 +18,6 @@ function getResendClient() {
 
 const RTDB_INSTANCE = "cleverhaus-petrov-default-rtdb";
 const ALARM_DEDUPE_MS = 45000;
-const ALARM_EMAIL_FALLBACK_MS = 60000;
 
 function emailFromUserKey(userKey) {
     const marker = "_at_";
@@ -30,13 +29,39 @@ function emailFromUserKey(userKey) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : "";
 }
 
-async function pushWasShownOnDevice(userKey, eventTag) {
-    const snap = await rtdb.ref(`users/${userKey}/pushAcks/${eventTag}`).get();
-    const stages = snap.val() || {};
-    return Boolean(stages.shown || stages.opened || stages.dismissed);
+async function claimEmailSent(userKey, eventTag, bodyText) {
+    const ref = rtdb.ref(`users/${userKey}/settings/emailSent/${safeEventTagKey(eventTag)}`);
+    const now = Date.now();
+    const result = await ref.transaction((current) => {
+        const prev = Number(current) || 0;
+        if (prev && now - prev < ALARM_DEDUPE_MS) {
+            return;
+        }
+        return now;
+    });
+    if (!result.committed) {
+        return false;
+    }
+    const bodyRef = rtdb.ref(`users/${userKey}/settings/lastBodyEmail`);
+    const bodyKey = String(bodyText || "").trim();
+    const bodyResult = await bodyRef.transaction((current) => {
+        const prev = current || {};
+        const prevBody = String(prev.body || "");
+        const prevAt = Number(prev.at) || 0;
+        if (prevBody === bodyKey && now - prevAt < ALARM_DEDUPE_MS) {
+            return;
+        }
+        return { body: bodyKey, at: now };
+    });
+    return !!bodyResult.committed;
 }
 
 async function sendAlarmFallbackEmail(userKey, deviceName, bodyText, eventTag) {
+    const ok = await claimEmailSent(userKey, eventTag, bodyText);
+    if (!ok) {
+        console.log("[sensor-alarm] email dedupe blocked", userKey, eventTag);
+        return;
+    }
     const resend = getResendClient();
     if (!resend) {
         console.warn("[sensor-alarm] email skipped; RESEND_API_KEY missing", userKey, eventTag);
@@ -54,7 +79,7 @@ async function sendAlarmFallbackEmail(userKey, deviceName, bodyText, eventTag) {
         subject: `Alarm alert - ${deviceName}`,
         html:
             `<p><strong>${bodyText}</strong></p>` +
-            `<p>No phone alert was confirmed within 60 seconds, so this backup email was sent.</p>`,
+            `<p>Push notification could not be delivered to your phone (no app token or delivery failed).</p>`,
     });
     await rtdb.ref(`users/${userKey}/pendingAlarmEvents/${eventTag}`).remove();
     console.log("[sensor-alarm] email fallback sent", userKey, email, eventTag);
@@ -70,6 +95,15 @@ function safeDeviceKey(deviceId, deviceName) {
 function alarmDeviceKey(deviceName, deviceId) {
     const name = String(deviceName || deviceId || "sensor").trim();
     return safeDeviceKey("", name);
+}
+
+function normalizeAlarmBodyKey(deviceName, status) {
+    const name = String(deviceName || "Sensor")
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, " ");
+    const st = String(status || "").toLowerCase() === "open" ? "open" : "closed";
+    return `${name}|${st}`;
 }
 
 async function claimRecentBodyPush(userKey, bodyText) {
@@ -204,12 +238,6 @@ async function sendAlarmPushToUser(userKey, title, body, eventTag, eventCreatedA
         return 0;
     }
 
-    const bodyLockOk = await claimRecentBodyPush(userKey, body);
-    if (!bodyLockOk) {
-        console.log("[sensor-alarm] body push lock blocked", userKey, body);
-        return 0;
-    }
-
     const titleStr = String(title || "Aura HomeSystems");
     const bodyStr = String(body || "");
     const tagKey = safeEventTagKey(eventTag) || "aura-alarm";
@@ -262,28 +290,31 @@ export const onSensorHistoryAlarm = onValueCreated(
         if (!userKey) return;
 
         const historyId = String(event.params.historyId || "").trim();
-        const historyOk = await claimDispatchedHistory(userKey, historyId);
-        if (!historyOk) {
-            console.log("[sensor-alarm] history already dispatched", userKey, historyId);
-            return;
-        }
-
-        const enabledSnap = await rtdb.ref(`users/${userKey}/systemEnabled`).get();
-        if (enabledSnap.val() !== true) {
-            console.log("[sensor-alarm] skipped; system off", userKey, entry.deviceName || entry.deviceId || "Sensor", status);
-            return;
-        }
-
-        const deviceId = String(entry.deviceId || entry.deviceName || "sensor");
-        const deviceName = String(entry.deviceName || deviceId || "Sensor");
+        const deviceId = String(entry.deviceId || entry.deviceName || "sensor").trim();
+        const deviceName = String(entry.deviceName || deviceId || "Sensor").trim();
         const isOpen = status === "open";
         const eventCreatedAt = parseHistoryTimestamp(entry) || Date.now();
         const deviceKey = alarmDeviceKey(deviceName, deviceId);
         const eventTag = "cf-" + deviceKey + "-" + status;
+        const bodyKey = normalizeAlarmBodyKey(deviceName, status);
+        const title = "Aura HomeSystems";
+        const bodyText = isOpen ? `${deviceName} was opened.` : `${deviceName} was closed.`;
+
+        const enabledSnap = await rtdb.ref(`users/${userKey}/systemEnabled`).get();
+        if (enabledSnap.val() !== true) {
+            console.log("[sensor-alarm] skipped; system off", userKey, deviceName, status);
+            return;
+        }
 
         const gateOk = await claimAlarmGate(userKey, deviceKey, status, historyId);
         if (!gateOk) {
             console.log("[sensor-alarm] gate blocked duplicate", userKey, deviceName, status, historyId);
+            return;
+        }
+
+        const bodyLockOk = await claimRecentBodyPush(userKey, bodyKey);
+        if (!bodyLockOk) {
+            console.log("[sensor-alarm] body lock blocked duplicate", userKey, bodyKey, historyId);
             return;
         }
 
@@ -293,8 +324,11 @@ export const onSensorHistoryAlarm = onValueCreated(
             return;
         }
 
-        const title = "Aura HomeSystems";
-        const bodyText = isOpen ? `${deviceName} was opened.` : `${deviceName} was closed.`;
+        const historyOk = await claimDispatchedHistory(userKey, historyId);
+        if (!historyOk) {
+            console.log("[sensor-alarm] history already dispatched", userKey, historyId);
+            return;
+        }
 
         const sent = await sendAlarmPushToUser(userKey, title, bodyText, eventTag, eventCreatedAt);
         console.log(
@@ -323,13 +357,7 @@ export const onSensorHistoryAlarm = onValueCreated(
         }
 
         await rtdb.ref(`users/${userKey}/pendingAlarmEvents/${eventTag}`).remove().catch(() => {});
-
-        await new Promise((resolve) => setTimeout(resolve, ALARM_EMAIL_FALLBACK_MS));
-        if (await pushWasShownOnDevice(userKey, eventTag)) {
-            console.log("[sensor-alarm] skip email; push confirmed on phone", eventTag);
-            return;
-        }
-        await sendAlarmFallbackEmail(userKey, deviceName, bodyText, eventTag);
+        console.log("[sensor-alarm] push ok; no email backup", userKey, eventTag);
     }
 );
 

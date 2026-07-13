@@ -103,22 +103,40 @@
     }
   }
 
+  function hideBackToSiteLinks() {
+    global.document.querySelectorAll('a.back-home, a[data-i18n="auth.backToSite"]').forEach(function (link) {
+      link.hidden = true;
+      link.style.display = "none";
+      link.setAttribute("aria-hidden", "true");
+      var next = link.nextElementSibling;
+      if (next && next.classList && next.classList.contains("footer-sep")) {
+        next.hidden = true;
+        next.style.display = "none";
+      }
+      var prev = link.previousElementSibling;
+      if (prev && prev.tagName === "BR") {
+        prev.hidden = true;
+        prev.style.display = "none";
+      }
+    });
+  }
+
   function patchLinks() {
     captureAppMeta();
     global.document.documentElement.classList.add("aura-play-app");
 
     global.document.querySelectorAll('a[href="index.html"], a[href="/"]').forEach(function (link) {
+      if (link.dataset.i18n === "auth.backToSite" || link.classList.contains("back-home")) {
+        return;
+      }
       if (link.classList.contains("dashboard-brand-link")) {
         link.setAttribute("href", "dashboard.html");
         link.setAttribute("aria-label", (global.authT && global.authT("dashboard.brandShort")) || "Dashboard");
         return;
       }
-      if (link.dataset.i18n === "auth.backToSite" || link.classList.contains("back-home")) {
-        link.setAttribute("href", siteUrl(""));
-        link.setAttribute("target", "_blank");
-        link.setAttribute("rel", "noopener noreferrer");
-      }
     });
+
+    hideBackToSiteLinks();
 
     global.document.querySelectorAll('a[href="impressum.html"]').forEach(function (link) {
       link.setAttribute("href", siteUrl("impressum.html"));

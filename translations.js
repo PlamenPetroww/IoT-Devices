@@ -3,12 +3,32 @@ const translations = {
         nav: { problem: "Проблем", solution: "Решение", product: "Продукт", advantages: "Предимства", compatibility: "Съвместимост", pricing: "Цени", faq: "FAQ", stats: "Резултати", cta: "Започни", login: "Вход", register: "Регистрация", more: "Още", language: "Език" },
         a11y: { skipToContent: "Към основното съдържание" },
         seo: {
-            pageTitle: "Aura HomeSystems – умни сензори за врати и прозорци | smart home",
-            metaDescription: "Безжични WiFi сензори за врати и прозорци с мобилно приложение и push известия. Smart home защита у дома – монтаж без кабели, без месечен абонамент.",
-            ogTitle: "Aura HomeSystems – сензори за врати и прозорци",
-            ogDescription: "Умни сензори за smart home: мигновени известия на телефона при отваряне на врата или прозорец. WiFi, приложение, без абонамент.",
-            twitterTitle: "Aura HomeSystems – smart home сензори",
-            twitterDescription: "Сензори за врати и прозорци с push известия. Защита на дома в реално време."
+            pageTitle: "Сензор за прозорец и врата WiFi – Aura HomeSystems | без абонамент",
+            metaDescription: "Безжичен WiFi сензор за прозорец и входна врата с приложение и push известия. Smart home защита – лесен монтаж, без месечен абонамент.",
+            ogTitle: "Сензор за прозорец WiFi – Aura HomeSystems",
+            ogDescription: "Умни сензори за прозорец и врата: мигновени известия на телефона при отваряне. WiFi, приложение, без абонамент.",
+            twitterTitle: "Aura HomeSystems – сензор за прозорец",
+            twitterDescription: "Безжичен сензор за прозорец и врата с push известия. Защита на дома в реално време."
+        },
+        landingWindow: {
+            pageTitle: "Сензор за прозорец WiFi – Aura HomeSystems | без абонамент",
+            metaDescription: "Безжичен WiFi сензор за прозорец с мобилно приложение и push известия. Монтаж за минути, без месечен абонамент – идеален за тераса, детска стая и лесен достъп.",
+            title: "Безжичен сензор за прозорец с известия на телефона",
+            intro: "Aura HomeSystems е компактен WiFi сензор за прозорец, който уведомява телефона ви веднага при отваряне или незатворен прозорец. Без кабели, без хаб, без месечен абонамент.",
+            benefit1Title: "Мигновени push известия",
+            benefit1: "Когато системата е в режим „Навън“, получавате сигнал на телефона при всяко отваряне – дори ако телефонът е в standby.",
+            benefit2Title: "Лесен монтаж на прозорец",
+            benefit2: "Два малки модула с магнит: единият на рамата, другият на крилото. Работи на PVC, дърво и алуминий.",
+            benefit3Title: "Приложение и история",
+            benefit3: "Виждате в реално време кой прозорец е отворен и пълна история на събитията в таблото Aura.",
+            specsTitle: "На кратко",
+            spec1: "WiFi 2.4 GHz – без допълнителен хаб",
+            spec2: "Батерия за месеци – презареждане у дома",
+            spec3: "Android приложение + push известия",
+            spec4: "Еднократна покупка – без абонамент",
+            installLink: "Ръководство за монтаж",
+            cta: "Цени и поръчка",
+            backLink: "← Към началната страница"
         },
         installation: {
             pageTitle: "Инсталация на сензори – Aura HomeSystems",
@@ -30,8 +50,8 @@ const translations = {
         },
         hero: {
             eyebrow: "Когато никой не е у дома...",
-            title: "Aura HomeSystems пази дома ти, когато е празен.",
-            subtitle: "Най-честите кражби стават през прозорците и входната врата. Сензорите ни са изключително лесни за инсталиране и настройка, а приложението е изключително удобно – получаваш мигновени сигнали на телефона при всяко нежелано отваряне.",
+            title: "Безжичен сензор за прозорец и врата с известия на телефона",
+            subtitle: "Най-честите кражби стават през прозорците и входната врата. WiFi сензорите ни са изключително лесни за монтаж – получавате мигновени push сигнали при всяко нежелано отваряне.",
             cta: "Започни с Aura",
             ctaNote: "Виж как работи системата и как можеш да я инсталираш у дома си"
         },
@@ -380,7 +400,7 @@ const translations = {
             serverUnreachable: "Сървърът не отговаря. Затворете app-а, отворете го пак и опитайте отново.",
             awayPushFailed: "Известията още не са свързани. Режим „Навън“ е включен — отворете app-а и натиснете жълтия текст."
         },
-        footer: { text: "Умни сензори за по-спокоен дом.", wifiNote: "За да използваш нашите сензори, необходима е стабилна WiFi връзка у дома.", impressum: "Импресум", privacy: "Политика за поверителност", installation: "Инсталация на сензори" },
+        footer: { text: "Умни сензори за по-спокоен дом.", wifiNote: "За да използваш нашите сензори, необходима е стабилна WiFi връзка у дома.", impressum: "Импресум", privacy: "Политика за поверителност", installation: "Инсталация на сензори", windowSensor: "Сензор за прозорец", windowSensorHref: "senzor-za-prozorec.html" },
         impressum: {
             pageTitle: "Импресум – Aura HomeSystems",
             title: "Импресум (Правна информация)",
@@ -480,12 +500,32 @@ const translations = {
         nav: { problem: "Problem", solution: "Solution", product: "Product", advantages: "Advantages", compatibility: "Compatibility", pricing: "Pricing", faq: "FAQ", stats: "Results", cta: "Get started", login: "Login", register: "Register", more: "More", language: "Language" },
         a11y: { skipToContent: "Skip to main content" },
         seo: {
-            pageTitle: "Aura HomeSystems – smart door & window sensors | smart home",
-            metaDescription: "Wireless WiFi door and window sensors with mobile app and push alerts. Smart home security – easy install, no monthly subscription.",
-            ogTitle: "Aura HomeSystems – door & window sensors",
-            ogDescription: "Smart home sensors with instant phone alerts when doors or windows open. WiFi, app, no subscription.",
-            twitterTitle: "Aura HomeSystems – smart home sensors",
-            twitterDescription: "Door and window sensors with push notifications. Real-time home protection."
+            pageTitle: "WiFi Window & Door Sensors – Aura HomeSystems | No Subscription",
+            metaDescription: "Wireless WiFi window and door sensors with mobile app and instant push alerts. Smart home security – easy install, no monthly subscription.",
+            ogTitle: "WiFi Window Sensor – Aura HomeSystems",
+            ogDescription: "Wireless window and door sensors with instant phone alerts when something opens. WiFi app, no subscription.",
+            twitterTitle: "Aura HomeSystems – window sensor",
+            twitterDescription: "Wireless window and door sensors with push notifications. Real-time home protection."
+        },
+        landingWindow: {
+            pageTitle: "WiFi Window Sensor – Aura HomeSystems | No Subscription",
+            metaDescription: "Wireless WiFi window sensor with mobile app and push alerts. Install in minutes on any window – terrace, kids' room, ground floor. No monthly fee.",
+            title: "Wireless window sensor with instant phone alerts",
+            intro: "Aura HomeSystems is a compact WiFi window sensor that notifies your phone the moment a window opens or stays open. No cables, no hub, no monthly subscription.",
+            benefit1Title: "Instant push alerts",
+            benefit1: "When the system is armed (Away mode), your phone gets an alert on every opening – even when the screen is off.",
+            benefit2Title: "Easy window installation",
+            benefit2: "Two small magnetic parts: one on the frame, one on the sash. Works on PVC, wood and aluminium windows.",
+            benefit3Title: "App dashboard & history",
+            benefit3: "See live open/closed status for each window and a full event history in the Aura app.",
+            specsTitle: "At a glance",
+            spec1: "WiFi 2.4 GHz – no extra hub required",
+            spec2: "Months of battery – recharge at home",
+            spec3: "Android app with push notifications",
+            spec4: "One-time purchase – no subscription",
+            installLink: "Installation guide",
+            cta: "Pricing & order",
+            backLink: "← Back to homepage"
         },
         installation: {
             pageTitle: "Sensor installation – Aura HomeSystems",
@@ -507,8 +547,8 @@ const translations = {
         },
         hero: {
             eyebrow: "When nobody's home...",
-            title: "Aura HomeSystems keeps your home safe when it's empty.",
-            subtitle: "Most break-ins happen through windows and the front door. Our sensors are super easy to install and set up, and our app is extremely user-friendly – you get instant alerts on your phone whenever something opens.",
+            title: "Wireless window & door sensors with instant phone alerts",
+            subtitle: "Most break-ins happen through windows and the front door. Our WiFi sensors are easy to install – get instant push alerts on your phone whenever something opens.",
             cta: "Get started with Aura",
             ctaNote: "See how the system works and how you can install it at home"
         },
@@ -857,7 +897,7 @@ const translations = {
             serverUnreachable: "Server unreachable. Close the app, reopen it, and try again.",
             awayPushFailed: "Alerts not linked yet. Away mode is on — reopen the app and tap the yellow text."
         },
-        footer: { text: "Smart sensors for a calmer home.", wifiNote: "A stable WiFi connection at home is required to use our sensors.", impressum: "Impressum", privacy: "Privacy Policy", installation: "Sensor installation" },
+        footer: { text: "Smart sensors for a calmer home.", wifiNote: "A stable WiFi connection at home is required to use our sensors.", impressum: "Impressum", privacy: "Privacy Policy", installation: "Sensor installation", windowSensor: "Window sensor", windowSensorHref: "window-sensor.html" },
         impressum: {
             pageTitle: "Impressum – Aura HomeSystems",
             title: "Impressum (Legal information)",
@@ -957,12 +997,32 @@ const translations = {
         nav: { problem: "Problem", solution: "Lösung", product: "Produkt", advantages: "Vorteile", compatibility: "Kompatibilität", pricing: "Preise", faq: "FAQ", stats: "Ergebnisse", cta: "Loslegen", login: "Anmelden", register: "Registrieren", more: "Mehr", language: "Sprache" },
         a11y: { skipToContent: "Zum Hauptinhalt springen" },
         seo: {
-            pageTitle: "Aura HomeSystems – Smarte Tür- & Fenstersensoren | Smart Home",
-            metaDescription: "Drahtlose WLAN-Sensoren für Türen und Fenster mit App und Push-Benachrichtigungen. Smart-Home-Sicherheit – einfache Montage, kein Abo.",
-            ogTitle: "Aura HomeSystems – Tür- und Fenstersensoren",
-            ogDescription: "Smart-Home-Sensoren mit sofortigen Handy-Meldungen bei Öffnen. WLAN, App, kein Abonnement.",
-            twitterTitle: "Aura HomeSystems – Smart-Home-Sensoren",
-            twitterDescription: "Tür- und Fenstersensoren mit Push-Benachrichtigungen. Echtzeit-Schutz für Ihr Zuhause."
+            pageTitle: "WLAN Fenstersensor & Türsensor – Aura HomeSystems | Kein Abo",
+            metaDescription: "Drahtloser WLAN-Fenstersensor und Türsensor mit App und Push-Benachrichtigungen. Smart Home – einfache Montage, kein monatliches Abonnement.",
+            ogTitle: "WLAN Fenstersensor – Aura HomeSystems",
+            ogDescription: "Fenster- und Türsensoren mit sofortigen Handy-Meldungen. WLAN, App, kein Abonnement.",
+            twitterTitle: "Aura HomeSystems – Fenstersensor",
+            twitterDescription: "Drahtlose Fenster- und Türsensoren mit Push-Benachrichtigungen."
+        },
+        landingWindow: {
+            pageTitle: "WLAN Fenstersensor – Aura HomeSystems | Kein Abo",
+            metaDescription: "Drahtloser WLAN-Fenstersensor mit App und Push-Meldungen. Montage in Minuten – Terrasse, Kinderzimmer, Erdgeschoss. Kein monatliches Abo.",
+            title: "Drahtloser Fenstersensor mit sofortigen Handy-Meldungen",
+            intro: "Aura HomeSystems ist ein kompakter WLAN-Fenstersensor, der Ihr Handy sofort benachrichtigt, wenn ein Fenster geöffnet wird oder offen bleibt. Keine Kabel, kein Hub, kein Abonnement.",
+            benefit1Title: "Sofortige Push-Meldungen",
+            benefit1: "Im Modus „Unterwegs“ erhalten Sie bei jeder Öffnung eine Meldung auf dem Handy.",
+            benefit2Title: "Einfache Fenster-Montage",
+            benefit2: "Zwei magnetische Teile: eines am Rahmen, eines am Flügel. Für PVC, Holz und Aluminium.",
+            benefit3Title: "App & Verlauf",
+            benefit3: "Live-Status jedes Fensters und vollständiger Ereignisverlauf in der Aura-App.",
+            specsTitle: "Kurzüberblick",
+            spec1: "WLAN 2,4 GHz – kein Hub nötig",
+            spec2: "Monatelanger Akku – zu Hause laden",
+            spec3: "Android-App mit Push-Benachrichtigungen",
+            spec4: "Einmalkauf – kein Abonnement",
+            installLink: "Installationsanleitung",
+            cta: "Preise & Bestellung",
+            backLink: "← Zur Startseite"
         },
         installation: {
             pageTitle: "Sensor-Installation – Aura HomeSystems",
@@ -984,8 +1044,8 @@ const translations = {
         },
         hero: {
             eyebrow: "Wenn niemand zu Hause ist...",
-            title: "Aura HomeSystems schützt Ihr Zuhause, wenn es leer steht.",
-            subtitle: "Die meisten Einbrüche passieren über Fenster und Haustür. Unsere Sensoren sind extrem einfach zu installieren und einzurichten, und unsere App ist besonders benutzerfreundlich – Sie erhalten sofort eine Nachricht aufs Handy, sobald etwas geöffnet wird.",
+            title: "Drahtloser Fenster- & Türsensor mit sofortigen Handy-Meldungen",
+            subtitle: "Die meisten Einbrüche passieren über Fenster und Haustür. Unsere WLAN-Sensoren sind einfach zu montieren – Push-Meldungen aufs Handy bei jeder Öffnung.",
             cta: "Mit Aura starten",
             ctaNote: "Erfahren Sie, wie das System funktioniert und wie Sie es bei sich einbauen können"
         },
@@ -1331,7 +1391,7 @@ const translations = {
             serverUnreachable: "Server nicht erreichbar. App schließen, neu öffnen und erneut versuchen.",
             awayPushFailed: "Benachrichtigungen noch nicht verknüpft. Modus „Unterwegs“ ist an — App öffnen und gelben Text tippen."
         },
-        footer: { text: "Smarte Sensoren für ein ruhigeres Zuhause.", wifiNote: "Für unsere Sensoren ist eine stabile WLAN-Verbindung zu Hause erforderlich.", impressum: "Impressum", privacy: "Datenschutz", installation: "Sensor-Installation" },
+        footer: { text: "Smarte Sensoren für ein ruhigeres Zuhause.", wifiNote: "Für unsere Sensoren ist eine stabile WLAN-Verbindung zu Hause erforderlich.", impressum: "Impressum", privacy: "Datenschutz", installation: "Sensor-Installation", windowSensor: "Fenstersensor", windowSensorHref: "window-sensor.html" },
         impressum: {
             pageTitle: "Impressum – Aura HomeSystems",
             title: "Impressum (Rechtliche Angaben)",

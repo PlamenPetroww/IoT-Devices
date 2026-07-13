@@ -11,6 +11,16 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://aurahomesystems.eu/window-sensor.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://aurahomesystems.eu/senzor-za-prozorec.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
     <loc>https://aurahomesystems.eu/login.html</loc>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>

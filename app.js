@@ -16,6 +16,12 @@ function applySeoMeta(lang) {
         return;
     }
 
+    if (document.querySelector(".landing-window-page")) {
+        document.title = getTranslation(lang, "landingWindow.pageTitle") || document.title;
+        setMeta('meta[name="description"]', "landingWindow.metaDescription", "content");
+        return;
+    }
+
     if (!isHomePage()) return;
 
     const pageTitle = getTranslation(lang, "seo.pageTitle");
@@ -90,6 +96,50 @@ function applyLanguage(lang) {
     } catch (_) {}
     try { localStorage.setItem("aura-lang", lang); } catch (_) {}
     try { window.dispatchEvent(new CustomEvent("aura-lang-applied", { detail: { lang } })); } catch (_) {}
+    applyFaqSchema(lang);
+    document.querySelectorAll("[data-i18n-href]").forEach((el) => {
+        const key = el.getAttribute("data-i18n-href");
+        const href = getTranslation(lang, key);
+        if (href) el.setAttribute("href", href);
+    });
+}
+
+function applyFaqSchema(lang) {
+    if (!isHomePage()) return;
+    let script = document.getElementById("faq-schema");
+    if (!script) {
+        script = document.createElement("script");
+        script.type = "application/ld+json";
+        script.id = "faq-schema";
+        document.head.appendChild(script);
+    }
+    const questions = [];
+    for (let i = 1; i <= 7; i++) {
+        const q = getTranslation(lang, "faq.q" + i);
+        const a = getTranslation(lang, "faq.a" + i);
+        if (!q || !a) continue;
+        questions.push({
+            "@type": "Question",
+            name: String(q).replace(/\s+/g, " ").trim(),
+            acceptedAnswer: {
+                "@type": "Answer",
+                text: String(a).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim(),
+            },
+        });
+    }
+    if (!questions.length) return;
+    script.textContent = JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        mainEntity: questions,
+    });
+}
+
+function getLandingPageDefaultLang() {
+    const path = (window.location.pathname || "").toLowerCase();
+    if (path.includes("senzor-za-prozorec")) return "bg";
+    if (path.includes("window-sensor")) return "en";
+    return null;
 }
 
 function initI18n() {
@@ -100,7 +150,7 @@ function initI18n() {
         if (urlLang && translations[urlLang]) {
             lang = urlLang;
         } else {
-            lang = localStorage.getItem("aura-lang") || "en";
+            lang = localStorage.getItem("aura-lang") || getLandingPageDefaultLang() || "en";
         }
     } catch (_) {}
     applyLanguage(lang);

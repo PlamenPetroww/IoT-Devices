@@ -1629,6 +1629,18 @@ main {
     }
 }
 
+.hero-no-extras {
+    margin: 0 0 20px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--accent-strong);
+    line-height: 1.5;
+}
+
+.product-no-extras-note {
+    margin-top: 12px;
+}
+
 .product-wifi-note {
     margin-top: 20px;
     padding: 14px 20px;

@@ -52,6 +52,7 @@ const translations = {
             eyebrow: "Когато никой не е у дома...",
             title: "Безжичен сензор за прозорец и врата с известия на телефона",
             subtitle: "Най-честите кражби стават през прозорците и входната врата. WiFi сензорите ни са изключително лесни за монтаж – получавате мигновени push сигнали при всяко нежелано отваряне.",
+            noExtras: "Само сензорите и приложението — без хъб, без bridge и без допълнителни smart устройства.",
             cta: "Започни с Aura",
             ctaNote: "Виж как работи системата и как можеш да я инсталираш у дома си"
         },
@@ -73,21 +74,22 @@ const translations = {
         },
         product: {
             title: "Какво точно получаваш",
-            subtitle: "Aura HomeSystems е завършено решение – сензорите се инсталират и настройват изключително лесно, а приложението е изключително удобно: от сензора на прозореца до известието на телефона.",
+            subtitle: "Aura HomeSystems е завършено решение – само сензори и приложение: от монтажа на прозореца до известието на телефона.",
             windowTitle: "Сензори за прозорци",
             windowDesc: "Компактни безжични сензори, които засичат отваряне и оставане отворено. Идеални за тераси, детски стаи и леснодостъпни прозорци.",
             doorTitle: "Сензори за входни врати",
             doorDesc: "Устойчиви сензори за входни и гаражни врати, които предупреждават при всяко неочаквано отключване или отваряне.",
             appTitle: "Мобилно приложение",
             appDesc: "Изключително удобно приложение: виждаш в реално време статуса на всеки сензор, получаваш известия и история на събитията – директно на телефона си.",
-            wifiNote: "За да използваш сензорите ни, в дома ти трябва да има стабилна WiFi връзка – сензорите се свързват с нея и изпращат данните до приложението."
+            wifiNote: "За да използваш сензорите ни, в дома ти трябва да има стабилна WiFi връзка – сензорите се свързват с нея и изпращат данните до приложението.",
+            noExtrasNote: "Не ви трябва хъб, централа, bridge или други екстри — само закупените сензори, домашен WiFi (2.4 GHz) и безплатното приложение."
         },
         advantages: {
             title: "Нашите предимства",
             subtitle: "Какво точно ви даваме с Aura и с какво се отличава от останалите решения.",
-            noHub: "<strong>Без хъб.</strong> Директно към WiFi.",
-            noEcosystem: "<strong>Без Smart Home екосистеми.</strong> Работи сама.",
-            standalone: "<strong>Самостоятелно</strong> – без умни крушки и допълнения.",
+            noHub: "<strong>Без хъб и без bridge.</strong> Сензорът се свързва директно с домашния WiFi.",
+            noEcosystem: "<strong>Без Smart Home екосистеми.</strong> Не ви трябват Alexa, Google Home или други централни устройства.",
+            standalone: "<strong>Само сензорите.</strong> Без умни крушки, ключове, сирени или допълнителни gadgets.",
             ownCloud: "<strong>Собствена cloud</strong> – не споделена платформа.",
             pushNotifications: "<strong>Моментални push известия</strong> при отваряне.",
             personalAccount: "<strong>Персонален акаунт.</strong> Данните са само ваши.",
@@ -96,7 +98,7 @@ const translations = {
         },
         pricing: {
             title: "Изберете пакет за сигурност",
-            subtitle: "Без абонамент. Моментални известия.",
+            subtitle: "Без абонамент. Без хъб. Моментални известия.",
             pack1Name: "Basis",
             pack1Title: "1 сензор",
             pack1Desc: "Идеален за една врата, прозорец или гараж.",
@@ -116,7 +118,8 @@ const translations = {
             subtitle: "Приложението и сензорите работят с обичайните изисквания за устройство и мрежа.",
             ios: "iOS 14+",
             android: "Android 8+",
-            wifi: "WiFi 2.4 GHz"
+            wifi: "WiFi 2.4 GHz",
+            noHub: "Без хъб — само WiFi"
         },
         faq: {
             title: "Често задавани въпроси",
@@ -133,7 +136,9 @@ const translations = {
             q6: "Как да инсталирам сензора у дома и да получавам известия на телефона?",
             a6: "1) Регистрирай се или влез в приложението Aura на телефона си. 2) Поставете сензора на вратата или прозореца: единият модул на рамката, вторият на отварящата част, така че магнитите да са срещуположно при затваряне. 3) В приложението натисни „Добави сензор“ и следвай стъпките: избери домашния си WiFi (2.4 GHz) и въведи паролата. 4) Дай име на сензора (напр. „Входна врата“, „Прозорец детска“) и запази. 5) Разреши известия за Aura в настройките на телефона (Настройки → Приложения → Aura → Известия). След това при всяко отваряне или затваряне ще получаваш мигновено известие на телефона си.",
             q7: "Какви настройки на телефона са нужни за надеждни известия?",
-            a7: "За надеждни аларми разреши известията за Aura, изключи оптимизацията на батерията за приложението или избери „Неограничено“ използване на батерията, разреши работа във фонов режим и остави мобилни данни или WiFi включени. Ако Android не потвърди до 60 секунди, че алармата е показана, Aura може да изпрати резервен имейл до имейла на акаунта."
+            a7: "За надеждни аларми разреши известията за Aura, изключи оптимизацията на батерията за приложението или избери „Неограничено“ използване на батерията, разреши работа във фонов режим и остави мобилни данни или WiFi включени. Ако Android не потвърди до 60 секунди, че алармата е показана, Aura може да изпрати резервен имейл до имейла на акаунта.",
+            q8: "Нужен ли е хъб или други допълнителни устройства?",
+            a8: "Не. Aura работи само със сензорите и приложението — без хъб, без bridge, без умни крушки, ключове, сирени или други smart gadgets. Всяко устройство се свързва директно с домашния ви WiFi (2.4 GHz)."
         },
         stats: {
             title: "Довериха ни се десетки домакинства",
@@ -190,7 +195,7 @@ const translations = {
         },
         buyPanel: {
             title: "Директна поръчка",
-            productDesc: "Безжични сензори за прозорци и врати – свързват се с приложението и ви уведомяват при отваряне. Подходящи за всяка врата или прозорец.",
+            productDesc: "Безжични сензори за прозорци и врати — без хъб и без допълнителни устройства. Свързват се директно с приложението и ви уведомяват при отваряне.",
             priceLabel: "Цена за 1 сензор",
             priceValue: "59.00 €",
             shippingNote: "Цената не включва доставка – разходите за куриер са изцяло за сметка на купувача.",
@@ -549,6 +554,7 @@ const translations = {
             eyebrow: "When nobody's home...",
             title: "Wireless window & door sensors with instant phone alerts",
             subtitle: "Most break-ins happen through windows and the front door. Our WiFi sensors are easy to install – get instant push alerts on your phone whenever something opens.",
+            noExtras: "Sensors and app only — no hub, no bridge, no extra smart devices required.",
             cta: "Get started with Aura",
             ctaNote: "See how the system works and how you can install it at home"
         },
@@ -570,21 +576,22 @@ const translations = {
         },
         product: {
             title: "What you get",
-            subtitle: "Aura HomeSystems is a complete solution – the sensors are extremely easy to install and set up, and the app is extremely user-friendly: from the window sensor to the notification on your phone.",
+            subtitle: "Aura HomeSystems is sensors and app only – easy setup from the window to the phone notification.",
             windowTitle: "Window sensors",
             windowDesc: "Compact wireless sensors that detect opening and staying open. Ideal for terraces, kids' rooms, and easily accessible windows.",
             doorTitle: "Entrance door sensors",
             doorDesc: "Robust sensors for entrance and garage doors that alert you to any unexpected unlock or opening.",
             appTitle: "Mobile app",
             appDesc: "An extremely user-friendly app: see each sensor's status in real time, get notifications and event history – right on your phone.",
-            wifiNote: "To use our sensors, you need a stable WiFi connection at home – the sensors connect to it and send data to the app."
+            wifiNote: "To use our sensors, you need a stable WiFi connection at home – the sensors connect to it and send data to the app.",
+            noExtrasNote: "No hub, base station, bridge or extras needed — just the sensors you buy, home WiFi (2.4 GHz) and the free app."
         },
         advantages: {
             title: "Our advantages",
             subtitle: "What we offer and why choose Aura.",
-            noHub: "<strong>No hub.</strong> Direct to WiFi.",
-            noEcosystem: "<strong>No Smart Home ecosystems.</strong> Works on its own.",
-            standalone: "<strong>Standalone</strong> – no smart bulbs or add-ons.",
+            noHub: "<strong>No hub or bridge.</strong> Each sensor connects directly to your home WiFi.",
+            noEcosystem: "<strong>No Smart Home ecosystems.</strong> No Alexa, Google Home or other central hardware required.",
+            standalone: "<strong>Sensors only.</strong> No smart bulbs, switches, sirens or extra gadgets.",
             ownCloud: "<strong>Own cloud</strong> – not a shared platform.",
             pushNotifications: "<strong>Instant push alerts</strong> on open.",
             personalAccount: "<strong>Personal account.</strong> Your data stays yours.",
@@ -593,7 +600,7 @@ const translations = {
         },
         pricing: {
             title: "Choose your security pack",
-            subtitle: "No subscription. Instant alerts.",
+            subtitle: "No subscription. No hub. Instant alerts.",
             pack1Name: "Basis",
             pack1Title: "1 Sensor",
             pack1Desc: "Perfect for a single door, window or garage.",
@@ -613,7 +620,8 @@ const translations = {
             subtitle: "The app and sensors work with standard device and network requirements.",
             ios: "iOS 14+",
             android: "Android 8+",
-            wifi: "WiFi 2.4 GHz"
+            wifi: "WiFi 2.4 GHz",
+            noHub: "No hub — WiFi only"
         },
         faq: {
             title: "Frequently asked questions",
@@ -630,7 +638,9 @@ const translations = {
             q6: "How do I install the sensor at home and get notifications on my phone?",
             a6: "1) Sign up or log in to the Aura app on your phone. 2) Mount the sensor on the door or window: one part on the frame, the other on the opening part, so the magnets face each other when closed. 3) In the app tap \"Add sensor\" and follow the steps: select your home Wi‑Fi (2.4 GHz) and enter the password. 4) Give the sensor a name (e.g. \"Front door\", \"Kids' window\") and save. 5) Enable notifications for Aura in your phone settings (Settings → Apps → Aura → Notifications). After that, you'll get an instant notification on your phone whenever something opens or closes.",
             q7: "What phone settings are needed for reliable alerts?",
-            a7: "For reliable alerts, allow notifications for the Aura app, set battery usage to unrestricted or disable battery optimization for Aura, allow background activity and keep mobile data or WiFi enabled. If Android does not confirm that an alert was shown within 60 seconds, Aura can send a backup email to the account email address."
+            a7: "For reliable alerts, allow notifications for the Aura app, set battery usage to unrestricted or disable battery optimization for Aura, allow background activity and keep mobile data or WiFi enabled. If Android does not confirm that an alert was shown within 60 seconds, Aura can send a backup email to the account email address.",
+            q8: "Do I need a hub or other extra devices?",
+            a8: "No. Aura works with the sensors and the app only — no hub, bridge, smart bulbs, switches, sirens or other gadgets. Each sensor connects directly to your home WiFi (2.4 GHz)."
         },
         stats: {
             title: "Dozens of households trust us",
@@ -687,7 +697,7 @@ const translations = {
         },
         buyPanel: {
             title: "Direct order",
-            productDesc: "Wireless sensors for windows and doors – they connect to the app and notify you when something opens. Suitable for any door or window.",
+            productDesc: "Wireless window and door sensors — no hub or extra devices. They connect straight to the app and notify you when something opens.",
             priceLabel: "Price per sensor",
             priceValue: "59.00 €",
             shippingNote: "Price does not include shipping – delivery costs are covered by the buyer.",
@@ -1046,6 +1056,7 @@ const translations = {
             eyebrow: "Wenn niemand zu Hause ist...",
             title: "Drahtloser Fenster- & Türsensor mit sofortigen Handy-Meldungen",
             subtitle: "Die meisten Einbrüche passieren über Fenster und Haustür. Unsere WLAN-Sensoren sind einfach zu montieren – Push-Meldungen aufs Handy bei jeder Öffnung.",
+            noExtras: "Nur Sensoren und App — kein Hub, keine Bridge, keine zusätzlichen Smart-Geräte.",
             cta: "Mit Aura starten",
             ctaNote: "Erfahren Sie, wie das System funktioniert und wie Sie es bei sich einbauen können"
         },
@@ -1074,14 +1085,15 @@ const translations = {
             doorDesc: "Robuste Sensoren für Eingangs- und Garagentüren, die bei unerwartetem Öffnen oder Aufschließen warnen.",
             appTitle: "Mobile App",
             appDesc: "Eine besonders benutzerfreundliche App: Sie sehen in Echtzeit den Status jedes Sensors, bekommen Benachrichtigungen und Verlauf – direkt auf dem Handy.",
-            wifiNote: "Für die Nutzung unserer Sensoren ist eine stabile WLAN-Verbindung zu Hause nötig – die Sensoren verbinden sich damit und senden die Daten an die App."
+            wifiNote: "Für die Nutzung unserer Sensoren ist eine stabile WLAN-Verbindung zu Hause nötig – die Sensoren verbinden sich damit und senden die Daten an die App.",
+            noExtrasNote: "Kein Hub, keine Basisstation, keine Bridge und kein Zubehör — nur die gekauften Sensoren, Heim-WLAN (2,4 GHz) und die kostenlose App."
         },
         advantages: {
             title: "Unsere Vorteile",
             subtitle: "Was wir bieten und warum Aura wählen.",
-            noHub: "<strong>Kein Hub.</strong> Direkt ins WLAN.",
-            noEcosystem: "<strong>Keine Smart-Home-Ökosysteme.</strong> Arbeitet für sich.",
-            standalone: "<strong>Eigenständig</strong> – ohne smarte Lampen oder Zubehör.",
+            noHub: "<strong>Kein Hub, keine Bridge.</strong> Jeder Sensor verbindet sich direkt mit Ihrem WLAN.",
+            noEcosystem: "<strong>Keine Smart-Home-Ökosysteme.</strong> Kein Alexa, Google Home oder andere Zentralgeräte nötig.",
+            standalone: "<strong>Nur die Sensoren.</strong> Keine smarten Lampen, Schalter, Sirenen oder Extra-Geräte.",
             ownCloud: "<strong>Eigene Cloud</strong> – keine geteilte Plattform.",
             pushNotifications: "<strong>Sofortige Push-Meldungen</strong> bei Öffnung.",
             personalAccount: "<strong>Persönliches Konto.</strong> Ihre Daten bleiben Ihre.",
@@ -1090,7 +1102,7 @@ const translations = {
         },
         pricing: {
             title: "Wählen Sie Ihr Sicherheitspaket",
-            subtitle: "Kein Abo. Sofortige Benachrichtigungen.",
+            subtitle: "Kein Abo. Kein Hub. Sofortige Benachrichtigungen.",
             pack1Name: "Basis",
             pack1Title: "1 Sensor",
             pack1Desc: "Ideal für eine Tür, ein Fenster oder die Garage.",
@@ -1110,7 +1122,8 @@ const translations = {
             subtitle: "App und Sensoren funktionieren mit den üblichen Anforderungen an Gerät und Netzwerk.",
             ios: "iOS 14+",
             android: "Android 8+",
-            wifi: "WLAN 2,4 GHz"
+            wifi: "WLAN 2,4 GHz",
+            noHub: "Kein Hub — nur WLAN"
         },
         faq: {
             title: "Häufige Fragen",
@@ -1127,7 +1140,9 @@ const translations = {
             q6: "Wie installiere ich den Sensor zu Hause und erhalte Benachrichtigungen auf dem Handy?",
             a6: "1) Registrieren Sie sich oder melden Sie sich in der Aura-App auf dem Handy an. 2) Bringen Sie den Sensor an Tür oder Fenster an: ein Teil am Rahmen, der andere am beweglichen Teil, sodass die Magnete beim Schließen einander zugewandt sind. 3) Tippen Sie in der App auf „Sensor hinzufügen“ und folgen Sie den Schritten: Wählen Sie Ihr WLAN (2,4 GHz) und geben Sie das Passwort ein. 4) Vergeben Sie einen Namen (z. B. „Haustür“, „Kinderzimmerfenster“) und speichern Sie. 5) Erlauben Sie Benachrichtigungen für Aura in den Handy-Einstellungen (Einstellungen → Apps → Aura → Benachrichtigungen). Danach erhalten Sie sofort eine Benachrichtigung, sobald sich etwas öffnet oder schließt.",
             q7: "Welche Handy-Einstellungen sind für zuverlässige Alarme nötig?",
-            a7: "Für zuverlässige Alarme erlauben Sie Benachrichtigungen für die Aura-App, stellen Sie die Akkunutzung auf „Nicht eingeschränkt“ oder deaktivieren Sie die Akku-Optimierung für Aura, erlauben Sie Hintergrundaktivität und lassen Sie mobile Daten oder WLAN eingeschaltet. Wenn Android nicht innerhalb von 60 Sekunden bestätigt, dass der Alarm angezeigt wurde, kann Aura eine Backup-E-Mail an die E-Mail-Adresse des Kontos senden."
+            a7: "Für zuverlässige Alarme erlauben Sie Benachrichtigungen für die Aura-App, stellen Sie die Akkunutzung auf „Nicht eingeschränkt“ oder deaktivieren Sie die Akku-Optimierung für Aura, erlauben Sie Hintergrundaktivität und lassen Sie mobile Daten oder WLAN eingeschaltet. Wenn Android nicht innerhalb von 60 Sekunden bestätigt, dass der Alarm angezeigt wurde, kann Aura eine Backup-E-Mail an die E-Mail-Adresse des Kontos senden.",
+            q8: "Brauche ich einen Hub oder andere Zusatzgeräte?",
+            a8: "Nein. Aura funktioniert nur mit Sensoren und App — kein Hub, keine Bridge, keine smarten Lampen, Schalter, Sirenen oder andere Gadgets. Jeder Sensor verbindet sich direkt mit Ihrem Heim-WLAN (2,4 GHz)."
         },
         stats: {
             title: "Dutzende Haushalte vertrauen uns",
@@ -1184,7 +1199,7 @@ const translations = {
         },
         buyPanel: {
             title: "Direktbestellung",
-            productDesc: "Funk-Sensoren für Fenster und Türen – sie verbinden sich mit der App und benachrichtigen Sie bei Öffnung. Geeignet für jede Tür und jedes Fenster.",
+            productDesc: "Funk-Sensoren für Fenster und Türen — ohne Hub und ohne Zusatzgeräte. Direkte Verbindung zur App, Meldung bei Öffnung.",
             priceLabel: "Preis pro Sensor",
             priceValue: "59.00 €",
             shippingNote: "Der Preis enthält keine Lieferung – die Versandkosten trägt der Käufer.",

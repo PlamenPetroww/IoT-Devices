@@ -1079,28 +1079,22 @@ const server = http.createServer((req, res) => {
     const finish = (userKey) => {
       const sendEvents = (armed) => {
         if (!armed || !userKey) {
-          console.log(
-            "[alarm-events]",
-            userKey || "no-user",
-            deviceIdParam || "no-device",
-            "armed=" + armed,
-            "since=" + since,
-            "count=0"
-          );
           res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
           res.end(JSON.stringify({ success: true, armed, events: [], userKey: userKey || "" }));
           return;
         }
         fetchPendingAlarmEvents(userKey, since, (err, events) => {
           const list = err ? [] : events;
-          console.log(
-            "[alarm-events]",
-            userKey || "no-user",
-            deviceIdParam || "no-device",
-            "armed=" + armed,
-            "since=" + since,
-            "count=" + list.length
-          );
+          if (list.length > 0) {
+            console.log(
+              "[alarm-events]",
+              userKey || "no-user",
+              deviceIdParam || "no-device",
+              "armed=" + armed,
+              "since=" + since,
+              "count=" + list.length
+            );
+          }
           res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
           res.end(JSON.stringify({ success: true, armed, events: list, userKey: userKey || "" }));
         });

@@ -119,7 +119,9 @@
       try {
         if (
           isAuraAndroidTwa() ||
-          (payload && payload.data && payload.data.skipWeb === "1")
+          (payload && payload.data && payload.data.skipWeb === "1") ||
+          (payload && payload.data && payload.data.eventTag &&
+            String(payload.data.eventTag).indexOf("cf-") === 0)
         ) {
           return;
         }

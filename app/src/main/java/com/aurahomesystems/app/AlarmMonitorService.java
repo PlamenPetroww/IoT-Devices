@@ -26,8 +26,8 @@ public class AlarmMonitorService extends Service {
     private static final String CHANNEL_ID = "aura_monitoring";
     private static final int NOTIFICATION_ID = 2601;
     private static final String API_BASE = "https://cleverhaus.onrender.com";
-    private static final long POLL_WHILE_ARMED_MS = 5000L;
-    private static final long POLL_WHILE_DISARMED_MS = 15000L;
+    private static final long POLL_WHILE_ARMED_MS = 60000L;
+    private static final long POLL_WHILE_DISARMED_MS = 300000L;
 
     private volatile boolean running;
     private Thread worker;
@@ -104,6 +104,11 @@ public class AlarmMonitorService extends Service {
                     // Cloud Function + FCM deliver alarms; poll only advances cursor (no second notification).
                     NativePushRegistrar.sendAck(this, "poll_seen", event.eventTag, "", event.userKey);
                     rememberSeenEvent(this, event.eventTag, event.createdAt);
+                }
+                if (!result.armed) {
+                    Log.i(TAG, "system disarmed; stopping monitor to save battery");
+                    stopMonitorService();
+                    return;
                 }
             } catch (Exception e) {
                 pollFailures++;
@@ -224,6 +229,16 @@ public class AlarmMonitorService extends Service {
         } catch (Exception ignored) {
             return "";
         }
+    }
+
+    private void stopMonitorService() {
+        running = false;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            stopForeground(STOP_FOREGROUND_REMOVE);
+        } else {
+            stopForeground(true);
+        }
+        stopSelf();
     }
 
     private android.app.Notification buildMonitorNotification() {

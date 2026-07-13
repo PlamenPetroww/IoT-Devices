@@ -44,7 +44,7 @@ const translations = {
             step4Title: "4. Проверка в таблото",
             step4: "Влез в таблото – сензорът трябва да се появи автоматично. Отвори и затвори вратата/прозореца и виж статуса в реално време.",
             step5Title: "5. Push известия",
-            step5: "Включи режим „Навън“ и разреши известия за приложението в настройките на телефона. При отваряне получаваш сигнал веднага.",
+            step5: "Включи режим „Навън“. В настройките на телефона (Приложения → Aura HomeSystems): включи Известия и задай Батерия на „Без ограничения“ / „Не оптимизирай“ — иначе push-овете закъсняват в standby. Провери, че известията са разрешени, преди да тестваш. При отваряне получаваш сигнал веднага.",
             cta: "Към регистрация",
             backLink: "← Обратно към началната страница"
         },
@@ -541,7 +541,7 @@ const translations = {
             step4Title: "4. Check the dashboard",
             step4: "Sign in to the dashboard – the sensor should appear automatically. Open and close the door/window and watch live status.",
             step5Title: "5. Push notifications",
-            step5: "Enable Away mode and allow notifications for the app in your phone settings. You get an alert immediately when something opens.",
+            step5: "Enable Away mode. In phone settings (Apps → Aura HomeSystems): turn Notifications on and set Battery to Unrestricted / Don't optimize — otherwise alerts may delay in standby. Confirm notifications are allowed before testing. You get an alert immediately when something opens.",
             cta: "Go to registration",
             backLink: "← Back to homepage"
         },
@@ -1038,7 +1038,7 @@ const translations = {
             step4Title: "4. Dashboard prüfen",
             step4: "Melden Sie sich im Dashboard an – der Sensor erscheint automatisch. Öffnen und schließen Sie Tür/Fenster und sehen Sie den Live-Status.",
             step5Title: "5. Push-Benachrichtigungen",
-            step5: "Aktivieren Sie den Modus „Unterwegs“ und erlauben Sie Benachrichtigungen in den Telefoneinstellungen. Bei Öffnen erhalten Sie sofort eine Meldung.",
+            step5: "Aktivieren Sie den Modus „Unterwegs“. In den Telefoneinstellungen (Apps → Aura HomeSystems): Benachrichtigungen einschalten und Akku auf „Uneingeschränkt“ / „Nicht optimieren“ — sonst verzögern sich Push-Meldungen im Standby. Prüfen Sie, dass Benachrichtigungen erlaubt sind, bevor Sie testen. Bei Öffnen erhalten Sie sofort eine Meldung.",
             cta: "Zur Registrierung",
             backLink: "← Zurück zur Startseite"
         },

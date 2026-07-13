@@ -51,12 +51,30 @@
             role="menu"
             hidden
           >
-            <span
-              id="appVersionMenu"
-              class="header-menu-item header-menu-item--meta"
-              role="menuitem"
-              hidden
-            ></span>
+            <div
+              class="header-menu-lang"
+              id="headerMenuLang"
+              role="group"
+              aria-labelledby="headerMenuLangLabel"
+            >
+              <span
+                class="header-menu-lang-label"
+                id="headerMenuLangLabel"
+                data-i18n="nav.language"
+                >Language</span
+              >
+              <div class="header-menu-lang-options">
+                <button type="button" class="header-menu-lang-btn" data-lang="en">
+                  EN
+                </button>
+                <button type="button" class="header-menu-lang-btn" data-lang="bg">
+                  BG
+                </button>
+                <button type="button" class="header-menu-lang-btn" data-lang="de">
+                  DE
+                </button>
+              </div>
+            </div>
             <a
               href="delete-account.html"
               class="header-menu-item header-menu-item--danger"
@@ -72,6 +90,12 @@
               data-i18n="dashboard.logout"
               >Изход</a
             >
+            <span
+              id="appVersionMenu"
+              class="header-menu-item header-menu-item--meta"
+              role="menuitem"
+              hidden
+            ></span>
           </div>
         </div>
       </div>

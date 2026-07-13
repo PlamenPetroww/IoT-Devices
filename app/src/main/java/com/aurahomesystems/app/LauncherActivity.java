@@ -164,6 +164,7 @@ public class LauncherActivity
         } catch (PackageManager.NameNotFoundException ignored) {
         }
         return uri.buildUpon()
+                .appendQueryParameter("aura_app", "1")
                 .appendQueryParameter("aura_did", AuraDeviceId.get(this))
                 .appendQueryParameter("aura_app_ver", versionName != null ? versionName : "")
                 .appendQueryParameter(

@@ -32,6 +32,7 @@ function auraDateLocale() {
 }
 
 var auraLangPickerBound = false;
+var headerMenuLangBound = false;
 
 function langDropdownInnerHtml() {
     return (
@@ -53,6 +54,12 @@ function langDropdownInnerHtml() {
 }
 
 function ensureLangDropdown() {
+    var menuLang = document.getElementById("headerMenuLang");
+    if (menuLang) {
+        updateLangDropdownUi(getAuraLang());
+        initHeaderMenuLangPicker();
+        return;
+    }
     if (document.querySelector(".lang-dropdown")) {
         updateLangDropdownUi(getAuraLang());
         initAuraLangPicker();
@@ -63,10 +70,7 @@ function ensureLangDropdown() {
     var dropdown = mount.firstElementChild;
     if (!dropdown) return;
 
-    var headerEnd = document.querySelector(".dashboard-header-end");
-    if (headerEnd) {
-        headerEnd.insertBefore(dropdown, headerEnd.firstChild);
-    } else if (document.body.classList.contains("auth-page")) {
+    if (document.body.classList.contains("auth-page")) {
         var bar = document.createElement("div");
         bar.className = "auth-lang-bar";
         bar.appendChild(dropdown);
@@ -76,6 +80,19 @@ function ensureLangDropdown() {
     }
     updateLangDropdownUi(getAuraLang());
     initAuraLangPicker();
+}
+
+function initHeaderMenuLangPicker() {
+    if (headerMenuLangBound) return;
+    var buttons = document.querySelectorAll(".header-menu-lang-btn[data-lang]");
+    if (!buttons.length) return;
+    headerMenuLangBound = true;
+    buttons.forEach(function (btn) {
+        btn.addEventListener("click", function (e) {
+            e.stopPropagation();
+            applyAuraLanguage(btn.getAttribute("data-lang"));
+        });
+    });
 }
 
 function updateLangDropdownUi(lang) {
@@ -89,6 +106,9 @@ function updateLangDropdownUi(lang) {
     if (triggerCode) triggerCode.textContent = codes[lang] || codes.en;
     document.querySelectorAll(".lang-option").forEach(function (opt) {
         opt.classList.toggle("active", opt.getAttribute("data-lang") === lang);
+    });
+    document.querySelectorAll(".header-menu-lang-btn[data-lang]").forEach(function (btn) {
+        btn.classList.toggle("active", btn.getAttribute("data-lang") === lang);
     });
     var trigger = document.getElementById("langDropdownTrigger");
     if (trigger) {

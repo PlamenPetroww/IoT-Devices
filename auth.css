@@ -440,6 +440,52 @@
     background: transparent;
 }
 
+.header-menu-lang {
+    padding: 10px 14px 12px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+    margin-bottom: 4px;
+}
+
+.header-menu-lang-label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #94a3b8;
+}
+
+.header-menu-lang-options {
+    display: flex;
+    gap: 6px;
+}
+
+.header-menu-lang-btn {
+    flex: 1;
+    padding: 8px 10px;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    border-radius: 8px;
+    background: rgba(15, 23, 42, 0.6);
+    color: #cbd5e1;
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.header-menu-lang-btn:hover {
+    background: rgba(51, 65, 85, 0.55);
+    color: #f1f5f9;
+}
+
+.header-menu-lang-btn.active {
+    border-color: rgba(74, 222, 128, 0.55);
+    background: rgba(74, 222, 128, 0.14);
+    color: #4ade80;
+}
+
 .app-version-line {
     display: block;
     margin-top: 10px;
@@ -1115,10 +1161,6 @@ body.dashboard-overlay-open {
     top: 14px;
     right: 14px;
     z-index: 1200;
-}
-
-.dashboard-header-end .lang-dropdown {
-    margin-right: 8px;
 }
 
 .lang-dropdown {

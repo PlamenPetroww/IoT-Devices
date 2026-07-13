@@ -2,6 +2,7 @@ import { initializeApp } from "firebase-admin/app";
 import { getDatabase } from "firebase-admin/database";
 import { getMessaging } from "firebase-admin/messaging";
 import { onRequest } from "firebase-functions/v2/https";
+import { onSchedule } from "firebase-functions/v2/scheduler";
 import { onValueCreated } from "firebase-functions/v2/database";
 import { Resend } from "resend";
 import crypto from "crypto";
@@ -18,6 +19,66 @@ function getResendClient() {
 
 const RTDB_INSTANCE = "cleverhaus-petrov-default-rtdb";
 const ALARM_DEDUPE_MS = 45000;
+const ALARM_PUSH_COALESCE_MS = 20000;
+const RENDER_HEALTH_URL =
+    process.env.RENDER_HEALTH_URL || "https://cleverhaus.onrender.com/api/health";
+
+function isDeadFcmError(err) {
+    const code = String(err?.code || "");
+    const msg = String(err?.message || err || "");
+    return (
+        code === "messaging/registration-token-not-registered" ||
+        code === "messaging/invalid-registration-token" ||
+        /unregistered|not.?registered|entity was not found|Requested entity was not found/i.test(msg)
+    );
+}
+
+async function resolveNativeAndroidToken(userKey) {
+    const key = String(userKey || "").trim();
+    if (!key) return "";
+
+    const snap = await rtdb.ref(`users/${key}/pushTokens/native_android`).get();
+    const stored = snap.val()?.token ? String(snap.val().token).trim() : "";
+    let latest = stored;
+    let latestAt = Number(snap.val()?.createdAt) || 0;
+
+    const consider = (token, updatedAt) => {
+        const t = String(token || "").trim();
+        const at = Number(updatedAt) || 0;
+        if (!t) return;
+        if (!latest || at >= latestAt) {
+            latest = t;
+            latestAt = at;
+        }
+    };
+
+    const deviceIdSnap = await rtdb.ref(`users/${key}/settings/nativeDeviceId`).get();
+    const deviceId = deviceIdSnap.val() ? String(deviceIdSnap.val()).trim() : "";
+    if (deviceId) {
+        const devSnap = await rtdb.ref(`nativeDeviceTokens/${deviceId}`).get();
+        const row = devSnap.val();
+        if (row) consider(row.token, row.updatedAt);
+    }
+
+    const allSnap = await rtdb.ref("nativeDeviceTokens").get();
+    allSnap.forEach((child) => {
+        const row = child.val();
+        if (row && String(row.userKey || "").trim() === key) {
+            consider(row.token, row.updatedAt);
+        }
+    });
+
+    if (latest && latest !== stored) {
+        await rtdb.ref(`users/${key}/pushTokens/native_android`).set({
+            token: latest,
+            platform: "android",
+            createdAt: Date.now(),
+        });
+        console.log("[sensor-alarm] synced native token for", key);
+    }
+
+    return latest;
+}
 
 function emailFromUserKey(userKey) {
     const marker = "_at_";
@@ -104,6 +165,21 @@ function normalizeAlarmBodyKey(deviceName, status) {
         .replace(/\s+/g, " ");
     const st = String(status || "").toLowerCase() === "open" ? "open" : "closed";
     return `${name}|${st}`;
+}
+
+async function claimCoalescedDevicePush(userKey, deviceKey, status) {
+    const ref = rtdb.ref(
+        `users/${userKey}/settings/coalescedPush/${safeEventTagKey(deviceKey + "_" + status)}`
+    );
+    const now = Date.now();
+    const result = await ref.transaction((current) => {
+        const prev = Number(current) || 0;
+        if (prev && now - prev < ALARM_PUSH_COALESCE_MS) {
+            return;
+        }
+        return now;
+    });
+    return !!result.committed;
 }
 
 async function claimRecentBodyPush(userKey, bodyText) {
@@ -198,35 +274,37 @@ async function claimPushSendLock(userKey, eventTag) {
     return !!result.committed;
 }
 
-async function sendAlarmPushToUser(userKey, title, body, eventTag, eventCreatedAt) {
-    const snap = await rtdb.ref(`users/${userKey}/pushTokens`).get();
-    const val = snap.val();
-    if (!val || typeof val !== "object") return 0;
-
+async function sendAlarmPushToUser(userKey, title, body, eventTag, eventCreatedAt, collapseKey) {
     const soundSnap = await rtdb.ref(`users/${userKey}/settings/alertSoundEnabled`).get();
     const playSound = soundSnap.val() !== false;
     const playFlag = playSound ? "1" : "0";
 
-    const nativeToken = val.native_android && val.native_android.token;
-    let targetToken = nativeToken ? String(nativeToken).trim() : "";
+    let targetToken = await resolveNativeAndroidToken(userKey);
     let isNative = Boolean(targetToken);
 
     if (!targetToken) {
-        const webEntries = Object.keys(val)
-            .map((key) => ({
-                key,
-                token: val[key] && val[key].token,
-                platform: (val[key] && val[key].platform) || "web",
-                createdAt: Number((val[key] && val[key].createdAt) || 0),
-            }))
-            .filter((entry) => entry.token && entry.platform !== "android" && entry.key !== "native_android")
-            .sort((a, b) => b.createdAt - a.createdAt);
-        if (webEntries.length > 0) {
-            targetToken = String(webEntries[0].token).trim();
+        const snap = await rtdb.ref(`users/${userKey}/pushTokens`).get();
+        const val = snap.val();
+        if (val && typeof val === "object") {
+            const webEntries = Object.keys(val)
+                .map((key) => ({
+                    key,
+                    token: val[key] && val[key].token,
+                    platform: (val[key] && val[key].platform) || "web",
+                    createdAt: Number((val[key] && val[key].createdAt) || 0),
+                }))
+                .filter((entry) => entry.token && entry.platform !== "android" && entry.key !== "native_android")
+                .sort((a, b) => b.createdAt - a.createdAt);
+            if (webEntries.length > 0) {
+                targetToken = String(webEntries[0].token).trim();
+            }
         }
     }
 
-    if (!targetToken) return 0;
+    if (!targetToken) {
+        console.warn("[sensor-alarm] no push token", userKey, eventTag);
+        return 0;
+    }
 
     if (isNative) {
         await purgeWebPushTokens(userKey);
@@ -240,10 +318,10 @@ async function sendAlarmPushToUser(userKey, title, body, eventTag, eventCreatedA
 
     const titleStr = String(title || "Aura HomeSystems");
     const bodyStr = String(body || "");
-    const tagKey = safeEventTagKey(eventTag) || "aura-alarm";
+    const collapse = safeEventTagKey(collapseKey || eventTag) || "aura-alarm";
 
-    const message = {
-        token: targetToken,
+    const buildMessage = (token) => ({
+        token,
         data: {
             title: titleStr,
             body: bodyStr,
@@ -252,22 +330,44 @@ async function sendAlarmPushToUser(userKey, title, body, eventTag, eventCreatedA
             eventCreatedAt: String(eventCreatedAt || Date.now()),
             userKey: String(userKey || ""),
             skipWeb: isNative ? "1" : "0",
+            dedupeTag: collapse,
         },
-    };
-    if (isNative) {
-        message.android = {
-            priority: "high",
-            ttl: 86400000,
-            collapseKey: tagKey,
-        };
-    } else {
-        message.webpush = { headers: { Urgency: "high" } };
-    }
+        ...(isNative
+            ? {
+                  android: {
+                      priority: "high",
+                      ttl: 86400000,
+                      collapseKey: collapse,
+                  },
+              }
+            : {
+                  webpush: { headers: { Urgency: "high" } },
+              }),
+    });
+
     try {
-        await messaging.send(message);
+        await messaging.send(buildMessage(targetToken));
         console.log("[sensor-alarm] FCM sent once", userKey, eventTag, isNative ? "native" : "web");
         return 1;
     } catch (err) {
+        if (isNative && isDeadFcmError(err)) {
+            console.warn("[sensor-alarm] dead token; refreshing", userKey, err.message || err);
+            await rtdb.ref(`users/${userKey}/pushTokens/native_android`).remove().catch(() => {});
+            const retryToken = await resolveNativeAndroidToken(userKey);
+            if (retryToken && retryToken !== targetToken) {
+                try {
+                    await messaging.send(buildMessage(retryToken));
+                    console.log("[sensor-alarm] FCM sent once after token refresh", userKey, eventTag);
+                    return 1;
+                } catch (retryErr) {
+                    console.warn(
+                        "[sensor-alarm] FCM retry failed",
+                        userKey,
+                        retryErr.message || retryErr
+                    );
+                }
+            }
+        }
         console.warn("[sensor-alarm] FCM failed", userKey, isNative ? "native_android" : "web", err.message || err);
         return 0;
     }
@@ -295,8 +395,7 @@ export const onSensorHistoryAlarm = onValueCreated(
         const isOpen = status === "open";
         const eventCreatedAt = parseHistoryTimestamp(entry) || Date.now();
         const deviceKey = alarmDeviceKey(deviceName, deviceId);
-        const eventTag = "cf-" + deviceKey + "-" + status;
-        const bodyKey = normalizeAlarmBodyKey(deviceName, status);
+        const eventTag = "cf-" + safeEventTagKey(historyId || deviceKey + "-" + status + "-" + eventCreatedAt);
         const title = "Aura HomeSystems";
         const bodyText = isOpen ? `${deviceName} was opened.` : `${deviceName} was closed.`;
 
@@ -312,25 +411,27 @@ export const onSensorHistoryAlarm = onValueCreated(
             return;
         }
 
-        const bodyLockOk = await claimRecentBodyPush(userKey, bodyKey);
-        if (!bodyLockOk) {
-            console.log("[sensor-alarm] body lock blocked duplicate", userKey, bodyKey, historyId);
-            return;
-        }
-
-        const tagOk = await claimDispatchedEventTag(userKey, eventTag);
-        if (!tagOk) {
-            console.log("[sensor-alarm] eventTag already dispatched", userKey, eventTag, historyId);
-            return;
-        }
-
         const historyOk = await claimDispatchedHistory(userKey, historyId);
         if (!historyOk) {
             console.log("[sensor-alarm] history already dispatched", userKey, historyId);
             return;
         }
 
-        const sent = await sendAlarmPushToUser(userKey, title, bodyText, eventTag, eventCreatedAt);
+        const collapseKey = safeEventTagKey(deviceKey + "-" + status) || "aura-alarm";
+        const coalesceOk = await claimCoalescedDevicePush(userKey, deviceKey, status);
+        if (!coalesceOk) {
+            console.log("[sensor-alarm] coalesce blocked duplicate push", userKey, deviceName, status, historyId);
+            return;
+        }
+
+        const sent = await sendAlarmPushToUser(
+            userKey,
+            title,
+            bodyText,
+            eventTag,
+            eventCreatedAt,
+            collapseKey
+        );
         console.log(
             "[sensor-alarm]",
             userKey,
@@ -597,5 +698,25 @@ export const confirmInquiry = onRequest(
 
         res.set("Access-Control-Allow-Origin", "*");
         res.status(200).send(confirmHtml(true, "Благодарим! Запитването ви е потвърдено. Ще получите отговор скоро на посочения имейл.", data.baseUrl || null));
+    }
+);
+
+/** Render free tier sleeps when idle; internal setInterval cannot wake a stopped instance. */
+export const keepRenderAwake = onSchedule(
+    {
+        schedule: "every 10 minutes",
+        region: "europe-west1",
+        timeZone: "Europe/Sofia",
+    },
+    async () => {
+        try {
+            const res = await fetch(RENDER_HEALTH_URL, {
+                signal: AbortSignal.timeout(25000),
+            });
+            const body = await res.text();
+            console.log("[keep-render-awake]", res.status, body.slice(0, 160));
+        } catch (e) {
+            console.warn("[keep-render-awake] failed", e.message || e);
+        }
     }
 );

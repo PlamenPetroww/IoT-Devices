@@ -33,14 +33,17 @@ loadEnvFile();
 
 const REVOLUT_API_VERSION = process.env.REVOLUT_API_VERSION || "2024-09-01";
 
-// Render free tier sleeps after ~15 min idle → 30-60 s push delay on the next sensor event.
-// Self-ping keeps the instance warm. RENDER_EXTERNAL_URL is set automatically by Render.
+// Render free tier sleeps after ~15 min idle. Self-ping only works while the process is awake.
+// External wake: Firebase keepRenderAwake (every 10 min) or UptimeRobot → /api/health
 const KEEP_ALIVE_URL = process.env.KEEP_ALIVE_URL || process.env.RENDER_EXTERNAL_URL || "";
+const SERVER_STARTED_AT = Date.now();
 if (/^https?:\/\//.test(KEEP_ALIVE_URL)) {
   const pingMod = KEEP_ALIVE_URL.startsWith("https") ? https : http;
+  const pingBase = KEEP_ALIVE_URL.replace(/\/$/, "");
+  const pingUrl = pingBase + "/api/health";
   setInterval(() => {
     pingMod
-      .get(KEEP_ALIVE_URL, (r) => {
+      .get(pingUrl, (r) => {
         r.on("data", () => {});
         r.on("end", () => {});
       })
@@ -48,7 +51,7 @@ if (/^https?:\/\//.test(KEEP_ALIVE_URL)) {
         console.warn("[keep-alive] ping failed:", err && err.message ? err.message : err);
       });
   }, 5 * 60 * 1000);
-  console.log("[keep-alive] Pinging", KEEP_ALIVE_URL, "every 5 min");
+  console.log("[keep-alive] Pinging", pingUrl, "every 5 min (only while instance is awake)");
 }
 
 /** Strip accidental "sandbox " prefix from pasted Revolut keys. */
@@ -1312,6 +1315,8 @@ const server = http.createServer((req, res) => {
         checkoutTestMode: CHECKOUT_TEST_PRICES,
         unitPriceEur: UNIT_PRICE_EUR,
         alarmBackendVersion: ALARM_BACKEND_VERSION,
+        uptimeSec: Math.floor((Date.now() - SERVER_STARTED_AT) / 1000),
+        keepAliveHint: "Use Firebase keepRenderAwake or external cron on /api/health",
       })
     );
     return;

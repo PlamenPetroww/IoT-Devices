@@ -1608,7 +1608,6 @@ const server = http.createServer((req, res) => {
       }
       const safeDeviceId = String(deviceId || deviceName || "sensor").replace(/[.$#[\]/]/g, "_");
       const devicePath = "users/" + userKey + "/devices/" + safeDeviceId;
-      const historyRef = firebaseDb.ref("users/" + userKey + "/history").push();
       const timestamp = firebaseAdmin.database.ServerValue.TIMESTAMP;
       const deviceUpdate = {
         status: !isOpen,
@@ -1620,17 +1619,10 @@ const server = http.createServer((req, res) => {
 
       Promise.all([
         firebaseDb.ref(devicePath).update(deviceUpdate),
-        historyRef.set({
-          deviceId: safeDeviceId,
-          deviceName,
-          status: isOpen ? "open" : "closed",
-          timestamp,
-          fromServerApi: true,
-        }),
         firebaseDb.ref("users/" + userKey + "/systemEnabled").once("value"),
       ])
         .then((results) => {
-          const systemEnabled = results[2].val() === true;
+          const systemEnabled = results[1].val() === true;
           if (!systemEnabled) {
             console.log("[sensor-event]", userKey, "sent:", 0, "via", "off");
             res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
@@ -1642,7 +1634,7 @@ const server = http.createServer((req, res) => {
             "[sensor-event]",
             ALARM_BACKEND_VERSION,
             userKey,
-            "recorded only sent:0",
+            "recorded device only (no history)",
             deviceName,
             isOpen ? "open" : "closed"
           );

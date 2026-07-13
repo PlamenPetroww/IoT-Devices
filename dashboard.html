@@ -462,11 +462,33 @@
                   deviceName: entry.deviceName || entry.deviceId,
                   status: entry.status === "open" ? "open" : "closed",
                   timestamp: entry.timestamp || 0,
+                  fromServerApi: entry.fromServerApi === true,
                 }))
+                .filter(function (entry) {
+                  return !entry.fromServerApi;
+                })
                 .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+              historyData = dedupeHistoryEntries(historyData);
             }
             renderHistory();
           });
+        function dedupeHistoryEntries(entries) {
+          const out = [];
+          for (let i = 0; i < entries.length; i++) {
+            const entry = entries[i];
+            const prev = out[out.length - 1];
+            if (
+              prev &&
+              prev.deviceName === entry.deviceName &&
+              prev.status === entry.status &&
+              Math.abs((entry.timestamp || 0) - (prev.timestamp || 0)) < 20000
+            ) {
+              continue;
+            }
+            out.push(entry);
+          }
+          return out;
+        }
         function renderHistory() {
           const listEl = document.getElementById("historyList");
           const limit = historyLimit;

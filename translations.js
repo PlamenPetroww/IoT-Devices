@@ -1,6 +1,6 @@
 const translations = {
     bg: {
-        nav: { problem: "Проблем", solution: "Решение", product: "Продукт", advantages: "Предимства", compatibility: "Съвместимост", pricing: "Цени", faq: "FAQ", stats: "Резултати", cta: "Започни", login: "Вход", register: "Регистрация", more: "Още" },
+        nav: { problem: "Проблем", solution: "Решение", product: "Продукт", advantages: "Предимства", compatibility: "Съвместимост", pricing: "Цени", faq: "FAQ", stats: "Резултати", cta: "Започни", login: "Вход", register: "Регистрация", more: "Още", language: "Език" },
         a11y: { skipToContent: "Към основното съдържание" },
         seo: {
             pageTitle: "Aura HomeSystems – умни сензори за врати и прозорци | smart home",
@@ -477,7 +477,7 @@ const translations = {
         }
     },
     en: {
-        nav: { problem: "Problem", solution: "Solution", product: "Product", advantages: "Advantages", compatibility: "Compatibility", pricing: "Pricing", faq: "FAQ", stats: "Results", cta: "Get started", login: "Login", register: "Register", more: "More" },
+        nav: { problem: "Problem", solution: "Solution", product: "Product", advantages: "Advantages", compatibility: "Compatibility", pricing: "Pricing", faq: "FAQ", stats: "Results", cta: "Get started", login: "Login", register: "Register", more: "More", language: "Language" },
         a11y: { skipToContent: "Skip to main content" },
         seo: {
             pageTitle: "Aura HomeSystems – smart door & window sensors | smart home",
@@ -954,7 +954,7 @@ const translations = {
         }
     },
     de: {
-        nav: { problem: "Problem", solution: "Lösung", product: "Produkt", advantages: "Vorteile", compatibility: "Kompatibilität", pricing: "Preise", faq: "FAQ", stats: "Ergebnisse", cta: "Loslegen", login: "Anmelden", register: "Registrieren", more: "Mehr" },
+        nav: { problem: "Problem", solution: "Lösung", product: "Produkt", advantages: "Vorteile", compatibility: "Kompatibilität", pricing: "Preise", faq: "FAQ", stats: "Ergebnisse", cta: "Loslegen", login: "Anmelden", register: "Registrieren", more: "Mehr", language: "Sprache" },
         a11y: { skipToContent: "Zum Hauptinhalt springen" },
         seo: {
             pageTitle: "Aura HomeSystems – Smarte Tür- & Fenstersensoren | Smart Home",

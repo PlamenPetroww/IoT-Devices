@@ -15,7 +15,7 @@
     <link rel="apple-touch-icon" href="/icons/icon-192.png" />
     <link rel="stylesheet" href="auth.css" />
   </head>
-  <body class="auth-page">
+  <body class="auth-page" data-i18n-page="register">
     <div class="auth-box">
       <h1>Aura HomeSystems</h1>
       <p class="subtitle" data-i18n="auth.registerSubtitle">Създаване на профил</p>
@@ -78,6 +78,9 @@
       const submitBtn = document.getElementById("submitBtn");
       const setPasswordBtn = document.getElementById("setPasswordBtn");
       firebase.auth().languageCode = firebaseAuthLang();
+      window.addEventListener("aura-lang-applied", function () {
+        firebase.auth().languageCode = firebaseAuthLang();
+      });
       function showError(msg) {
         errorEl.textContent = msg || "";
         errorEl.classList.toggle("visible", !!msg);

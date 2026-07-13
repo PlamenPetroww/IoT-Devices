@@ -304,13 +304,12 @@
         });
         const devicesList = document.getElementById("devicesList");
         const historyRef = db.ref(userPath + "/history");
+        let lastDevicesSnap = null;
         function showDevicesError(msg) {
           devicesList.innerHTML =
             '<p class="devices-empty">' + msg + "</p>";
         }
-        db.ref(userPath + "/devices").on(
-          "value",
-          (snap) => {
+        function renderDevicesFromSnap(snap) {
           const data = snap.val();
           if (!data || typeof data !== "object") {
             devicesList.innerHTML =
@@ -422,6 +421,12 @@
               return `                    <div class="device-item ${tintClass}">                        <span class="device-name-wrap"><span class="sensor-icon" aria-hidden="true">${icon}</span><span class="name">${escapeHtml(dev.name)}</span>${lastSeenHtml}</span>                        <span class="device-right">                            ${powerHtml}                            <span class="status ${dev.status}">${dev.status === "open" ? escapeHtml(authT("dashboard.statusOpen")) : escapeHtml(authT("dashboard.statusClosed"))}</span>                        </span>                    </div>                `;
             })
             .join("");
+        }
+        db.ref(userPath + "/devices").on(
+          "value",
+          (snap) => {
+          lastDevicesSnap = snap;
+          renderDevicesFromSnap(snap);
         },
         (err) => {
           console.error("[dashboard] devices read failed:", err);
@@ -564,6 +569,13 @@
             return "🪟";
           return "📍";
         }
+        window.addEventListener("aura-lang-applied", function () {
+          db.ref(userPath + "/systemEnabled").once("value", function (snap) {
+            setModeUI(snap.val() === true);
+          });
+          if (lastDevicesSnap) renderDevicesFromSnap(lastDevicesSnap);
+          renderHistory();
+        });
       });
     </script>
   </body>

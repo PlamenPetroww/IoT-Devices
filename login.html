@@ -15,7 +15,7 @@
     <link rel="apple-touch-icon" href="/icons/icon-192.png" />
     <link rel="stylesheet" href="auth.css" />
   </head>
-  <body class="auth-page">
+  <body class="auth-page" data-i18n-page="login">
     <div class="auth-box">
       <h1>Aura HomeSystems</h1>
       <p class="subtitle" data-i18n="auth.loginSubtitle">Вход в таблото</p>
@@ -82,6 +82,9 @@
       const auth = firebase.auth();
       const db = firebase.database();
       auth.languageCode = firebaseAuthLang();
+      window.addEventListener("aura-lang-applied", function () {
+        auth.languageCode = firebaseAuthLang();
+      });
       auth.onAuthStateChanged(function (user) {
         if (user && window.AuraAppMode && AuraAppMode.isPlayApp()) {
           var emailKey = user.email

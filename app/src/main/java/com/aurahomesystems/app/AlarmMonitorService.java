@@ -101,8 +101,23 @@ public class AlarmMonitorService extends Service {
                 pollFailures = 0;
                 delay = result.armed ? POLL_WHILE_ARMED_MS : POLL_WHILE_DISARMED_MS;
                 for (AlarmEvent event : result.events) {
-                    // Cloud Function + FCM deliver alarms; poll only advances cursor (no second notification).
-                    NativePushRegistrar.sendAck(this, "poll_seen", event.eventTag, "", event.userKey);
+                    // Backup when FCM could not deliver (pendingAlarmEvents); dedupe avoids duplicates.
+                    boolean shown = AuraFirebaseMessagingService.showAlarmNotification(
+                            this,
+                            event.title,
+                            event.body,
+                            true,
+                            event.eventTag,
+                            event.userKey,
+                            event.createdAt,
+                            event.eventTag,
+                            false);
+                    NativePushRegistrar.sendAck(
+                            this,
+                            shown ? "poll_shown" : "poll_seen",
+                            event.eventTag,
+                            shown ? AuraFirebaseMessagingService.CHANNEL_ID : "",
+                            event.userKey);
                     rememberSeenEvent(this, event.eventTag, event.createdAt);
                 }
                 if (!result.armed) {

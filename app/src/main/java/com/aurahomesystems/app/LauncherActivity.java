@@ -91,6 +91,7 @@ public class LauncherActivity
         }
         if (NotificationPermissionHelper.areNotificationsEnabled(this)) {
             notificationRequestScheduled = false;
+            BatteryOptimizationHelper.requestIfNeeded(this);
             return;
         }
         if (notificationRequestScheduled) {

@@ -318,7 +318,7 @@ async function sendAlarmPushToUser(userKey, title, body, eventTag, eventCreatedA
 
     const titleStr = String(title || "Aura HomeSystems");
     const bodyStr = String(body || "");
-    const collapse = safeEventTagKey(collapseKey || eventTag) || "aura-alarm";
+    const dedupeTag = safeEventTagKey(eventTag) || safeEventTagKey(collapseKey) || "aura-alarm";
 
     const buildMessage = (token) => ({
         token,
@@ -330,14 +330,27 @@ async function sendAlarmPushToUser(userKey, title, body, eventTag, eventCreatedA
             eventCreatedAt: String(eventCreatedAt || Date.now()),
             userKey: String(userKey || ""),
             skipWeb: isNative ? "1" : "0",
-            dedupeTag: collapse,
+            dedupeTag,
         },
         ...(isNative
             ? {
+                  // notification + data: Android system tray shows alerts in Doze/standby
+                  // (data-only FCM is deferred until the phone wakes).
+                  notification: {
+                      title: titleStr,
+                      body: bodyStr,
+                  },
                   android: {
                       priority: "high",
                       ttl: 86400000,
-                      collapseKey: collapse,
+                      collapseKey: dedupeTag,
+                      notification: {
+                          channelId: "aura_alarm_alerts_v2",
+                          priority: "max",
+                          defaultSound: playSound,
+                          defaultVibrateTimings: true,
+                          visibility: "public",
+                      },
                   },
               }
             : {

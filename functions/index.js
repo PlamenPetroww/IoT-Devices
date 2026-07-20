@@ -715,6 +715,38 @@ export const confirmInquiry = onRequest(
 );
 
 /** Render free tier sleeps when idle; internal setInterval cannot wake a stopped instance. */
+// Prune old history entries for every user — keep only the latest 200 per user.
+// Runs once per day. Prevents unbounded history growth that can slow Firebase writes.
+export const pruneHistory = onSchedule(
+    {
+        schedule: "every 24 hours",
+        region: "europe-west1",
+        timeZone: "Europe/Sofia",
+    },
+    async () => {
+        const KEEP = 200;
+        try {
+            const usersSnap = await rtdb.ref("users").once("value");
+            if (!usersSnap.exists()) return;
+            const users = usersSnap.val();
+            for (const userKey of Object.keys(users)) {
+                const histRef = rtdb.ref(`users/${userKey}/history`);
+                const snap = await histRef.orderByKey().once("value");
+                if (!snap.exists()) continue;
+                const keys = Object.keys(snap.val()).sort();
+                if (keys.length <= KEEP) continue;
+                const toDelete = keys.slice(0, keys.length - KEEP);
+                const updates = {};
+                for (const k of toDelete) updates[k] = null;
+                await histRef.update(updates);
+                console.log(`[prune-history] ${userKey}: deleted ${toDelete.length}, kept ${KEEP}`);
+            }
+        } catch (e) {
+            console.error("[prune-history] error", e.message || e);
+        }
+    }
+);
+
 export const keepRenderAwake = onSchedule(
     {
         schedule: "every 10 minutes",

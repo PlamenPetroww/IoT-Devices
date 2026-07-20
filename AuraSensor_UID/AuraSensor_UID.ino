@@ -148,6 +148,10 @@ static int64_t timestampMsNow() {
 RTC_DATA_ATTR int nextWakeLevel = 0;
 RTC_DATA_ATTR int8_t rtcLastSentStatus = -1;  // -1 = nothing sent yet; 0/1 = last sent status
 RTC_DATA_ATTR int8_t rtcCapturedClosed = -1;  // sensor state captured immediately after GPIO wake
+// Periodic full restart: every PERIODIC_RESTART_WAKES wakeups do ESP.restart() to clear any
+// accumulated WiFi/SSL/Firebase state that degrades over time.
+#define PERIODIC_RESTART_WAKES 50
+RTC_DATA_ATTR uint16_t rtcWakeCount = 0;
 
 #define SENSOR_DEBOUNCE_MS 50
 #define SENSOR_DEBOUNCE_SAMPLES 5
@@ -457,6 +461,7 @@ void setup() {
     if (coldBoot) {
         rtcLastSentStatus = -1;
         rtcCapturedClosed = -1;
+        rtcWakeCount = 0;
     }
 #if UPLOAD_GRACE_MS > 0
     if (coldBoot) delay(UPLOAD_GRACE_MS);
@@ -731,8 +736,17 @@ void setup() {
     }
     rtcLastSentStatus = curSt;
     nextWakeLevel = currentStatus ? 0 : 1;
+    rtcWakeCount++;
     delay(300);
     Serial.flush();
+    // Periodic full restart: clears WiFi stack, SSL session, Firebase library state.
+    if (rtcWakeCount >= PERIODIC_RESTART_WAKES) {
+        rtcWakeCount = 0;
+        Serial.println("Periodic restart to clear accumulated state...");
+        delay(100);
+        ESP.restart();
+        return;
+    }
     // Before sleep: RTC pull (ESP32/S3) or gpio pull (C3) ÔÇö see armDeepSleepGpioWakeup().
     armDeepSleepGpioWakeup(nextWakeLevel);
     Serial.print("Deep sleep. Next wake: sensor change (waiting for ");

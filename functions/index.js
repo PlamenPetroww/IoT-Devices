@@ -724,7 +724,7 @@ export const pruneHistory = onSchedule(
         timeZone: "Europe/Sofia",
     },
     async () => {
-        const KEEP = 200;
+        const KEEP = 50;
         try {
             const usersSnap = await rtdb.ref("users").once("value");
             if (!usersSnap.exists()) return;

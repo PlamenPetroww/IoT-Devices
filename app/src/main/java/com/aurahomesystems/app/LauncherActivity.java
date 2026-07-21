@@ -60,9 +60,15 @@ public class LauncherActivity
         }
         String eventTag = intent.getStringExtra(AuraFirebaseMessagingService.EXTRA_EVENT_TAG);
         if (eventTag == null || eventTag.trim().isEmpty()) {
+            eventTag = intent.getStringExtra("eventTag");
+        }
+        if (eventTag == null || eventTag.trim().isEmpty()) {
             return;
         }
         String userKey = intent.getStringExtra(AuraFirebaseMessagingService.EXTRA_USER_KEY);
+        if (userKey == null || userKey.trim().isEmpty()) {
+            userKey = intent.getStringExtra("userKey");
+        }
         NativePushRegistrar.sendAck(
                 this,
                 "opened",
@@ -71,6 +77,8 @@ public class LauncherActivity
                 userKey);
         intent.removeExtra(AuraFirebaseMessagingService.EXTRA_EVENT_TAG);
         intent.removeExtra(AuraFirebaseMessagingService.EXTRA_USER_KEY);
+        intent.removeExtra("eventTag");
+        intent.removeExtra("userKey");
     }
 
     @Override

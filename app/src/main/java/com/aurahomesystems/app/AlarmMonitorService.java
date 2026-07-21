@@ -26,7 +26,7 @@ public class AlarmMonitorService extends Service {
     private static final String CHANNEL_ID = "aura_monitoring";
     private static final int NOTIFICATION_ID = 2601;
     private static final String API_BASE = "https://cleverhaus.onrender.com";
-    private static final long POLL_WHILE_ARMED_MS = 60000L;
+    private static final long POLL_WHILE_ARMED_MS = 15000L;
     private static final long POLL_WHILE_DISARMED_MS = 300000L;
 
     private volatile boolean running;
@@ -118,7 +118,9 @@ public class AlarmMonitorService extends Service {
                             event.eventTag,
                             shown ? AuraFirebaseMessagingService.CHANNEL_ID : "",
                             event.userKey);
-                    rememberSeenEvent(this, event.eventTag, event.createdAt);
+                    if (shown) {
+                        rememberSeenEvent(this, event.eventTag, event.createdAt);
+                    }
                 }
                 if (!result.armed) {
                     Log.i(TAG, "system disarmed; stopping monitor to save battery");
@@ -187,7 +189,7 @@ public class AlarmMonitorService extends Service {
                     continue;
                 }
                 AlarmEvent event = AlarmEvent.fromJson(item, userKey);
-                if (event.createdAt <= since || event.eventTag.isEmpty()) {
+                if (event.eventTag.isEmpty()) {
                     continue;
                 }
                 events[count++] = event;

@@ -327,23 +327,22 @@ function sendResendEmail(apiKey, payloadObj, callback) {
 const nativePushAckState = new Map();
 const ALARM_BACKEND_VERSION = "render-v2-cf-only";
 
-function clearPendingAlarmEvent(userKey, eventTag) {
+function completeAlarmDelivery(userKey, eventTag, stage) {
   const key = String(userKey || "").trim();
   const tag = String(eventTag || "").trim();
-  if (!firebaseDb || !key || !tag) return;
-  firebaseDb
-    .ref("users/" + key + "/pendingAlarmEvents/" + tag)
-    .remove()
-    .catch(() => {});
+  if (!firebaseDb || !key || !tag) return Promise.resolve();
+  const now = Date.now();
+  const updates = {};
+  updates["users/" + key + "/pendingAlarmEvents/" + tag] = null;
+  updates["alarmDeliveryQueue/" + tag] = null;
+  updates["users/" + key + "/alarmDeliveries/" + tag + "/state"] = "ack_shown";
+  updates["users/" + key + "/alarmDeliveries/" + tag + "/ackStage"] = stage || "shown";
+  updates["users/" + key + "/alarmDeliveries/" + tag + "/ackShownAt"] = now;
+  updates["users/" + key + "/alarmDeliveries/" + tag + "/updatedAt"] = now;
+  return firebaseDb.ref().update(updates);
 }
 
 function fetchPendingAlarmEvents(userKey, since, callback) {
-  const sinceNum = (() => {
-    const serverNow = Date.now();
-    let value = Number(since) || 0;
-    if (value > serverNow + 300000) value = 0;
-    return value;
-  })();
   if (!firebaseDb) {
     callback(null, []);
     return;
@@ -355,7 +354,7 @@ function fetchPendingAlarmEvents(userKey, since, callback) {
       const events = [];
       snap.forEach((child) => {
         const event = child.val();
-        if (!event || !event.eventTag || event.createdAt <= sinceNum) return;
+        if (!event || !event.eventTag) return;
         events.push({
           userKey: event.userKey || userKey,
           eventTag: event.eventTag,
@@ -373,18 +372,31 @@ function fetchPendingAlarmEvents(userKey, since, callback) {
 function rememberNativePushAck(eventTag, stage, userKey) {
   const tag = String(eventTag || "").trim();
   const stageStr = String(stage || "").trim();
-  if (!tag || !stageStr) return;
+  if (!tag || !stageStr) return Promise.reject(new Error("Invalid ACK"));
   const current = nativePushAckState.get(tag) || { stages: {}, createdAt: Date.now() };
   current.stages[stageStr] = Date.now();
   current.updatedAt = Date.now();
   nativePushAckState.set(tag, current);
   const key = String(userKey || "").trim();
   if (firebaseDb && key) {
-    firebaseDb
-      .ref("users/" + key + "/pushAcks/" + tag + "/" + stageStr)
-      .set(Date.now())
-      .catch(() => {});
+    const now = Date.now();
+    const updates = {};
+    updates["users/" + key + "/pushAcks/" + tag + "/" + stageStr] = now;
+    updates["users/" + key + "/alarmDeliveries/" + tag + "/acks/" + stageStr] = now;
+    updates["users/" + key + "/alarmDeliveries/" + tag + "/updatedAt"] = now;
+    const saved = firebaseDb.ref().update(updates);
+    if (
+      stageStr === "shown" ||
+      stageStr === "shown_system" ||
+      stageStr === "poll_shown" ||
+      stageStr === "opened" ||
+      stageStr === "dismissed"
+    ) {
+      return saved.then(() => completeAlarmDelivery(key, tag, stageStr));
+    }
+    return saved;
   }
+  return Promise.reject(new Error("ACK storage unavailable"));
 }
 
 function cleanupNativePushAckState() {
@@ -1541,7 +1553,7 @@ const server = http.createServer((req, res) => {
     setCors(res, req);
     let body = "";
     req.on("data", (chunk) => { body += chunk; });
-    req.on("end", () => {
+    req.on("end", async () => {
       let parsed = {};
       try {
         parsed = JSON.parse(body || "{}");
@@ -1555,9 +1567,13 @@ const server = http.createServer((req, res) => {
       const eventTag = String(parsed.eventTag || "").slice(0, 120);
       const userKey = String(parsed.userKey || "").slice(0, 120);
       const channelId = String(parsed.channelId || "").slice(0, 120);
-      rememberNativePushAck(eventTag, stage, userKey);
-      if ((stage === "opened" || stage === "dismissed") && userKey) {
-        clearPendingAlarmEvent(userKey, eventTag);
+      try {
+        await rememberNativePushAck(eventTag, stage, userKey);
+      } catch (ackErr) {
+        console.error("[native-push-ack] persist failed", ackErr.message || ackErr);
+        res.writeHead(503, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({ error: "ACK persistence failed" }));
+        return;
       }
       console.log(
         "[native-push-ack]",

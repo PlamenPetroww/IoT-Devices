@@ -18,8 +18,8 @@ function getResendClient() {
 }
 
 const RTDB_INSTANCE = "cleverhaus-petrov-default-rtdb";
-const ALARM_DEDUPE_MS = 45000;
-const ALARM_PUSH_COALESCE_MS = 20000;
+const ALARM_DEDUPE_MS = 12000;
+const ALARM_PUSH_COALESCE_MS = 8000;
 const RENDER_HEALTH_URL =
     process.env.RENDER_HEALTH_URL || "https://cleverhaus.onrender.com/api/health";
 
@@ -93,57 +93,45 @@ function emailFromUserKey(userKey) {
 async function claimEmailSent(userKey, eventTag, bodyText) {
     const ref = rtdb.ref(`users/${userKey}/settings/emailSent/${safeEventTagKey(eventTag)}`);
     const now = Date.now();
-    const result = await ref.transaction((current) => {
-        const prev = Number(current) || 0;
-        if (prev && now - prev < ALARM_DEDUPE_MS) {
-            return;
-        }
-        return now;
-    });
-    if (!result.committed) {
-        return false;
-    }
-    const bodyRef = rtdb.ref(`users/${userKey}/settings/lastBodyEmail`);
-    const bodyKey = String(bodyText || "").trim();
-    const bodyResult = await bodyRef.transaction((current) => {
-        const prev = current || {};
-        const prevBody = String(prev.body || "");
-        const prevAt = Number(prev.at) || 0;
-        if (prevBody === bodyKey && now - prevAt < ALARM_DEDUPE_MS) {
-            return;
-        }
-        return { body: bodyKey, at: now };
-    });
-    return !!bodyResult.committed;
+    const result = await ref.transaction((current) => (current ? undefined : now));
+    return !!result.committed;
 }
 
 async function sendAlarmFallbackEmail(userKey, deviceName, bodyText, eventTag) {
-    const ok = await claimEmailSent(userKey, eventTag, bodyText);
-    if (!ok) {
-        console.log("[sensor-alarm] email dedupe blocked", userKey, eventTag);
-        return;
-    }
     const resend = getResendClient();
     if (!resend) {
         console.warn("[sensor-alarm] email skipped; RESEND_API_KEY missing", userKey, eventTag);
-        return;
+        return false;
     }
     const email = emailFromUserKey(userKey);
     if (!email) {
         console.warn("[sensor-alarm] email skipped; no email for", userKey, eventTag);
-        return;
+        return false;
+    }
+    const ok = await claimEmailSent(userKey, eventTag, bodyText);
+    if (!ok) {
+        console.log("[sensor-alarm] email dedupe blocked", userKey, eventTag);
+        return false;
     }
     const fromAddr = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
-    await resend.emails.send({
-        from: fromAddr,
-        to: [email],
-        subject: `Alarm alert - ${deviceName}`,
-        html:
-            `<p><strong>${bodyText}</strong></p>` +
-            `<p>Push notification could not be delivered to your phone (no app token or delivery failed).</p>`,
-    });
-    await rtdb.ref(`users/${userKey}/pendingAlarmEvents/${eventTag}`).remove();
+    try {
+        await resend.emails.send({
+            from: fromAddr,
+            to: [email],
+            subject: `Alarm alert - ${deviceName}`,
+            html:
+                `<p><strong>${bodyText}</strong></p>` +
+                `<p>Push notification could not be delivered to your phone (no app token or delivery failed).</p>`,
+        });
+    } catch (e) {
+        await rtdb
+            .ref(`users/${userKey}/settings/emailSent/${safeEventTagKey(eventTag)}`)
+            .remove()
+            .catch(() => {});
+        throw e;
+    }
     console.log("[sensor-alarm] email fallback sent", userKey, email, eventTag);
+    return true;
 }
 
 function safeDeviceKey(deviceId, deviceName) {
@@ -386,6 +374,37 @@ async function sendAlarmPushToUser(userKey, title, body, eventTag, eventCreatedA
     }
 }
 
+async function createAlarmDelivery(userKey, historyId, eventTag, deviceName, title, body, createdAt) {
+    const delivery = {
+        userKey,
+        historyId,
+        eventTag,
+        deviceName,
+        title,
+        body,
+        createdAt,
+        state: "pending",
+        attempts: 0,
+        updatedAt: Date.now(),
+    };
+    const updates = {};
+    updates[`users/${userKey}/pendingAlarmEvents/${eventTag}`] = delivery;
+    updates[`users/${userKey}/alarmDeliveries/${eventTag}`] = delivery;
+    updates[`alarmDeliveryQueue/${eventTag}`] = delivery;
+    await rtdb.ref().update(updates);
+}
+
+async function updateAlarmDelivery(userKey, eventTag, values) {
+    const update = { ...values, updatedAt: Date.now() };
+    const updates = {};
+    for (const [key, value] of Object.entries(update)) {
+        updates[`users/${userKey}/pendingAlarmEvents/${eventTag}/${key}`] = value;
+        updates[`users/${userKey}/alarmDeliveries/${eventTag}/${key}`] = value;
+        updates[`alarmDeliveryQueue/${eventTag}/${key}`] = value;
+    }
+    await rtdb.ref().update(updates);
+}
+
 export const onSensorHistoryAlarm = onValueCreated(
     {
         ref: "/users/{userKey}/history/{historyId}",
@@ -418,25 +437,25 @@ export const onSensorHistoryAlarm = onValueCreated(
             return;
         }
 
-        const gateOk = await claimAlarmGate(userKey, deviceKey, status, historyId);
-        if (!gateOk) {
-            console.log("[sensor-alarm] gate blocked duplicate", userKey, deviceName, status, historyId);
-            return;
-        }
-
+        // Dedupe only the exact RTDB history event. Legitimate OPEN/CLOSED transitions can
+        // happen seconds apart and must each produce an alarm.
         const historyOk = await claimDispatchedHistory(userKey, historyId);
         if (!historyOk) {
             console.log("[sensor-alarm] history already dispatched", userKey, historyId);
             return;
         }
 
-        const collapseKey = safeEventTagKey(deviceKey + "-" + status) || "aura-alarm";
-        const coalesceOk = await claimCoalescedDevicePush(userKey, deviceKey, status);
-        if (!coalesceOk) {
-            console.log("[sensor-alarm] coalesce blocked duplicate push", userKey, deviceName, status, historyId);
-            return;
-        }
+        await createAlarmDelivery(
+            userKey,
+            historyId,
+            eventTag,
+            deviceName,
+            title,
+            bodyText,
+            eventCreatedAt
+        );
 
+        const collapseKey = safeEventTagKey(deviceKey + "-" + status) || "aura-alarm";
         const sent = await sendAlarmPushToUser(
             userKey,
             title,
@@ -458,20 +477,17 @@ export const onSensorHistoryAlarm = onValueCreated(
             sent
         );
 
-        if (sent === 0) {
-            await rtdb.ref(`users/${userKey}/pendingAlarmEvents/${eventTag}`).set({
-                eventTag,
-                createdAt: eventCreatedAt,
-                title,
-                body: bodyText,
-                userKey,
-            });
-            await sendAlarmFallbackEmail(userKey, deviceName, bodyText, eventTag);
-            return;
-        }
-
-        await rtdb.ref(`users/${userKey}/pendingAlarmEvents/${eventTag}`).remove().catch(() => {});
-        console.log("[sensor-alarm] push ok; no email backup", userKey, eventTag);
+        await updateAlarmDelivery(userKey, eventTag, {
+            state: sent ? "fcm_accepted" : "fcm_send_failed",
+            attempts: 1,
+            lastAttemptAt: Date.now(),
+            fcmAcceptedAt: sent ? Date.now() : null,
+        });
+        console.log(
+            sent ? "[sensor-alarm] awaiting shown ACK" : "[sensor-alarm] queued after FCM failure",
+            userKey,
+            eventTag
+        );
     }
 );
 
@@ -714,9 +730,152 @@ export const confirmInquiry = onRequest(
     }
 );
 
-/** Render free tier sleeps when idle; internal setInterval cannot wake a stopped instance. */
-// Prune old history entries for every user — keep only the latest 200 per user.
-// Runs once per day. Prevents unbounded history growth that can slow Firebase writes.
+// FCM acceptance is not delivery. Retry unacknowledged alarms and use email after 60 seconds.
+export const retryUnacknowledgedAlarms = onSchedule(
+    {
+        schedule: "every 1 minutes",
+        region: "europe-west1",
+        timeZone: "Europe/Sofia",
+        timeoutSeconds: 120,
+    },
+    async () => {
+        const now = Date.now();
+        const snap = await rtdb
+            .ref("alarmDeliveryQueue")
+            .orderByChild("createdAt")
+            .limitToFirst(100)
+            .once("value");
+        if (!snap.exists()) return;
+
+        const jobs = [];
+        snap.forEach((child) => jobs.push({ key: child.key, ...child.val() }));
+        for (const job of jobs) {
+          try {
+            const userKey = String(job.userKey || "").trim();
+            const eventTag = String(job.eventTag || job.key || "").trim();
+            const createdAt = Number(job.createdAt) || now;
+            const lastAttemptAt = Number(job.lastAttemptAt) || 0;
+            let attempts = Number(job.attempts) || 0;
+            if (!userKey || !eventTag) {
+                await rtdb.ref(`alarmDeliveryQueue/${job.key}`).remove();
+                continue;
+            }
+
+            if (now - lastAttemptAt >= 15000 && attempts < 3) {
+                const sent = await sendAlarmPushToUser(
+                    userKey,
+                    job.title || "Aura HomeSystems",
+                    job.body || "",
+                    eventTag,
+                    createdAt,
+                    eventTag
+                );
+                attempts += 1;
+                await updateAlarmDelivery(userKey, eventTag, {
+                    state: sent ? "fcm_retried" : "fcm_retry_failed",
+                    attempts,
+                    lastAttemptAt: Date.now(),
+                });
+                console.log("[alarm-retry]", userKey, eventTag, "attempt", attempts, "sent", sent);
+            }
+
+            if (now - createdAt >= 60000) {
+                const emailSent = await sendAlarmFallbackEmail(
+                    userKey,
+                    job.deviceName || "Sensor",
+                    job.body || "",
+                    eventTag
+                );
+                if (emailSent) {
+                    const updates = {};
+                    updates[`users/${userKey}/pendingAlarmEvents/${eventTag}/state`] = "email_fallback";
+                    updates[`users/${userKey}/pendingAlarmEvents/${eventTag}/emailSentAt`] = Date.now();
+                    updates[`users/${userKey}/alarmDeliveries/${eventTag}/state`] = "email_fallback";
+                    updates[`users/${userKey}/alarmDeliveries/${eventTag}/emailSentAt`] = Date.now();
+                    updates[`alarmDeliveryQueue/${eventTag}`] = null;
+                    await rtdb.ref().update(updates);
+                }
+            }
+          } catch (e) {
+              console.error("[alarm-retry] job failed", job.key, e.message || e);
+          }
+        }
+    }
+);
+
+const HISTORY_LIMIT = 50;
+
+async function pruneUserHistory(userKey) {
+    const histRef = rtdb.ref(`users/${userKey}/history`);
+    const snap = await histRef.once("value");
+    if (!snap.exists()) return 0;
+
+    const entries = [];
+    snap.forEach((child) => {
+        entries.push({
+            key: child.key,
+            timestamp: parseHistoryTimestamp(child.val()),
+        });
+    });
+    if (entries.length <= HISTORY_LIMIT) return 0;
+
+    entries.sort((a, b) => a.timestamp - b.timestamp || a.key.localeCompare(b.key));
+    const toDelete = entries.slice(0, entries.length - HISTORY_LIMIT);
+    const updates = {};
+    for (const entry of toDelete) updates[entry.key] = null;
+    await histRef.update(updates);
+    console.log(`[prune-history] ${userKey}: deleted ${toDelete.length}, kept ${HISTORY_LIMIT}`);
+    return toDelete.length;
+}
+
+async function pruneUserDeliveryMetadata(userKey) {
+    const ref = rtdb.ref(`users/${userKey}/alarmDeliveries`);
+    const snap = await ref.once("value");
+    if (!snap.exists()) return 0;
+    const terminal = [];
+    snap.forEach((child) => {
+        const value = child.val() || {};
+        if (value.state === "ack_shown" || value.state === "email_fallback") {
+            terminal.push({
+                eventTag: child.key,
+                historyId: String(value.historyId || ""),
+                at: Number(value.ackShownAt || value.emailSentAt || value.createdAt) || 0,
+            });
+        }
+    });
+    if (terminal.length <= HISTORY_LIMIT) return 0;
+    terminal.sort((a, b) => a.at - b.at || a.eventTag.localeCompare(b.eventTag));
+    const expired = terminal.slice(0, terminal.length - HISTORY_LIMIT);
+    const updates = {};
+    for (const item of expired) {
+        updates[`users/${userKey}/alarmDeliveries/${item.eventTag}`] = null;
+        updates[`users/${userKey}/pushAcks/${item.eventTag}`] = null;
+        updates[`users/${userKey}/settings/emailSent/${item.eventTag}`] = null;
+        updates[`users/${userKey}/settings/pushSendLock/${item.eventTag}`] = null;
+        if (item.historyId) {
+            updates[`users/${userKey}/settings/dispatchedHistory/${item.historyId}`] = null;
+        }
+    }
+    await rtdb.ref().update(updates);
+    return expired.length;
+}
+
+// Enforce the limit immediately after every newly created sensor event.
+export const pruneHistoryOnCreate = onValueCreated(
+    {
+        ref: "/users/{userKey}/history/{historyId}",
+        instance: RTDB_INSTANCE,
+        region: "europe-west1",
+        timeoutSeconds: 60,
+    },
+    async (event) => {
+        const userKey = String(event.params.userKey || "").trim();
+        if (!userKey) return;
+        await pruneUserHistory(userKey);
+    }
+);
+
+// Daily safety pass also cleans users that already had more than 50 records.
 export const pruneHistory = onSchedule(
     {
         schedule: "every 24 hours",
@@ -724,22 +883,13 @@ export const pruneHistory = onSchedule(
         timeZone: "Europe/Sofia",
     },
     async () => {
-        const KEEP = 50;
         try {
             const usersSnap = await rtdb.ref("users").once("value");
             if (!usersSnap.exists()) return;
             const users = usersSnap.val();
             for (const userKey of Object.keys(users)) {
-                const histRef = rtdb.ref(`users/${userKey}/history`);
-                const snap = await histRef.orderByKey().once("value");
-                if (!snap.exists()) continue;
-                const keys = Object.keys(snap.val()).sort();
-                if (keys.length <= KEEP) continue;
-                const toDelete = keys.slice(0, keys.length - KEEP);
-                const updates = {};
-                for (const k of toDelete) updates[k] = null;
-                await histRef.update(updates);
-                console.log(`[prune-history] ${userKey}: deleted ${toDelete.length}, kept ${KEEP}`);
+                await pruneUserHistory(userKey);
+                await pruneUserDeliveryMetadata(userKey);
             }
         } catch (e) {
             console.error("[prune-history] error", e.message || e);

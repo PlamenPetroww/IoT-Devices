@@ -24,14 +24,11 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
     public static final String EXTRA_EVENT_TAG = "alarm_event_tag";
     public static final String EXTRA_USER_KEY = "alarm_user_key";
     private static final String PREFS = "aura_app";
-    private static final String KEY_LAST_BODY = "last_notif_body";
-    private static final String KEY_LAST_BODY_AT = "last_notif_body_at";
     private static final String KEY_FCM_MESSAGE_IDS = "fcm_message_ids";
     private static final String KEY_RECENT_CLAIMS = "recent_notif_claims";
     private static final java.util.Set<String> IN_MEMORY_CLAIMS =
             java.util.Collections.synchronizedSet(new java.util.HashSet<>());
     private static final long IN_MEMORY_CLAIM_MS = 30000L;
-    private static final long BODY_DEDUPE_MS = 12000L;
     private static volatile long inMemoryPrunedAt = 0L;
 
     static boolean claimEventForNotification(
@@ -43,17 +40,8 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
         synchronized (AuraFirebaseMessagingService.class) {
             android.content.SharedPreferences prefs =
                     context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
-            long now = System.currentTimeMillis();
-
             String stored = prefs.getString(KEY_RECENT_CLAIMS, "");
             if (("\n" + stored + "\n").contains("\n" + dedupeKey + "\n")) {
-                return false;
-            }
-
-            String bodyKey = buildBodyDedupeKey(title, body);
-            long lastBodyAt = prefs.getLong(KEY_LAST_BODY_AT, 0L);
-            String lastBody = prefs.getString(KEY_LAST_BODY, "");
-            if (bodyKey.equals(lastBody) && now - lastBodyAt < BODY_DEDUPE_MS) {
                 return false;
             }
 
@@ -69,11 +57,7 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
                 }
                 updated = trimmed.toString();
             }
-            prefs.edit()
-                    .putString(KEY_RECENT_CLAIMS, updated)
-                    .putString(KEY_LAST_BODY, bodyKey)
-                    .putLong(KEY_LAST_BODY_AT, now)
-                    .commit();
+            prefs.edit().putString(KEY_RECENT_CLAIMS, updated).commit();
             return true;
         }
     }
@@ -164,8 +148,7 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
     @Override
     public void onMessageReceived(RemoteMessage remoteMessage) {
         if (!claimFcmMessageId(this, remoteMessage.getMessageId())) {
-            android.util.Log.i("AuraFCM", "skip duplicate FCM messageId " + remoteMessage.getMessageId());
-            return;
+            android.util.Log.i("AuraFCM", "reconfirm duplicate FCM messageId " + remoteMessage.getMessageId());
         }
 
         Map<String, String> data = remoteMessage.getData();
@@ -178,12 +161,6 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
                         ? data.get("eventCreatedAt")
                         : "");
         String dedupeTag = resolveDedupeTag(data, eventTag, eventCreatedAt);
-        String inboundKey = dedupeTag + "|" + eventCreatedAt;
-        if (!claimInMemory(inboundKey)) {
-            android.util.Log.i("AuraFCM", "skip in-memory duplicate " + dedupeTag);
-            NativePushRegistrar.sendAck(this, "skipped_duplicate", eventTag, "", userKey);
-            return;
-        }
 
         String previewTitle =
                 remoteMessage.getNotification() != null && remoteMessage.getNotification().getTitle() != null
@@ -193,12 +170,6 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
                 remoteMessage.getNotification() != null && remoteMessage.getNotification().getBody() != null
                         ? remoteMessage.getNotification().getBody()
                         : (data != null && data.containsKey("body") ? data.get("body") : "");
-        if (!claimEventForNotification(this, eventTag, previewTitle, previewBody, eventCreatedAt)) {
-            android.util.Log.i("AuraFCM", "skip duplicate inbound message " + eventTag);
-            NativePushRegistrar.sendAck(this, "skipped_duplicate", eventTag, "", userKey);
-            return;
-        }
-
         NativePushRegistrar.sendAck(this, "received", eventTag, "", userKey);
         if (remoteMessage.getNotification() != null) {
             if (!isAppInForeground()) {
@@ -262,9 +233,9 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
             boolean skipDedupeClaim) {
         if (!skipDedupeClaim
                 && !claimEventForNotification(context, eventTag, title, body, eventCreatedAt)) {
-            android.util.Log.i("AuraFCM", "skip duplicate notification " + eventTag);
-            NativePushRegistrar.sendAck(context, "skipped_duplicate", eventTag, "", userKey);
-            return false;
+            // Re-posting the same event uses the same notification ID/tag and replaces it.
+            // This lets a retry restore a missing ACK without creating a second tray item.
+            android.util.Log.i("AuraFCM", "reconfirm duplicate notification " + eventTag);
         }
         if (!NotificationPermissionHelper.areNotificationsEnabled(context)) {
             android.util.Log.w("AuraFCM", "Notifications disabled — enable in phone Settings");

@@ -64,8 +64,8 @@ android {
         applicationId "com.aurahomesystems.app"
         minSdkVersion 21
         targetSdkVersion 35
-        versionCode 39
-        versionName "39"
+        versionCode 40
+        versionName "40"
 
         // The name for the application
         resValue "string", "appName", twaManifest.name
@@ -232,4 +232,5 @@ dependencies {
     
     implementation platform('com.google.firebase:firebase-bom:33.7.0')
     implementation 'com.google.firebase:firebase-messaging'
+    implementation 'androidx.work:work-runtime:2.10.0'
 }

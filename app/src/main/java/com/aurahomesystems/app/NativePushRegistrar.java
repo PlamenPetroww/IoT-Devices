@@ -3,6 +3,14 @@ package com.aurahomesystems.app;
 import android.content.Context;
 import android.util.Log;
 
+import androidx.work.BackoffPolicy;
+import androidx.work.Constraints;
+import androidx.work.Data;
+import androidx.work.ExistingWorkPolicy;
+import androidx.work.NetworkType;
+import androidx.work.OneTimeWorkRequest;
+import androidx.work.WorkManager;
+
 import org.json.JSONObject;
 
 import java.io.InputStream;
@@ -10,6 +18,7 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.TimeUnit;
 
 final class NativePushRegistrar {
     private static final String TAG = "AuraNativePush";
@@ -66,19 +75,27 @@ final class NativePushRegistrar {
                 ? normalizedExplicitUserKey
                 : context.getSharedPreferences("aura_app", Context.MODE_PRIVATE)
                         .getString("user_key", "");
-        new Thread(
-                () -> {
-                    for (int attempt = 1; attempt <= 3; attempt++) {
-                        if (postAck(deviceId, stageStr, eventTagStr, channelIdStr, userKey, attempt)) {
-                            return;
-                        }
-                        sleepQuiet(attempt * 1500L);
-                    }
-                })
-                .start();
+        Data input = new Data.Builder()
+                .putString(PushAckWorker.KEY_DEVICE_ID, deviceId)
+                .putString(PushAckWorker.KEY_STAGE, stageStr)
+                .putString(PushAckWorker.KEY_EVENT_TAG, eventTagStr)
+                .putString(PushAckWorker.KEY_CHANNEL_ID, channelIdStr)
+                .putString(PushAckWorker.KEY_USER_KEY, userKey)
+                .build();
+        Constraints constraints = new Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build();
+        OneTimeWorkRequest request = new OneTimeWorkRequest.Builder(PushAckWorker.class)
+                .setInputData(input)
+                .setConstraints(constraints)
+                .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 10, TimeUnit.SECONDS)
+                .build();
+        String uniqueName = "aura-ack-" + (eventTagStr + "|" + stageStr).hashCode();
+        WorkManager.getInstance(context.getApplicationContext())
+                .enqueueUniqueWork(uniqueName, ExistingWorkPolicy.KEEP, request);
     }
 
-    private static boolean postAck(
+    static boolean postAck(
             String deviceId,
             String stage,
             String eventTag,

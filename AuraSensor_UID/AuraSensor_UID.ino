@@ -7,6 +7,7 @@
 #include <WiFiClientSecure.h>
 #include <time.h>
 #include "esp_sleep.h"
+#include "esp_system.h"
 #if CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32S3
 #include "driver/rtc_io.h"
 #endif
@@ -153,6 +154,97 @@ RTC_DATA_ATTR int8_t rtcCapturedClosed = -1;  // sensor state captured immediate
 #define PERIODIC_RESTART_WAKES 50
 RTC_DATA_ATTR uint16_t rtcWakeCount = 0;
 
+#define EVENT_QUEUE_MAGIC 0x41555241UL
+#define EVENT_QUEUE_CAPACITY 32
+
+struct PendingSensorEvent {
+    uint32_t sequence;
+    int64_t capturedAt;
+    uint8_t closed;
+};
+
+struct PersistedEventQueue {
+    uint32_t magic;
+    uint32_t nextSequence;
+    int8_t lastAcknowledged;
+    uint8_t count;
+    PendingSensorEvent events[EVENT_QUEUE_CAPACITY];
+};
+
+static PersistedEventQueue eventQueue;
+static bool eventQueueLoaded = false;
+
+static void loadEventQueue() {
+    if (eventQueueLoaded) return;
+    memset(&eventQueue, 0, sizeof(eventQueue));
+    prefs.begin("aura", true);
+    size_t len = prefs.getBytesLength("eventq");
+    if (len == sizeof(eventQueue)) {
+        prefs.getBytes("eventq", &eventQueue, sizeof(eventQueue));
+    }
+    prefs.end();
+    if (eventQueue.magic != EVENT_QUEUE_MAGIC
+        || eventQueue.count > EVENT_QUEUE_CAPACITY
+        || eventQueue.nextSequence == 0) {
+        memset(&eventQueue, 0, sizeof(eventQueue));
+        eventQueue.magic = EVENT_QUEUE_MAGIC;
+        eventQueue.nextSequence = 1;
+        eventQueue.lastAcknowledged = -1;
+    }
+    eventQueueLoaded = true;
+}
+
+static bool saveEventQueue() {
+    prefs.begin("aura", false);
+    size_t written = prefs.putBytes("eventq", &eventQueue, sizeof(eventQueue));
+    prefs.end();
+    return written == sizeof(eventQueue);
+}
+
+static bool enqueueSensorEvent(bool closed) {
+    loadEventQueue();
+    int8_t lastKnown = eventQueue.lastAcknowledged;
+    if (eventQueue.count > 0) {
+        lastKnown = eventQueue.events[eventQueue.count - 1].closed ? 1 : 0;
+    }
+    if (lastKnown == (closed ? 1 : 0)) return true;
+    if (eventQueue.count >= EVENT_QUEUE_CAPACITY) {
+        Serial.println("EVENT QUEUE FULL - retaining unsent events");
+        return false;
+    }
+    PendingSensorEvent &event = eventQueue.events[eventQueue.count++];
+    event.sequence = eventQueue.nextSequence++;
+    if (eventQueue.nextSequence == 0) eventQueue.nextSequence = 1;
+    event.capturedAt = timestampMsNow();
+    event.closed = closed ? 1 : 0;
+    if (!saveEventQueue()) {
+        eventQueue.count--;
+        Serial.println("EVENT QUEUE SAVE FAILED");
+        return false;
+    }
+    Serial.print("Event queued, seq=");
+    Serial.println(event.sequence);
+    return true;
+}
+
+static bool peekSensorEvent(PendingSensorEvent &event) {
+    loadEventQueue();
+    if (eventQueue.count == 0) return false;
+    event = eventQueue.events[0];
+    return true;
+}
+
+static bool removeQueuedSensorEvent(uint32_t sequence, int8_t acknowledgedStatus) {
+    loadEventQueue();
+    if (eventQueue.count == 0 || eventQueue.events[0].sequence != sequence) return false;
+    for (uint8_t i = 1; i < eventQueue.count; i++) {
+        eventQueue.events[i - 1] = eventQueue.events[i];
+    }
+    eventQueue.count--;
+    eventQueue.lastAcknowledged = acknowledgedStatus;
+    return saveEventQueue();
+}
+
 #define SENSOR_DEBOUNCE_MS 50
 #define SENSOR_DEBOUNCE_SAMPLES 5
 
@@ -296,12 +388,15 @@ String getDeviceIdFromName(char* device_name_ptr) {
     return safe;
 }
 
-#define HISTORY_BUCKET_MS 45000UL
-
 String buildHistoryKey(const String& deviceID, bool isClosed, unsigned long tsMs) {
-    unsigned long bucket = tsMs / HISTORY_BUCKET_MS;
     String status = isClosed ? "closed" : "open";
-    return deviceID + "_" + status + "_" + String(bucket);
+    // Unique key per event so RTDB onValueCreated always fires (45s buckets overwrote repeats → no push).
+    return deviceID + "_" + status + "_" + String(tsMs) + "_"
+        + String((uint32_t)(esp_random() & 0xFFFF));
+}
+
+String buildQueuedHistoryKey(const String& deviceID, uint32_t sequence) {
+    return deviceID + "_event_" + String(sequence);
 }
 
 int readBatteryPercent(char* powerSourceOut, size_t powerSourceLen) {
@@ -455,10 +550,16 @@ static void armDeepSleepGpioWakeup(int wakeLevel) {
     esp_sleep_enable_timer_wakeup((uint64_t)DEEP_SLEEP_HEARTBEAT_SEC * 1000000ULL);
 #endif
 }
+static bool isPowerOnReset() {
+    const esp_reset_reason_t reason = esp_reset_reason();
+    return reason == ESP_RST_POWERON || reason == ESP_RST_BROWNOUT;
+}
+
 void setup() {
     const esp_sleep_wakeup_cause_t bootWakeCause = esp_sleep_get_wakeup_cause();
     const bool coldBoot = (bootWakeCause == ESP_SLEEP_WAKEUP_UNDEFINED);
-    if (coldBoot) {
+    // Only clear RTC sensor state on true power-on — NOT on ESP.restart() (periodic restart).
+    if (isPowerOnReset()) {
         rtcLastSentStatus = -1;
         rtcCapturedClosed = -1;
         rtcWakeCount = 0;
@@ -490,6 +591,8 @@ void setup() {
         const esp_sleep_wakeup_cause_t earlyWake = esp_sleep_get_wakeup_cause();
         bool st = readSensorClosedDebounced();
         nextWakeLevel = st ? 0 : 1;
+        // Persist the transition before Wi-Fi. A network outage or reset must not lose it.
+        enqueueSensorEvent(st);
         if (earlyWake == ESP_SLEEP_WAKEUP_EXT0
 #if CONFIG_IDF_TARGET_ESP32C3
             || earlyWake == ESP_SLEEP_WAKEUP_GPIO
@@ -537,6 +640,7 @@ void setup() {
             // Already configured: do not open the setup AP on a temporary Wi-Fi failure.
             Serial.println("No WiFi - deep sleep 5 min, then retry.");
             Serial.flush();
+            rtcCapturedClosed = -1;
             armDeepSleepGpioWakeup(nextWakeLevel);
             esp_sleep_enable_timer_wakeup(300ULL * 1000000ULL);
             esp_deep_sleep_start();
@@ -588,6 +692,7 @@ void setup() {
                 // Router missing/power outage: sleep 5 min and retry instead of keeping the portal open.
                 Serial.println("No WiFi ÔÇö deep sleep 5 min, then retry.");
                 Serial.flush();
+                rtcCapturedClosed = -1;
                 armDeepSleepGpioWakeup(nextWakeLevel);
                 esp_sleep_enable_timer_wakeup(300ULL * 1000000ULL);
                 esp_deep_sleep_start();
@@ -679,21 +784,18 @@ void setup() {
     String devicePath = userPath + "/devices/" + deviceID;
     Serial.print("Device path: ");
     Serial.println(devicePath);
-    bool currentStatus;
-    if (rtcCapturedClosed >= 0) {
-        currentStatus = (rtcCapturedClosed == 1);
-        rtcCapturedClosed = -1;
-        Serial.println("Using sensor state from wake (before Wi-Fi)");
-    } else {
-        currentStatus = readSensorClosedDebounced();
-    }
+    PendingSensorEvent pendingEvent;
+    const bool hasPendingEvent = peekSensorEvent(pendingEvent);
+    bool currentStatus = hasPendingEvent
+        ? (pendingEvent.closed == 1)
+        : readSensorClosedDebounced();
+    rtcCapturedClosed = -1;
     Serial.print("Sensor ");
     Serial.print(device_name);
     Serial.print(" -> ");
     Serial.println(currentStatus ? "CLOSED" : "OPEN");
     const int8_t curSt = currentStatus ? 1 : 0;
-    const bool statusChanged = (rtcLastSentStatus < 0 || rtcLastSentStatus != curSt);
-    const bool shouldSendEvent = statusChanged;
+    const bool shouldSendEvent = hasPendingEvent;
     if (shouldSendEvent) {
         Serial.println("Alarm push via Firebase Cloud Function.");
     } else {
@@ -711,13 +813,18 @@ void setup() {
 #endif
     json.set("battery", batteryPct);
     json.set("powerSource", powerSource);
-    if (Firebase.RTDB.setJSON(&fbdo, devicePath, &json)) {
+    bool deviceWriteOk = false;
+    for (int attempt = 1; attempt <= 3 && !deviceWriteOk; attempt++) {
+        deviceWriteOk = Firebase.RTDB.setJSON(&fbdo, devicePath, &json);
+        if (!deviceWriteOk) delay(attempt * 1000);
+    }
+    bool historyWriteOk = !shouldSendEvent;
+    if (deviceWriteOk) {
         Serial.println("Firebase: OK");
-        // History only on a real change ÔÇö otherwise resets/false wakes fill the list with identical entries.
-        const bool writeHistory = shouldSendEvent;
-        if (writeHistory) {
-            unsigned long histTs = timestampMsNow();
-            String historyKey = buildHistoryKey(deviceID, currentStatus, histTs);
+        if (shouldSendEvent) {
+            int64_t histTs = pendingEvent.capturedAt;
+            if (histTs < 1700000000000LL) histTs = timestampMsNow();
+            String historyKey = buildQueuedHistoryKey(deviceID, pendingEvent.sequence);
             String historyPath = userPath + "/history/" + historyKey;
             FirebaseJson jsonHist;
             jsonHist.set("deviceId", deviceID);
@@ -726,16 +833,35 @@ void setup() {
 #if RTDB_USE_SV_TIMESTAMP
             jsonHist.set("timestamp/.sv", "timestamp");
 #else
-            jsonHist.set("timestamp", timestampMsNow());
+            jsonHist.set("timestamp", histTs);
 #endif
-            Firebase.RTDB.setJSON(&fbdo, historyPath.c_str(), &jsonHist);
+            for (int attempt = 1; attempt <= 3 && !historyWriteOk; attempt++) {
+                historyWriteOk = Firebase.RTDB.setJSON(&fbdo, historyPath.c_str(), &jsonHist);
+                if (!historyWriteOk) delay(attempt * 1000);
+            }
         }
     } else {
         Serial.print("Firebase FAIL: ");
         Serial.println(fbdo.errorReason());
     }
-    rtcLastSentStatus = curSt;
-    nextWakeLevel = currentStatus ? 0 : 1;
+    if (deviceWriteOk && historyWriteOk) {
+        bool queueCommitOk = true;
+        if (shouldSendEvent) {
+            queueCommitOk = removeQueuedSensorEvent(pendingEvent.sequence, curSt);
+        }
+        if (queueCommitOk) {
+            rtcLastSentStatus = curSt;
+        } else {
+            Serial.println("Queue commit failed; event will be retried idempotently.");
+        }
+    } else {
+        Serial.println("Event remains queued for retry.");
+    }
+
+    // Capture a transition that happened while Wi-Fi/Firebase was busy.
+    bool liveStatus = readSensorClosedDebounced();
+    enqueueSensorEvent(liveStatus);
+    nextWakeLevel = liveStatus ? 0 : 1;
     rtcWakeCount++;
     delay(300);
     Serial.flush();
@@ -749,6 +875,11 @@ void setup() {
     }
     // Before sleep: RTC pull (ESP32/S3) or gpio pull (C3) ÔÇö see armDeepSleepGpioWakeup().
     armDeepSleepGpioWakeup(nextWakeLevel);
+    if (eventQueue.count > 0) {
+        esp_sleep_enable_timer_wakeup(2ULL * 1000000ULL);
+        Serial.print("Queued events remaining: ");
+        Serial.println(eventQueue.count);
+    }
     Serial.print("Deep sleep. Next wake: sensor change (waiting for ");
     Serial.print(nextWakeLevel ? "HIGH" : "LOW");
     Serial.print(")");

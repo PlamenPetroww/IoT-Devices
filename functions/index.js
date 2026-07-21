@@ -322,23 +322,12 @@ async function sendAlarmPushToUser(userKey, title, body, eventTag, eventCreatedA
         },
         ...(isNative
             ? {
-                  // notification + data: Android system tray shows alerts in Doze/standby
-                  // (data-only FCM is deferred until the phone wakes).
-                  notification: {
-                      title: titleStr,
-                      body: bodyStr,
-                  },
+                  // High-priority data message lets the app show the alarm and return a real
+                  // shown ACK. A notification payload is auto-rendered by Android without an
+                  // app callback, which caused the backup poll/retry to create a second alert.
                   android: {
                       priority: "high",
                       ttl: 86400000,
-                      collapseKey: dedupeTag,
-                      notification: {
-                          channelId: "aura_alarm_alerts_v2",
-                          priority: "max",
-                          defaultSound: playSound,
-                          defaultVibrateTimings: true,
-                          visibility: "public",
-                      },
                   },
               }
             : {

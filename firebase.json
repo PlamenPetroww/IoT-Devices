@@ -3,6 +3,9 @@
     "source": "functions",
     "predeploy": []
   },
+  "database": {
+    "rules": "firebase-database-rules.json"
+  },
   "firestore": {
     "rules": "firestore.rules"
   }

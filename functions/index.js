@@ -322,12 +322,23 @@ async function sendAlarmPushToUser(userKey, title, body, eventTag, eventCreatedA
         },
         ...(isNative
             ? {
-                  // High-priority data message lets the app show the alarm and return a real
-                  // shown ACK. A notification payload is auto-rendered by Android without an
-                  // app callback, which caused the backup poll/retry to create a second alert.
+                  // Android renders notification messages immediately in Doze. The stable tag
+                  // lets backup polling verify/replace the same tray item instead of duplicating it.
+                  notification: {
+                      title: titleStr,
+                      body: bodyStr,
+                  },
                   android: {
                       priority: "high",
                       ttl: 86400000,
+                      notification: {
+                          tag: "aura-event-" + dedupeTag,
+                          channelId: "aura_alarm_alerts_v2",
+                          priority: "max",
+                          defaultSound: playSound,
+                          defaultVibrateTimings: true,
+                          visibility: "public",
+                      },
                   },
               }
             : {

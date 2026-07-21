@@ -9,7 +9,10 @@
     "users": {
       "$userKey": {
         ".read": "auth != null && (auth.uid === $userKey || root.child('userEmailKeys').child(auth.uid).val() === $userKey)",
-        ".write": "auth != null && (auth.uid === $userKey || root.child('userEmailKeys').child(auth.uid).val() === $userKey)"
+        ".write": "auth != null && (auth.uid === $userKey || root.child('userEmailKeys').child(auth.uid).val() === $userKey)",
+        "pendingAlarmEvents": {
+          ".read": "auth != null && auth.token.nativeMonitorUserKey === $userKey"
+        }
       }
     },
     "nativeDeviceTokens": {

@@ -389,6 +389,7 @@ function rememberNativePushAck(eventTag, stage, userKey) {
       stageStr === "shown" ||
       stageStr === "shown_system" ||
       stageStr === "poll_shown" ||
+      stageStr === "rtdb_shown" ||
       stageStr === "opened" ||
       stageStr === "dismissed"
     ) {
@@ -1166,6 +1167,49 @@ const server = http.createServer((req, res) => {
       }
       res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
       res.end(JSON.stringify({ success: true, userKey: userKey || "" }));
+    });
+    return;
+  }
+
+  if (requestPath === "/api/native-rtdb-token" && req.method === "GET") {
+    setCors(res, req);
+    const deviceId = sanitizeDeviceId(requestUrl.searchParams.get("deviceId"));
+    if (!deviceId) {
+      res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+      res.end(JSON.stringify({ error: "Invalid deviceId" }));
+      return;
+    }
+    if (!firebaseDb || !firebaseAdmin) {
+      res.writeHead(503, { "Content-Type": "application/json; charset=utf-8" });
+      res.end(JSON.stringify({ error: "Not configured" }));
+      return;
+    }
+    resolveUserKeyForDeviceId(deviceId, (lookupErr, userKey) => {
+      if (lookupErr) {
+        res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({ error: lookupErr.message || "Lookup failed" }));
+        return;
+      }
+      if (!userKey) {
+        res.writeHead(404, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({ error: "Device not linked" }));
+        return;
+      }
+      const monitorUid =
+        "native-monitor-" +
+        crypto.createHash("sha256").update(deviceId).digest("hex").slice(0, 48);
+      firebaseAdmin
+        .auth()
+        .createCustomToken(monitorUid, { nativeMonitorUserKey: userKey })
+        .then((customToken) => {
+          res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify({ success: true, customToken, userKey }));
+        })
+        .catch((tokenErr) => {
+          console.error("[native-rtdb-token]", tokenErr.message || tokenErr);
+          res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify({ error: "Token issue failed" }));
+        });
     });
     return;
   }

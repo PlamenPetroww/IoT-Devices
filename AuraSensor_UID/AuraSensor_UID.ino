@@ -171,6 +171,14 @@ struct PersistedEventQueue {
     PendingSensorEvent events[EVENT_QUEUE_CAPACITY];
 };
 
+// Explicit prototypes prevent Arduino's .ino preprocessor from generating
+// peekSensorEvent(PendingSensorEvent&) before the struct declaration.
+static void loadEventQueue();
+static bool saveEventQueue();
+static bool enqueueSensorEvent(bool closed);
+static bool peekSensorEvent(PendingSensorEvent &event);
+static bool removeQueuedSensorEvent(uint32_t sequence, int8_t acknowledgedStatus);
+
 static PersistedEventQueue eventQueue;
 static bool eventQueueLoaded = false;
 

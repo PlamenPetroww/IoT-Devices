@@ -33,7 +33,7 @@ Aura HomeSystems пази дома ти, когато е празен.
 • Сензори за прозорци и врати – без кабели, без хъб, директно WiFi
 • Мобилно приложение с статус в реално време и история на събитията
 • Моментални push известия при отваряне
-• Работи на до 2 устройства едновременно (телефон, таблет, лаптоп)
+• Работи на до 3 устройства едновременно (телефон, таблет, лаптоп)
 
 ПРЕДИМСТВА:
 • Без месечен абонамент – плащаш веднъж за сензорите и приложението
@@ -41,7 +41,7 @@ Aura HomeSystems пази дома ти, когато е празен.
 • USB-C презареждане с обикновено зарядно
 • Личен акаунт – данните са само ваши
 
-ЦЕНИ (ориентировъчно): 1 сензор 59,00 € · 3 сензора 159,00 € · 5 сензора 249,00 €
+ЦЕНИ (ориентировъчно): 1 сензор 44,99 € · 3 сензора 109,99 € · 5 сензора 169,99 €
 
 Съвместимост: Android 8+, WiFi 2.4 GHz у дома.
 За поръчки и информация: www.aurahomesystems.eu
@@ -60,7 +60,7 @@ WHAT YOU GET:
 • Sensors for windows and doors – no cables, no hub, direct WiFi
 • Mobile app with real-time status and event history
 • Instant push notifications on opening
-• Works on up to 2 devices at once (phone, tablet, laptop)
+• Works on up to 3 devices at once (phone, tablet, laptop)
 
 BENEFITS:
 • No monthly subscription – pay once for sensors and app

@@ -1,6 +1,6 @@
 {
-  "testMode": true,
-  "unitPriceEur": 0.01,
-  "bundles": { "1": 0.01, "3": 0.03, "5": 0.05 },
+  "testMode": false,
+  "unitPriceEur": 44.99,
+  "bundles": { "1": 44.99, "3": 109.99, "5": 169.99 },
   "testDeliveryEur": 0.01
 }

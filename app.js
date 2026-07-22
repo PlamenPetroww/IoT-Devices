@@ -619,8 +619,8 @@ function initBuyPanel() {
 
     const pricingCfg = window.AURA_PRICING || {
         testMode: false,
-        unitPriceEur: 59,
-        bundles: { 1: 59, 3: 159, 5: 249 },
+        unitPriceEur: 44.99,
+        bundles: { 1: 44.99, 3: 109.99, 5: 169.99 },
         testDeliveryEur: 0.01,
     };
     const UNIT_PRICE_EUR = pricingCfg.unitPriceEur;
@@ -1012,7 +1012,7 @@ function initBuyPanel() {
 
         const lang = document.documentElement.lang || "en";
         const msgError = { bg: "Неуспешно. Опитайте отново.", en: "Failed. Try again.", de: "Fehlgeschlagen. Bitte erneut versuchen." };
-        const msgSuccessTitle = { bg: "Поръчката е изпратена!", en: "Order submitted!", de: "Bestellung gesendet!" };
+        const msgSuccessTitle = { bg: "Поръчката е приета!", en: "Order received!", de: "Bestellung angenommen!" };
 
         const quantity = (qtyInput && qtyInput.value) || "1";
         const paymentMethod = (buyForm.querySelector('select[name="paymentMethod"]') && buyForm.querySelector('select[name="paymentMethod"]').value) || "";

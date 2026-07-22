@@ -81,8 +81,8 @@ function loadShippingZones() {
 function loadPricingConfig() {
   const production = {
     testMode: false,
-    unitPriceEur: 59,
-    bundles: { 1: 59, 3: 159, 5: 249 },
+    unitPriceEur: 44.99,
+    bundles: { 1: 44.99, 3: 109.99, 5: 169.99 },
     testDeliveryEur: 0.01,
   };
   try {

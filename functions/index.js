@@ -1,23 +1,38 @@
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { getDatabase } from "firebase-admin/database";
+import { getFunctions } from "firebase-admin/functions";
 import { getMessaging } from "firebase-admin/messaging";
 import { onRequest } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { onValueCreated } from "firebase-functions/v2/database";
+import { onTaskDispatched } from "firebase-functions/v2/tasks";
+import { defineSecret } from "firebase-functions/params";
 import { Resend } from "resend";
-import crypto from "crypto";
+import { getAlarmTexts, normalizeAlarmLang } from "./alarm-i18n.js";
 
 initializeApp();
 const rtdb = getDatabase();
 const messaging = getMessaging();
+const resendApiKey = defineSecret("RESEND_API_KEY");
+const resendFromEmail = defineSecret("RESEND_FROM_EMAIL");
 
 function getResendClient() {
-    const apiKey = String(process.env.RESEND_API_KEY || "").trim();
+    const apiKey = String(resendApiKey.value() || process.env.RESEND_API_KEY || "").trim();
     if (!apiKey) return null;
     return new Resend(apiKey);
 }
 
+function getResendFromEmail() {
+    return String(
+        resendFromEmail.value() ||
+        process.env.RESEND_FROM_EMAIL ||
+        "onboarding@resend.dev"
+    ).trim();
+}
+
 const RTDB_INSTANCE = "cleverhaus-petrov-default-rtdb";
+const EMAIL_FALLBACK_DELAY_SECONDS = 45;
 const ALARM_DEDUPE_MS = 12000;
 const ALARM_PUSH_COALESCE_MS = 8000;
 const RENDER_HEALTH_URL =
@@ -33,51 +48,79 @@ function isDeadFcmError(err) {
     );
 }
 
-async function resolveNativeAndroidToken(userKey) {
+async function resolveNativeAndroidTokens(userKey) {
     const key = String(userKey || "").trim();
-    if (!key) return "";
+    if (!key) return [];
 
-    const snap = await rtdb.ref(`users/${key}/pushTokens/native_android`).get();
-    const stored = snap.val()?.token ? String(snap.val().token).trim() : "";
-    let latest = stored;
-    let latestAt = Number(snap.val()?.createdAt) || 0;
-
-    const consider = (token, updatedAt) => {
+    const targets = new Map();
+    const consider = (token, updatedAt, deviceId = "") => {
         const t = String(token || "").trim();
         const at = Number(updatedAt) || 0;
         if (!t) return;
-        if (!latest || at >= latestAt) {
-            latest = t;
-            latestAt = at;
-        }
+        const current = targets.get(t) || { token: t, updatedAt: 0, deviceIds: new Set() };
+        current.updatedAt = Math.max(current.updatedAt, at);
+        if (deviceId) current.deviceIds.add(deviceId);
+        targets.set(t, current);
     };
 
-    const deviceIdSnap = await rtdb.ref(`users/${key}/settings/nativeDeviceId`).get();
-    const deviceId = deviceIdSnap.val() ? String(deviceIdSnap.val()).trim() : "";
-    if (deviceId) {
-        const devSnap = await rtdb.ref(`nativeDeviceTokens/${deviceId}`).get();
-        const row = devSnap.val();
-        if (row) consider(row.token, row.updatedAt);
-    }
-
-    const allSnap = await rtdb.ref("nativeDeviceTokens").get();
+    const [storedSnap, allSnap] = await Promise.all([
+        rtdb.ref(`users/${key}/pushTokens/native_android`).get(),
+        rtdb.ref("nativeDeviceTokens").get(),
+    ]);
+    const stored = storedSnap.val() || {};
+    consider(stored.token, stored.createdAt);
     allSnap.forEach((child) => {
         const row = child.val();
         if (row && String(row.userKey || "").trim() === key) {
-            consider(row.token, row.updatedAt);
+            consider(row.token, row.updatedAt, String(child.key || ""));
         }
     });
 
-    if (latest && latest !== stored) {
+    const result = Array.from(targets.values())
+        .map((target) => ({
+            token: target.token,
+            updatedAt: target.updatedAt,
+            deviceIds: Array.from(target.deviceIds),
+        }))
+        .sort((a, b) => b.updatedAt - a.updatedAt);
+
+    if (result.length > 0 && result[0].token !== String(stored.token || "").trim()) {
         await rtdb.ref(`users/${key}/pushTokens/native_android`).set({
-            token: latest,
+            token: result[0].token,
             platform: "android",
             createdAt: Date.now(),
         });
-        console.log("[sensor-alarm] synced native token for", key);
+        console.log("[sensor-alarm] synced newest native token for", key);
     }
+    return result;
+}
 
-    return latest;
+async function removeDeadNativeToken(userKey, target) {
+    const token = String(target?.token || "").trim();
+    if (!token) return;
+    const removals = [];
+    const userRef = rtdb.ref(`users/${userKey}/pushTokens/native_android`);
+    removals.push(
+        userRef.get().then((snap) => {
+            if (String(snap.val()?.token || "").trim() === token) return userRef.remove();
+            return null;
+        })
+    );
+    for (const deviceId of target.deviceIds || []) {
+        const ref = rtdb.ref(`nativeDeviceTokens/${deviceId}`);
+        removals.push(
+            ref.get().then((snap) => {
+                if (String(snap.val()?.token || "").trim() === token) return ref.remove();
+                return null;
+            })
+        );
+    }
+    await Promise.all(removals);
+    console.warn(
+        "[sensor-alarm] removed dead native token",
+        userKey,
+        (target.deviceIds || []).join(",") || "legacy"
+    );
 }
 
 function emailFromUserKey(userKey) {
@@ -90,44 +133,62 @@ function emailFromUserKey(userKey) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : "";
 }
 
-async function claimEmailSent(userKey, eventTag, bodyText) {
-    const ref = rtdb.ref(`users/${userKey}/settings/emailSent/${safeEventTagKey(eventTag)}`);
-    const now = Date.now();
-    const result = await ref.transaction((current) => (current ? undefined : now));
-    return !!result.committed;
+async function resolveEmailForUserKey(userKey) {
+    const snap = await rtdb
+        .ref("userEmailKeys")
+        .orderByValue()
+        .equalTo(userKey)
+        .limitToFirst(1)
+        .get();
+    let uid = "";
+    snap.forEach((child) => {
+        if (!uid) uid = String(child.key || "").trim();
+    });
+    if (uid) {
+        try {
+            const user = await getAuth().getUser(uid);
+            const email = String(user.email || "").trim();
+            if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return email;
+        } catch (e) {
+            console.warn("[sensor-alarm] auth email lookup failed", userKey, e.message || e);
+        }
+    }
+    return emailFromUserKey(userKey);
 }
 
-async function sendAlarmFallbackEmail(userKey, deviceName, bodyText, eventTag) {
+async function sendAlarmFallbackEmail(userKey, deviceName, bodyText, eventTag, lang) {
     const resend = getResendClient();
     if (!resend) {
         console.warn("[sensor-alarm] email skipped; RESEND_API_KEY missing", userKey, eventTag);
         return false;
     }
-    const email = emailFromUserKey(userKey);
+    const email = await resolveEmailForUserKey(userKey);
     if (!email) {
         console.warn("[sensor-alarm] email skipped; no email for", userKey, eventTag);
         return false;
     }
-    const ok = await claimEmailSent(userKey, eventTag, bodyText);
-    if (!ok) {
-        console.log("[sensor-alarm] email dedupe blocked", userKey, eventTag);
-        return false;
+    let emailSubject = `Alarm alert - ${deviceName}`;
+    let emailIntro =
+        "Push notification could not be delivered to your phone (no app token or delivery failed).";
+    if (!lang) {
+        const langSnap = await rtdb.ref(`users/${userKey}/settings/language`).get();
+        lang = langSnap.val();
     }
-    const fromAddr = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
+    const isOpen = /open|geöffnet|отвор/i.test(String(bodyText || ""));
+    const texts = getAlarmTexts(lang, deviceName, isOpen);
+    emailSubject = texts.emailSubject;
+    emailIntro = texts.emailIntro;
+    const fromAddr = getResendFromEmail();
     try {
         await resend.emails.send({
             from: fromAddr,
             to: [email],
-            subject: `Alarm alert - ${deviceName}`,
+            subject: emailSubject,
             html:
                 `<p><strong>${bodyText}</strong></p>` +
-                `<p>Push notification could not be delivered to your phone (no app token or delivery failed).</p>`,
+                `<p>${emailIntro}</p>`,
         });
     } catch (e) {
-        await rtdb
-            .ref(`users/${userKey}/settings/emailSent/${safeEventTagKey(eventTag)}`)
-            .remove()
-            .catch(() => {});
         throw e;
     }
     console.log("[sensor-alarm] email fallback sent", userKey, email, eventTag);
@@ -267,10 +328,11 @@ async function sendAlarmPushToUser(userKey, title, body, eventTag, eventCreatedA
     const playSound = soundSnap.val() !== false;
     const playFlag = playSound ? "1" : "0";
 
-    let targetToken = await resolveNativeAndroidToken(userKey);
-    let isNative = Boolean(targetToken);
+    const nativeTargets = await resolveNativeAndroidTokens(userKey);
+    let targets = nativeTargets;
+    let isNative = targets.length > 0;
 
-    if (!targetToken) {
+    if (!isNative) {
         const snap = await rtdb.ref(`users/${userKey}/pushTokens`).get();
         const val = snap.val();
         if (val && typeof val === "object") {
@@ -284,12 +346,12 @@ async function sendAlarmPushToUser(userKey, title, body, eventTag, eventCreatedA
                 .filter((entry) => entry.token && entry.platform !== "android" && entry.key !== "native_android")
                 .sort((a, b) => b.createdAt - a.createdAt);
             if (webEntries.length > 0) {
-                targetToken = String(webEntries[0].token).trim();
+                targets = [{ token: String(webEntries[0].token).trim(), deviceIds: [] }];
             }
         }
     }
 
-    if (!targetToken) {
+    if (targets.length === 0) {
         console.warn("[sensor-alarm] no push token", userKey, eventTag);
         return 0;
     }
@@ -322,23 +384,12 @@ async function sendAlarmPushToUser(userKey, title, body, eventTag, eventCreatedA
         },
         ...(isNative
             ? {
-                  // Android renders notification messages immediately in Doze. The stable tag
-                  // lets backup polling verify/replace the same tray item instead of duplicating it.
-                  notification: {
-                      title: titleStr,
-                      body: bodyStr,
-                  },
+                  // High-priority data messages invoke FirebaseMessagingService even while the
+                  // screen is off. Notification messages may be deferred by Redmi/HyperOS until
+                  // the screen wakes. App-side event dedupe prevents poll/RTDB duplicates.
                   android: {
                       priority: "high",
                       ttl: 86400000,
-                      notification: {
-                          tag: "aura-event-" + dedupeTag,
-                          channelId: "aura_alarm_alerts_v2",
-                          priority: "max",
-                          defaultSound: playSound,
-                          defaultVibrateTimings: true,
-                          visibility: "public",
-                      },
                   },
               }
             : {
@@ -346,35 +397,53 @@ async function sendAlarmPushToUser(userKey, title, body, eventTag, eventCreatedA
               }),
     });
 
-    try {
-        await messaging.send(buildMessage(targetToken));
-        console.log("[sensor-alarm] FCM sent once", userKey, eventTag, isNative ? "native" : "web");
-        return 1;
-    } catch (err) {
-        if (isNative && isDeadFcmError(err)) {
-            console.warn("[sensor-alarm] dead token; refreshing", userKey, err.message || err);
-            await rtdb.ref(`users/${userKey}/pushTokens/native_android`).remove().catch(() => {});
-            const retryToken = await resolveNativeAndroidToken(userKey);
-            if (retryToken && retryToken !== targetToken) {
-                try {
-                    await messaging.send(buildMessage(retryToken));
-                    console.log("[sensor-alarm] FCM sent once after token refresh", userKey, eventTag);
-                    return 1;
-                } catch (retryErr) {
+    const results = await Promise.all(
+        targets.map(async (target) => {
+            try {
+                await messaging.send(buildMessage(target.token));
+                return true;
+            } catch (err) {
+                if (isNative && isDeadFcmError(err)) {
+                    await removeDeadNativeToken(userKey, target).catch((cleanupErr) => {
+                        console.warn(
+                            "[sensor-alarm] dead token cleanup failed",
+                            userKey,
+                            cleanupErr.message || cleanupErr
+                        );
+                    });
+                } else {
                     console.warn(
-                        "[sensor-alarm] FCM retry failed",
+                        "[sensor-alarm] FCM target failed",
                         userKey,
-                        retryErr.message || retryErr
+                        isNative ? "native_android" : "web",
+                        err.message || err
                     );
                 }
+                return false;
             }
-        }
-        console.warn("[sensor-alarm] FCM failed", userKey, isNative ? "native_android" : "web", err.message || err);
-        return 0;
-    }
+        })
+    );
+    const sent = results.filter(Boolean).length;
+    console.log(
+        "[sensor-alarm] FCM targets",
+        userKey,
+        eventTag,
+        isNative ? "native" : "web",
+        `sent=${sent}/${targets.length}`
+    );
+    return sent;
 }
 
-async function createAlarmDelivery(userKey, historyId, eventTag, deviceName, title, body, createdAt) {
+async function createAlarmDelivery(
+    userKey,
+    historyId,
+    eventTag,
+    deviceName,
+    title,
+    body,
+    createdAt,
+    lang
+) {
     const delivery = {
         userKey,
         historyId,
@@ -382,6 +451,7 @@ async function createAlarmDelivery(userKey, historyId, eventTag, deviceName, tit
         deviceName,
         title,
         body,
+        lang: normalizeAlarmLang(lang),
         createdAt,
         state: "pending",
         attempts: 0,
@@ -403,6 +473,91 @@ async function updateAlarmDelivery(userKey, eventTag, values) {
         updates[`alarmDeliveryQueue/${eventTag}/${key}`] = value;
     }
     await rtdb.ref().update(updates);
+}
+
+async function scheduleAlarmEmailFallback(userKey, eventTag) {
+    const queue = getFunctions().taskQueue("emailAlarmFallback");
+    await queue.enqueue(
+        { userKey, eventTag },
+        { scheduleDelaySeconds: EMAIL_FALLBACK_DELAY_SECONDS }
+    );
+    console.log(
+        "[sensor-alarm] email fallback scheduled",
+        userKey,
+        eventTag,
+        `${EMAIL_FALLBACK_DELAY_SECONDS}s`
+    );
+}
+
+async function processAlarmEmailFallback(userKey, eventTag) {
+    const key = String(userKey || "").trim();
+    const tag = String(eventTag || "").trim();
+    if (!key || !tag) return false;
+
+    const deliveryRef = rtdb.ref(`users/${key}/alarmDeliveries/${tag}`);
+    let delivery = (await deliveryRef.get()).val();
+    if (!delivery || delivery.ackShownAt || delivery.emailSentAt) {
+        console.log("[sensor-alarm] email fallback cancelled by shown ACK", key, tag);
+        return false;
+    }
+
+    const claimRef = rtdb.ref(
+        `users/${key}/settings/emailFallbackClaims/${safeEventTagKey(tag)}`
+    );
+    const claim = await claimRef.transaction((current) =>
+        current ? undefined : { claimedAt: Date.now(), state: "sending" }
+    );
+    if (!claim.committed) {
+        console.log("[sensor-alarm] email fallback dedupe blocked", key, tag);
+        return false;
+    }
+
+    try {
+        delivery = (await deliveryRef.get()).val();
+        if (!delivery || delivery.ackShownAt || delivery.emailSentAt) {
+            await claimRef.remove();
+            console.log("[sensor-alarm] email fallback cancelled by late shown ACK", key, tag);
+            return false;
+        }
+        const sent = await sendAlarmFallbackEmail(
+            key,
+            delivery.deviceName || "Sensor",
+            delivery.body || "Alarm event detected.",
+            tag,
+            delivery.lang
+        );
+        if (!sent) {
+            throw new Error("Email provider unavailable");
+        }
+        const sentAt = Date.now();
+        const updates = {};
+        updates[`users/${key}/pendingAlarmEvents/${tag}`] = null;
+        updates[`alarmDeliveryQueue/${tag}`] = null;
+        updates[`users/${key}/alarmDeliveries/${tag}/state`] = "email_fallback";
+        updates[`users/${key}/alarmDeliveries/${tag}/emailSentAt`] = sentAt;
+        updates[`users/${key}/alarmDeliveries/${tag}/updatedAt`] = sentAt;
+        updates[`users/${key}/settings/emailSent/${safeEventTagKey(tag)}`] = sentAt;
+        updates[
+            `users/${key}/settings/emailFallbackClaims/${safeEventTagKey(tag)}/state`
+        ] = "sent";
+        updates[
+            `users/${key}/settings/emailFallbackClaims/${safeEventTagKey(tag)}/sentAt`
+        ] = sentAt;
+        await rtdb.ref().update(updates);
+        return true;
+    } catch (e) {
+        await Promise.all([
+            claimRef.remove().catch(() => {}),
+            deliveryRef
+                .update({
+                    state: "email_retry_pending",
+                    emailError: String(e?.message || e).slice(0, 300),
+                    updatedAt: Date.now(),
+                })
+                .catch(() => {}),
+        ]);
+        throw e;
+    }
 }
 
 export const onSensorHistoryAlarm = onValueCreated(
@@ -428,14 +583,32 @@ export const onSensorHistoryAlarm = onValueCreated(
         const eventCreatedAt = parseHistoryTimestamp(entry) || Date.now();
         const deviceKey = alarmDeviceKey(deviceName, deviceId);
         const eventTag = "cf-" + safeEventTagKey(historyId || deviceKey + "-" + status + "-" + eventCreatedAt);
-        const title = "Aura HomeSystems";
-        const bodyText = isOpen ? `${deviceName} was opened.` : `${deviceName} was closed.`;
 
-        const enabledSnap = await rtdb.ref(`users/${userKey}/systemEnabled`).get();
+        const safeDeviceId = String(deviceId || deviceName || "sensor").replace(/[.$#[\]/]/g, "_");
+        const [enabledSnap, removedSnap, deviceSnap, langSnap] = await Promise.all([
+            rtdb.ref(`users/${userKey}/systemEnabled`).get(),
+            rtdb.ref(`users/${userKey}/removedDevices/${safeDeviceId}`).get(),
+            rtdb.ref(`users/${userKey}/devices/${safeDeviceId}`).get(),
+            rtdb.ref(`users/${userKey}/settings/language`).get(),
+        ]);
         if (enabledSnap.val() !== true) {
             console.log("[sensor-alarm] skipped; system off", userKey, deviceName, status);
             return;
         }
+        if (removedSnap.exists()) {
+            console.log("[sensor-alarm] skipped; device removed", userKey, deviceName, status);
+            return;
+        }
+        const deviceVal = deviceSnap.val();
+        if (deviceVal && deviceVal.active === false) {
+            console.log("[sensor-alarm] skipped; device paused", userKey, deviceName, status);
+            return;
+        }
+        const displayName =
+            (deviceVal && (deviceVal.displayName || deviceVal.deviceName)) || deviceName;
+        const alarmText = getAlarmTexts(langSnap.val(), displayName, isOpen);
+        const title = alarmText.title;
+        const bodyText = alarmText.body;
 
         // Dedupe only the exact RTDB history event. Legitimate OPEN/CLOSED transitions can
         // happen seconds apart and must each produce an alarm.
@@ -449,11 +622,22 @@ export const onSensorHistoryAlarm = onValueCreated(
             userKey,
             historyId,
             eventTag,
-            deviceName,
+            displayName,
             title,
             bodyText,
-            eventCreatedAt
+            eventCreatedAt,
+            normalizeAlarmLang(langSnap.val())
         );
+        try {
+            await scheduleAlarmEmailFallback(userKey, eventTag);
+        } catch (e) {
+            console.error(
+                "[sensor-alarm] email task scheduling failed; scheduler will recover",
+                userKey,
+                eventTag,
+                e.message || e
+            );
+        }
 
         const collapseKey = safeEventTagKey(deviceKey + "-" + status) || "aura-alarm";
         const sent = await sendAlarmPushToUser(
@@ -492,7 +676,6 @@ export const onSensorHistoryAlarm = onValueCreated(
 );
 
 const OWNER_EMAIL = "solutions.petrov@gmail.com";
-const FROM_EMAIL = "onboarding@resend.dev";
 const SITE_NAME = "Aura HomeSystems";
 const PENDING_PATH = "pendingInquiries";
 
@@ -569,7 +752,7 @@ function confirmHtml(success, message, baseUrl) {
 }
 
 export const submitInquiry = onRequest(
-    { cors: true },
+    { cors: true, secrets: [resendApiKey, resendFromEmail] },
     async (req, res) => {
         if (req.method !== "POST") {
             res.status(405).json({ error: "Method not allowed" });
@@ -623,7 +806,7 @@ export const submitInquiry = onRequest(
 
         try {
             await resend.emails.send({
-                from: FROM_EMAIL,
+                from: getResendFromEmail(),
                 to: email.trim(),
                 subject: isDirect
                     ? `Потвърдете поръчката си – ${SITE_NAME}`
@@ -650,7 +833,7 @@ export const submitInquiry = onRequest(
 );
 
 export const confirmInquiry = onRequest(
-    { cors: true },
+    { cors: true, secrets: [resendApiKey, resendFromEmail] },
     async (req, res) => {
         const token = (req.query.t || req.query.token || "").toString().trim();
         if (!token) {
@@ -691,7 +874,7 @@ export const confirmInquiry = onRequest(
         if (resend) {
             try {
                 await resend.emails.send({
-                    from: FROM_EMAIL,
+                    from: getResendFromEmail(),
                     to: OWNER_EMAIL,
                     replyTo: data.email,
                     subject: `[Потвърдено запитване] ${data.subject}`,
@@ -714,7 +897,7 @@ export const confirmInquiry = onRequest(
             if (data.orderType === "direct" && data.email) {
                 try {
                     await resend.emails.send({
-                        from: FROM_EMAIL,
+                        from: getResendFromEmail(),
                         to: String(data.email).trim(),
                         subject: `Вашата поръчка е потвърдена – ${SITE_NAME}`,
                         html: customerDirectOrderConfirmationEmailHtml(data),
@@ -730,13 +913,34 @@ export const confirmInquiry = onRequest(
     }
 );
 
-// FCM acceptance is not delivery. Retry unacknowledged alarms and use email after 60 seconds.
+export const emailAlarmFallback = onTaskDispatched(
+    {
+        secrets: [resendApiKey, resendFromEmail],
+        retryConfig: {
+            maxAttempts: 3,
+            minBackoffSeconds: 30,
+        },
+        rateLimits: {
+            maxConcurrentDispatches: 10,
+        },
+    },
+    async (request) => {
+        const userKey = String(request.data?.userKey || "").trim();
+        const eventTag = String(request.data?.eventTag || "").trim();
+        await processAlarmEmailFallback(userKey, eventTag);
+    }
+);
+
+// FCM acceptance is not delivery. Retry unacknowledged alarms; the task queue sends
+// one email after 45 seconds only when no shown ACK exists. This scheduler is also
+// a recovery path if task creation or execution was temporarily unavailable.
 export const retryUnacknowledgedAlarms = onSchedule(
     {
         schedule: "every 1 minutes",
         region: "europe-west1",
         timeZone: "Europe/Sofia",
         timeoutSeconds: 120,
+        secrets: [resendApiKey, resendFromEmail],
     },
     async () => {
         const now = Date.now();
@@ -779,22 +983,8 @@ export const retryUnacknowledgedAlarms = onSchedule(
                 console.log("[alarm-retry]", userKey, eventTag, "attempt", attempts, "sent", sent);
             }
 
-            if (now - createdAt >= 60000) {
-                const emailSent = await sendAlarmFallbackEmail(
-                    userKey,
-                    job.deviceName || "Sensor",
-                    job.body || "",
-                    eventTag
-                );
-                if (emailSent) {
-                    const updates = {};
-                    updates[`users/${userKey}/pendingAlarmEvents/${eventTag}/state`] = "email_fallback";
-                    updates[`users/${userKey}/pendingAlarmEvents/${eventTag}/emailSentAt`] = Date.now();
-                    updates[`users/${userKey}/alarmDeliveries/${eventTag}/state`] = "email_fallback";
-                    updates[`users/${userKey}/alarmDeliveries/${eventTag}/emailSentAt`] = Date.now();
-                    updates[`alarmDeliveryQueue/${eventTag}`] = null;
-                    await rtdb.ref().update(updates);
-                }
+            if (now - createdAt >= 90000) {
+                await processAlarmEmailFallback(userKey, eventTag);
             }
           } catch (e) {
               console.error("[alarm-retry] job failed", job.key, e.message || e);

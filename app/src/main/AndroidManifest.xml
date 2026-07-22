@@ -29,6 +29,7 @@
         <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
         <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
         <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT"/>
+        <uses-permission android:name="android.permission.WAKE_LOCK"/>
     
 
     
@@ -164,6 +165,15 @@
 
             
         </activity>
+
+        <activity
+            android:name=".AlarmAlertActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:theme="@android:style/Theme.Material.Light.NoActionBar" />
 
         <activity android:name="com.google.androidbrowserhelper.trusted.FocusActivity" />
 

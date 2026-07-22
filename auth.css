@@ -186,10 +186,24 @@
     min-height: 100vh;
     padding: 0;
     background: radial-gradient(circle at top, #1f2937 0, #020617 55%, #000 100%);
-    font-family: system-ui, -apple-system, sans-serif;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    font-weight: 500;
     color: #e5e7eb;
     display: flex;
     flex-direction: column;
+    --dash-font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --dash-text: 0.875rem;
+    --dash-text-sm: 0.8125rem;
+    --dash-title: 1rem;
+}
+
+.dashboard-page button,
+.dashboard-page input,
+.dashboard-page select,
+.dashboard-page textarea {
+    font: inherit;
 }
 
 .dashboard-header {
@@ -559,77 +573,64 @@
     color: #94a3b8;
 }
 
-.push-chip {
-    margin: -8px 0 14px;
-    padding: 8px 12px;
-    border-radius: 10px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: #86efac;
-    background: rgba(34, 197, 94, 0.12);
-    border: 1px solid rgba(34, 197, 94, 0.35);
-}
-
-.push-chip.push-chip-warn {
-    color: #fcd34d;
-    background: rgba(245, 158, 11, 0.12);
-    border-color: rgba(245, 158, 11, 0.45);
-}
-
-.alert-sound-toggle {
+.mode-buttons {
     display: flex;
-    align-items: center;
     gap: 10px;
-    margin: 0 0 14px;
-    padding: 10px 12px;
+    flex-wrap: wrap;
+}
+
+.mode-buttons .mode-btn {
+    flex: 1;
+    min-width: 120px;
+}
+
+.device-action,
+.history-limit-btn,
+.mode-btn {
+    appearance: none;
+    padding: 8px 16px;
+    border: 1px solid rgba(148, 163, 184, 0.3);
     border-radius: 10px;
-    background: rgba(15, 23, 42, 0.45);
-    border: 1px solid rgba(148, 163, 184, 0.25);
+    background: rgba(15, 23, 42, 0.8);
+    color: #94a3b8;
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.2;
     cursor: pointer;
-    user-select: none;
+    transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
 }
 
-.alert-sound-toggle input {
-    position: absolute;
-    opacity: 0;
-    width: 0;
-    height: 0;
+.device-action:hover,
+.history-limit-btn:hover,
+.mode-btn:hover {
+    border-color: rgba(34, 197, 94, 0.45);
+    color: #e2e8f0;
 }
 
-.alert-sound-toggle-ui {
-    flex-shrink: 0;
-    width: 42px;
-    height: 24px;
-    border-radius: 999px;
-    background: rgba(100, 116, 139, 0.55);
-    position: relative;
-    transition: background 0.2s ease;
+.history-limit-btn.active,
+.mode-btn.active:not(.danger) {
+    background: rgba(74, 222, 128, 0.18);
+    border-color: rgba(34, 197, 94, 0.5);
+    color: #86efac;
 }
 
-.alert-sound-toggle-ui::after {
-    content: "";
-    position: absolute;
-    top: 3px;
-    left: 3px;
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    background: #f8fafc;
-    transition: transform 0.2s ease;
+.mode-btn.danger.active {
+    background: rgba(248, 113, 113, 0.18);
+    border-color: rgba(248, 113, 113, 0.5);
+    color: #fecaca;
 }
 
-.alert-sound-toggle input:checked + .alert-sound-toggle-ui {
-    background: #22c55e;
+.mode-btn.danger:hover {
+    border-color: rgba(248, 113, 113, 0.45);
+    color: #fecaca;
 }
 
-.alert-sound-toggle input:checked + .alert-sound-toggle-ui::after {
-    transform: translateX(18px);
-}
-
-.alert-sound-toggle-label {
-    color: rgba(226, 232, 240, 0.95);
+.sensor-status-msg {
+    margin-top: 18px;
+    padding: 14px 18px;
+    border-radius: 12px;
     font-size: 0.9rem;
-    line-height: 1.35;
+    font-weight: 600;
 }
 
 /* Blur overlay – като панела с цени на сайта */
@@ -743,51 +744,6 @@ body.dashboard-overlay-open {
     filter: brightness(1.05);
 }
 
-.mode-buttons {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-}
-
-.mode-btn {
-    flex: 1;
-    min-width: 120px;
-    padding: 14px 18px;
-    border-radius: 12px;
-    border: 1px solid rgba(148, 163, 184, 0.35);
-    background: rgba(15, 23, 42, 0.8);
-    color: #94a3b8;
-    font-size: 1rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.mode-btn:hover {
-    border-color: rgba(34, 197, 94, 0.5);
-    color: #e2e8f0;
-}
-
-.mode-btn.active {
-    background: linear-gradient(135deg, rgba(74, 222, 128, 0.22), rgba(34, 197, 94, 0.18));
-    border-color: rgba(34, 197, 94, 0.5);
-    color: #86efac;
-}
-
-.mode-btn.danger.active {
-    background: rgba(248, 113, 113, 0.2);
-    border-color: #f97373;
-    color: #fecaca;
-}
-
-.sensor-status-msg {
-    margin-top: 18px;
-    padding: 14px 18px;
-    border-radius: 12px;
-    font-size: 0.9rem;
-    font-weight: 600;
-}
-
 .sensor-status-msg.away {
     background: rgba(248, 113, 113, 0.12);
     border: 1px solid rgba(248, 113, 113, 0.25);
@@ -864,6 +820,7 @@ body.dashboard-overlay-open {
     flex-wrap: wrap;
     gap: 12px;
     transition: border-color 0.2s, box-shadow 0.2s;
+    overflow: visible;
 }
 
 .device-item:hover {
@@ -965,6 +922,124 @@ body.dashboard-overlay-open {
     color: #bbf7d0;
 }
 
+.device-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.device-menu {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.device-menu-btn {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    border-radius: 10px;
+    background: rgba(15, 23, 42, 0.8);
+    color: #94a3b8;
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+}
+
+.device-menu-btn:hover,
+.device-menu-btn[aria-expanded="true"] {
+    border-color: rgba(34, 197, 94, 0.45);
+    color: #e2e8f0;
+    background: rgba(30, 41, 59, 0.95);
+}
+
+.device-menu-dropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    min-width: 11.5rem;
+    padding: 6px;
+    border-radius: 10px;
+    background: linear-gradient(160deg, rgba(15, 23, 42, 0.98), rgba(2, 6, 23, 0.99));
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+    z-index: 30;
+    white-space: nowrap;
+}
+
+.device-menu-dropdown[hidden] {
+    display: none;
+}
+
+.device-menu-item {
+    display: block;
+    width: 100%;
+    padding: 9px 12px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: #e2e8f0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.device-menu-item:hover {
+    background: rgba(51, 65, 85, 0.5);
+}
+
+.device-menu-item--danger {
+    color: #fca5a5;
+}
+
+.device-menu-item--danger:hover {
+    background: rgba(248, 113, 113, 0.12);
+}
+
+.removed-devices-section {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.removed-devices-section h3 {
+    margin: 0 0 6px;
+    font-size: 0.95rem;
+    color: #e5e7eb;
+}
+
+.removed-devices-desc {
+    margin: 0 0 12px;
+    font-size: 0.8rem;
+    color: #9ca3af;
+    line-height: 1.5;
+}
+
+.removed-device-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    border-radius: 12px;
+    border: 1px dashed rgba(148, 163, 184, 0.28);
+    background: rgba(15, 23, 42, 0.55);
+}
+
+.removed-device-item:last-child {
+    margin-bottom: 0;
+}
+
+.removed-device-name {
+    font-size: 0.88rem;
+    color: #cbd5e1;
+}
+
 .devices-empty {
     color: #9ca3af;
     font-size: 0.9rem;
@@ -1005,29 +1080,6 @@ body.dashboard-overlay-open {
 .history-controls > span {
     font-size: 0.9rem;
     color: #9ca3af;
-}
-
-.history-limit-btn {
-    padding: 8px 16px;
-    border: 1px solid rgba(148, 163, 184, 0.3);
-    border-radius: 10px;
-    background: rgba(15, 23, 42, 0.8);
-    color: #94a3b8;
-    font-size: 0.9rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.history-limit-btn:hover {
-    border-color: rgba(34, 197, 94, 0.45);
-    color: #e2e8f0;
-}
-
-.history-limit-btn.active {
-    background: rgba(74, 222, 128, 0.18);
-    border-color: rgba(34, 197, 94, 0.5);
-    color: #86efac;
 }
 
 .history-list {
@@ -1285,4 +1337,88 @@ body.dashboard-overlay-open {
 .lang-option.active {
     background: rgba(74, 222, 128, 0.15);
     color: #4ade80;
+}
+
+/* Dashboard typography – единен шрифт модел */
+.dashboard-page .devices-card h2,
+.dashboard-page .history-card h2,
+.dashboard-page .mode-card h2,
+.dashboard-page .removed-devices-section h3 {
+    font-family: var(--dash-font);
+    font-size: var(--dash-title);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.dashboard-page .history-desc,
+.dashboard-page .mode-card p,
+.dashboard-page .removed-devices-desc,
+.dashboard-page .devices-empty,
+.dashboard-page .duplicate-names-warning,
+.dashboard-page .sensor-status-msg {
+    font-family: var(--dash-font);
+    font-size: var(--dash-text-sm);
+    font-weight: 500;
+    line-height: 1.55;
+}
+
+.dashboard-page .device-item .name,
+.dashboard-page .history-name,
+.dashboard-page .removed-device-name {
+    font-family: var(--dash-font);
+    font-size: var(--dash-text);
+    font-weight: 600;
+}
+
+.dashboard-page .device-item .device-last-seen,
+.dashboard-page .history-time,
+.dashboard-page .history-controls > span,
+.dashboard-page .dashboard-header .user-email,
+.dashboard-page .dashboard-footer,
+.dashboard-page .dashboard-footer a {
+    font-family: var(--dash-font);
+    font-size: var(--dash-text-sm);
+    font-weight: 500;
+}
+
+.dashboard-page .device-item .status,
+.dashboard-page .device-item .device-battery,
+.dashboard-page .device-item .device-power,
+.dashboard-page .history-status,
+.dashboard-page .history-empty {
+    font-family: var(--dash-font);
+    font-size: var(--dash-text-sm);
+    font-weight: 600;
+}
+
+.dashboard-page .device-action,
+.dashboard-page .history-limit-btn,
+.dashboard-page .mode-btn,
+.dashboard-page .device-menu-btn,
+.dashboard-page .device-menu-item,
+.dashboard-page .header-menu-btn,
+.dashboard-page .header-menu-item,
+.dashboard-page .header-menu-lang-btn,
+.dashboard-page .header-menu-lang-label {
+    font-family: var(--dash-font);
+    font-size: var(--dash-text-sm);
+    font-weight: 600;
+    letter-spacing: 0;
+}
+
+.dashboard-page .history-item {
+    font-family: var(--dash-font);
+    font-size: var(--dash-text);
+    font-weight: 500;
+}
+
+.dashboard-page .sensor-status-msg {
+    font-weight: 600;
+}
+
+.dashboard-page .device-item .sensor-icon,
+.dashboard-page .history-item .sensor-icon {
+    font-family: var(--dash-font);
+    font-size: 1.125rem;
+    line-height: 1;
 }

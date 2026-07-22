@@ -9,6 +9,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.media.AudioAttributes;
 import android.os.Build;
+import android.os.PowerManager;
 import android.service.notification.StatusBarNotification;
 
 import androidx.core.app.NotificationCompat;
@@ -23,6 +24,10 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
     public static final String CHANNEL_ID = "aura_alarm_alerts_v2";
     public static final String EXTRA_EVENT_TAG = "alarm_event_tag";
     public static final String EXTRA_USER_KEY = "alarm_user_key";
+    public static final String EXTRA_ALERT_TITLE = "alarm_alert_title";
+    public static final String EXTRA_ALERT_BODY = "alarm_alert_body";
+    public static final String EXTRA_NOTIFICATION_TAG = "alarm_notification_tag";
+    public static final String EXTRA_NOTIFICATION_ID = "alarm_notification_id";
     private static final String PREFS = "aura_app";
     private static final String KEY_FCM_MESSAGE_IDS = "fcm_message_ids";
     private static final String KEY_RECENT_CLAIMS = "recent_notif_claims";
@@ -244,6 +249,7 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
             return false;
         }
         ensureChannel(context, playSound);
+        wakeScreen(context);
 
         NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         Intent intent = new Intent(context, LauncherActivity.class);
@@ -273,6 +279,23 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
                 dismissIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
+        int notificationId = notificationIdForAlarm(dedupeTag, eventTag, eventCreatedAt, title, body);
+        String notifyTag = notificationTagForAlarm(dedupeTag, eventTag, eventCreatedAt, title, body);
+        Intent fullScreenIntent = new Intent(context, AlarmAlertActivity.class);
+        fullScreenIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        fullScreenIntent.putExtra(EXTRA_ALERT_TITLE, title);
+        fullScreenIntent.putExtra(EXTRA_ALERT_BODY, body);
+        fullScreenIntent.putExtra(EXTRA_EVENT_TAG, eventTag);
+        fullScreenIntent.putExtra(EXTRA_USER_KEY, userKey);
+        fullScreenIntent.putExtra(EXTRA_NOTIFICATION_TAG, notifyTag);
+        fullScreenIntent.putExtra(EXTRA_NOTIFICATION_ID, notificationId);
+        PendingIntent fullScreenPendingIntent =
+                PendingIntent.getActivity(
+                        context,
+                        notificationRequestCode(eventTag) + 2,
+                        fullScreenIntent,
+                        PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_notification_icon)
                 .setContentTitle(title)
@@ -283,6 +306,7 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
                 .setPriority(NotificationCompat.PRIORITY_MAX)
                 .setCategory(NotificationCompat.CATEGORY_ALARM)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                .setFullScreenIntent(fullScreenPendingIntent, true)
                 .setVibrate(new long[]{0, 300, 200, 300});
 
         if (playSound) {
@@ -291,8 +315,6 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
             builder.setSilent(true);
         }
 
-        int notificationId = notificationIdForAlarm(dedupeTag, eventTag, eventCreatedAt, title, body);
-        String notifyTag = notificationTagForAlarm(dedupeTag, eventTag, eventCreatedAt, title, body);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             nm.notify(notifyTag, notificationId, builder.build());
         } else {
@@ -305,6 +327,26 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
         }
         NativePushRegistrar.sendAck(context, "shown", eventTag, CHANNEL_ID, userKey);
         return true;
+    }
+
+    @SuppressWarnings("deprecation")
+    private static void wakeScreen(Context context) {
+        try {
+            PowerManager powerManager =
+                    (PowerManager) context.getSystemService(Context.POWER_SERVICE);
+            if (powerManager == null || powerManager.isInteractive()) {
+                return;
+            }
+            PowerManager.WakeLock wakeLock =
+                    powerManager.newWakeLock(
+                            PowerManager.SCREEN_BRIGHT_WAKE_LOCK
+                                    | PowerManager.ACQUIRE_CAUSES_WAKEUP
+                                    | PowerManager.ON_AFTER_RELEASE,
+                            "AuraHomeSystems:alarm-screen");
+            wakeLock.acquire(10000L);
+        } catch (Exception e) {
+            android.util.Log.w("AuraFCM", "screen wake failed", e);
+        }
     }
 
     private static int notificationIdForAlarm(

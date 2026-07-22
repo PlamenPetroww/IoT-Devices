@@ -763,29 +763,7 @@
 
   function updateUi() {
     if (els.chip) {
-      var t = global.authT || function (k) { return k; };
-      if (state.pushKind === "native" && areAndroidNotificationsEnabled()) {
-        els.chip.textContent = t("dashboard.pushNativeActive") || "✓ Native alerts active";
-        els.chip.hidden = false;
-        els.chip.classList.remove("push-chip-warn");
-      } else if (isAuraAndroidTwa() && !areAndroidNotificationsEnabled()) {
-        els.chip.textContent =
-          t("dashboard.pushNotifyDenied") ||
-          "Allow notifications: Settings → Apps → Aura → Notifications";
-        els.chip.hidden = false;
-        els.chip.classList.add("push-chip-warn");
-      } else if (isAuraAndroidTwa() && state.pushKind !== "native") {
-        els.chip.textContent =
-          t("dashboard.pushNativePending") || "Tap to activate reliable phone alerts";
-        els.chip.hidden = false;
-        els.chip.classList.add("push-chip-warn");
-      } else if (state.status === "active" && state.pushKind === "web") {
-        els.chip.textContent = t("dashboard.pushActive");
-        els.chip.hidden = false;
-        els.chip.classList.remove("push-chip-warn");
-      } else {
-        els.chip.hidden = true;
-      }
+      els.chip.hidden = true;
     }
     if (
       state.overlayMode === "onboarding" &&

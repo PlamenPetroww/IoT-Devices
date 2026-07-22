@@ -102,7 +102,7 @@
     </header>
     <main class="dashboard-layout" id="dashboardMain">
       <section class="dashboard-top">
-        <div class="devices-card">
+        <div class="devices-card" id="devicesCard">
           <h2 data-i18n="dashboard.sensorsTitle">Вашите сензори</h2>
           <div
             id="duplicateNamesWarning"
@@ -112,6 +112,13 @@
           ></div>
           <div id="devicesList">
             <p class="devices-empty" data-i18n="dashboard.loading">Зареждане...</p>
+          </div>
+          <div id="removedDevicesSection" class="removed-devices-section" hidden>
+            <h3 data-i18n="dashboard.removedTitle">Премахнати сензори</h3>
+            <p class="removed-devices-desc" data-i18n="dashboard.removedDesc">
+              Не се показват в списъка и не изпращат известия. Можете да ги възстановите по всяко време.
+            </p>
+            <div id="removedDevicesList"></div>
           </div>
         </div>
       </section>
@@ -150,12 +157,6 @@
               Когато системата е „Навън“, сензорите се следят и получавате
               известия. В режим „Аз съм у дома“ системата е изключена.
             </p>
-            <p id="pushChip" class="push-chip" hidden data-i18n="dashboard.pushActive">✓ Известията са активни на този телефон</p>
-            <label class="alert-sound-toggle" id="alertSoundToggleWrap" hidden>
-              <input type="checkbox" id="alertSoundToggle" checked />
-              <span class="alert-sound-toggle-ui" aria-hidden="true"></span>
-              <span class="alert-sound-toggle-label" data-i18n="dashboard.alertSound">Звук при известия</span>
-            </label>
             <div class="mode-buttons">
               <button type="button" id="modeHome" class="mode-btn active" data-i18n="dashboard.modeHome">
                 🏠 У дома
@@ -241,9 +242,11 @@
     <script src="translations.js"></script>
     <script src="auth-i18n.js"></script>
     <script src="firebase-config.js"></script>
+    <script src="lang-sync.js"></script>
     <script src="push-notifications.js"></script>
     <script>
       initAuthI18n("dashboard");
+      if (window.AuraLangSync) AuraLangSync.init();
       const auth = firebase.auth();
       const db = firebase.database();
       function getSafeEmail(email) {
@@ -327,32 +330,84 @@
           });
         });
         const devicesList = document.getElementById("devicesList");
+        const removedDevicesSection = document.getElementById("removedDevicesSection");
+        const removedDevicesList = document.getElementById("removedDevicesList");
+        const devicesCard = document.getElementById("devicesCard");
         const historyRef = db.ref(userPath + "/history");
         let lastDevicesSnap = null;
+        let lastRemovedSnap = null;
+        function getRemovedDeviceIds() {
+          const removed = lastRemovedSnap && lastRemovedSnap.val();
+          if (!removed || typeof removed !== "object") return new Set();
+          return new Set(Object.keys(removed));
+        }
+        function renderRemovedDevices() {
+          const removed = (lastRemovedSnap && lastRemovedSnap.val()) || {};
+          const entries = Object.entries(removed);
+          if (!removedDevicesSection || !removedDevicesList) return;
+          if (entries.length === 0) {
+            removedDevicesSection.hidden = true;
+            removedDevicesList.innerHTML = "";
+            return;
+          }
+          removedDevicesSection.hidden = false;
+          removedDevicesList.innerHTML = entries
+            .map(function (pair) {
+              var id = pair[0];
+              var info = pair[1] || {};
+              var name = info.displayName || info.deviceName || id;
+              return (
+                '<div class="removed-device-item">' +
+                '<span class="removed-device-name">' +
+                escapeHtml(name) +
+                "</span>" +
+                '<button type="button" class="device-action device-action-restore" data-device-action="restore" data-device-id="' +
+                escapeHtml(id) +
+                '" data-device-name="' +
+                escapeHtml(name) +
+                '">' +
+                escapeHtml(authT("dashboard.restoreSensor")) +
+                "</button>" +
+                "</div>"
+              );
+            })
+            .join("");
+        }
         function showDevicesError(msg) {
           devicesList.innerHTML =
             '<p class="devices-empty">' + msg + "</p>";
         }
         function renderDevicesFromSnap(snap) {
           const data = snap.val();
+          const removedIds = getRemovedDeviceIds();
           if (!data || typeof data !== "object") {
+            recoverDevicesFromHistory();
             devicesList.innerHTML =
-              '<p class="devices-empty">' + authT("dashboard.noSensorsHtml", { email: user.email || "" }) + "</p>";
+              '<p class="devices-empty">' + devicesEmptyMessage() + "</p>";
+            renderRemovedDevices();
             return;
           }
-          const devices = Object.entries(data).map(([id, d]) => ({
-            id,
-            name: (d && d.deviceName) || id,
-            status: (d && d.status) === true ? "closed" : "open",
-            lastSeen: d && d.lastSeen,
-            battery:
-              d && typeof d.battery === "number"
-                ? Math.max(-1, Math.min(100, Math.round(d.battery)))
-                : null,
-            batteryPinMv:
-              d && typeof d.batteryPinMv === "number" ? d.batteryPinMv : null,
-            powerSource: (d && d.powerSource) || "",
-          }));
+          const devices = Object.entries(data)
+            .filter(function (pair) {
+              return !removedIds.has(pair[0]);
+            })
+            .map(function (pair) {
+              var id = pair[0];
+              var d = pair[1];
+              return {
+                id: id,
+                name: (d && (d.displayName || d.deviceName)) || id,
+                status: (d && d.status) === true ? "closed" : "open",
+                lastSeen: d && d.lastSeen,
+                battery:
+                  d && typeof d.battery === "number"
+                    ? Math.max(-1, Math.min(100, Math.round(d.battery)))
+                    : null,
+                batteryPinMv:
+                  d && typeof d.batteryPinMv === "number" ? d.batteryPinMv : null,
+                powerSource: (d && d.powerSource) || "",
+              };
+            });
           function formatLastSeen(ms) {
             if (ms == null || typeof ms !== "number") return "";
             if (ms > 1e12) {
@@ -386,8 +441,15 @@
           } else {
             warningEl.style.display = "none";
           }
+          if (devices.length === 0) {
+            recoverDevicesFromHistory();
+            devicesList.innerHTML =
+              '<p class="devices-empty">' + devicesEmptyMessage() + "</p>";
+            renderRemovedDevices();
+            return;
+          }
           devicesList.innerHTML = devices
-            .map((dev, index) => {
+            .map(function (dev, index) {
               let powerHtml = "";
               if (dev.powerSource === "usb") {
                 powerHtml = '<span class="device-power usb">USB</span>';
@@ -442,9 +504,58 @@
                     formatLastSeen(dev.lastSeen) +
                     "</span>"
                   : "";
-              return `                    <div class="device-item ${tintClass}">                        <span class="device-name-wrap"><span class="sensor-icon" aria-hidden="true">${icon}</span><span class="name">${escapeHtml(dev.name)}</span>${lastSeenHtml}</span>                        <span class="device-right">                            ${powerHtml}                            <span class="status ${dev.status}">${dev.status === "open" ? escapeHtml(authT("dashboard.statusOpen")) : escapeHtml(authT("dashboard.statusClosed"))}</span>                        </span>                    </div>                `;
+              const menuHtml =
+                '<div class="device-menu">' +
+                '<button type="button" class="device-menu-btn" aria-expanded="false" aria-haspopup="true" aria-controls="device-menu-' +
+                index +
+                '" aria-label="' +
+                escapeHtml(authT("dashboard.sensorMenuAria")) +
+                '"><span aria-hidden="true">⋯</span></button>' +
+                '<div class="device-menu-dropdown" id="device-menu-' +
+                index +
+                '" role="menu" hidden>' +
+                '<button type="button" class="device-menu-item" role="menuitem" data-device-action="rename" data-device-id="' +
+                escapeHtml(dev.id) +
+                '" data-device-name="' +
+                escapeHtml(dev.name) +
+                '">' +
+                escapeHtml(authT("dashboard.renameSensor")) +
+                "</button>" +
+                '<button type="button" class="device-menu-item device-menu-item--danger" role="menuitem" data-device-action="remove" data-device-id="' +
+                escapeHtml(dev.id) +
+                '" data-device-name="' +
+                escapeHtml(dev.name) +
+                '">' +
+                escapeHtml(authT("dashboard.removeSensor")) +
+                "</button>" +
+                "</div></div>";
+              return (
+                '<div class="device-item ' +
+                tintClass +
+                '">' +
+                '<span class="device-name-wrap"><span class="sensor-icon" aria-hidden="true">' +
+                icon +
+                '</span><span class="name">' +
+                escapeHtml(dev.name) +
+                "</span>" +
+                lastSeenHtml +
+                "</span>" +
+                '<span class="device-right">' +
+                powerHtml +
+                '<span class="status ' +
+                dev.status +
+                '">' +
+                (dev.status === "open"
+                  ? escapeHtml(authT("dashboard.statusOpen"))
+                  : escapeHtml(authT("dashboard.statusClosed"))) +
+                "</span>" +
+                menuHtml +
+                "</span>" +
+                "</div>"
+              );
             })
             .join("");
+          renderRemovedDevices();
         }
         db.ref(userPath + "/devices").on(
           "value",
@@ -456,26 +567,174 @@
           console.error("[dashboard] devices read failed:", err);
           showDevicesError(authT("dashboard.devicesError"));
         });
+        db.ref(userPath + "/removedDevices").on(
+          "value",
+          function (snap) {
+            lastRemovedSnap = snap;
+            if (lastDevicesSnap) {
+              renderDevicesFromSnap(lastDevicesSnap);
+            } else {
+              renderRemovedDevices();
+            }
+          },
+          function (err) {
+            console.error("[dashboard] removedDevices read failed:", err);
+          }
+        );
+        function closeAllDeviceMenus() {
+          devicesCard.querySelectorAll(".device-menu-btn").forEach(function (btn) {
+            btn.setAttribute("aria-expanded", "false");
+          });
+          devicesCard.querySelectorAll(".device-menu-dropdown").forEach(function (menu) {
+            menu.hidden = true;
+          });
+        }
+        if (devicesCard) {
+          document.addEventListener("click", function () {
+            closeAllDeviceMenus();
+          });
+          devicesCard.addEventListener("click", function (e) {
+            var menuBtn = e.target.closest(".device-menu-btn");
+            if (menuBtn) {
+              e.stopPropagation();
+              var menu = menuBtn.closest(".device-menu");
+              var dropdown = menu && menu.querySelector(".device-menu-dropdown");
+              if (!dropdown) return;
+              var isOpen = menuBtn.getAttribute("aria-expanded") === "true";
+              closeAllDeviceMenus();
+              if (!isOpen) {
+                menuBtn.setAttribute("aria-expanded", "true");
+                dropdown.hidden = false;
+              }
+              return;
+            }
+            var btn = e.target.closest("[data-device-action]");
+            if (!btn) return;
+            e.stopPropagation();
+            closeAllDeviceMenus();
+            var action = btn.getAttribute("data-device-action");
+            var deviceId = btn.getAttribute("data-device-id");
+            var deviceName = btn.getAttribute("data-device-name") || deviceId;
+            if (!deviceId) return;
+            if (action === "rename") {
+              var nextName = window.prompt(
+                authT("dashboard.renameSensorPrompt", { name: deviceName }),
+                deviceName
+              );
+              if (nextName == null) return;
+              nextName = nextName.trim();
+              if (!nextName) {
+                window.alert(authT("dashboard.renameSensorEmpty"));
+                return;
+              }
+              if (nextName === deviceName) return;
+              db.ref(userPath + "/devices/" + deviceId).update({
+                displayName: nextName,
+              });
+              return;
+            }
+            if (action === "remove") {
+              if (
+                !window.confirm(
+                  authT("dashboard.removeSensorConfirm", { name: deviceName })
+                )
+              ) {
+                return;
+              }
+              db.ref(userPath + "/devices/" + deviceId).once("value", function (deviceSnap) {
+                var d = deviceSnap.val() || {};
+                var updates = {};
+                updates[userPath + "/removedDevices/" + deviceId] = {
+                  deviceName: deviceName,
+                  removedAt: firebase.database.ServerValue.TIMESTAMP,
+                  lastStatus: d.status,
+                  lastBattery: d.battery,
+                  lastPowerSource: d.powerSource,
+                  lastSeen: d.lastSeen,
+                  displayName: d.displayName || null,
+                };
+                db.ref().update(updates);
+              });
+              return;
+            }
+            if (action === "restore") {
+              var removedRef = db.ref(userPath + "/removedDevices/" + deviceId);
+              removedRef.once("value", function (removedSnap) {
+                var info = removedSnap.val() || {};
+                var name = info.deviceName || deviceName;
+                db.ref(userPath + "/devices/" + deviceId).once("value", function (deviceSnap) {
+                  var updates = {};
+                  updates[userPath + "/removedDevices/" + deviceId] = null;
+                  if (!deviceSnap.exists()) {
+                    var restored = {
+                      deviceName: name,
+                      status: typeof info.lastStatus === "boolean" ? info.lastStatus : true,
+                      restoredAt: firebase.database.ServerValue.TIMESTAMP,
+                    };
+                    if (info.displayName) {
+                      restored.displayName = info.displayName;
+                    }
+                    if (typeof info.lastBattery === "number") {
+                      restored.battery = info.lastBattery;
+                    }
+                    if (info.lastPowerSource) {
+                      restored.powerSource = info.lastPowerSource;
+                    }
+                    if (info.lastSeen != null) {
+                      restored.lastSeen = info.lastSeen;
+                    }
+                    updates[userPath + "/devices/" + deviceId] = restored;
+                  }
+                  db.ref().update(updates);
+                });
+              });
+            }
+          });
+        }
         if (window.AuraPush) {
           AuraPush.init({ userPath: userPath, db: db }).catch(function () {});
         }
-        var alertSoundToggle = document.getElementById("alertSoundToggle");
-        var alertSoundToggleWrap = document.getElementById("alertSoundToggleWrap");
-        var alertSoundRef = db.ref(userPath + "/settings/alertSoundEnabled");
-        if (alertSoundToggle) {
-          alertSoundRef.on("value", function (snap) {
-            var val = snap.val();
-            alertSoundToggle.checked = val !== false;
-            if (alertSoundToggleWrap) {
-              alertSoundToggleWrap.hidden = false;
-            }
-          });
-          alertSoundToggle.addEventListener("change", function () {
-            alertSoundRef.set(alertSoundToggle.checked);
-          });
-        }
         let historyLimit = 3;
         let historyData = [];
+        let recoveredDevicesFromHistory = false;
+        function devicesEmptyMessage() {
+          if (getRemovedDeviceIds().size > 0) {
+            return escapeHtml(authT("dashboard.noActiveSensors"));
+          }
+          if (historyData.length > 0) {
+            return escapeHtml(authT("dashboard.waitingForSensorUpdate"));
+          }
+          return authT("dashboard.noSensorsHtml", { email: user.email || "" });
+        }
+        function recoverDevicesFromHistory() {
+          if (recoveredDevicesFromHistory || !historyData.length) return;
+          if (getRemovedDeviceIds().size > 0) return;
+          var latestByDevice = {};
+          historyData.forEach(function (entry) {
+            var id = String(entry.deviceId || entry.deviceName || "").trim();
+            if (!id) return;
+            if (
+              !latestByDevice[id] ||
+              (entry.timestamp || 0) > (latestByDevice[id].timestamp || 0)
+            ) {
+              latestByDevice[id] = entry;
+            }
+          });
+          var ids = Object.keys(latestByDevice);
+          if (!ids.length) return;
+          recoveredDevicesFromHistory = true;
+          var updates = {};
+          ids.forEach(function (id) {
+            var entry = latestByDevice[id];
+            updates[userPath + "/devices/" + id] = {
+              deviceName: entry.deviceName || id,
+              status: entry.status !== "open",
+              lastSeen: entry.timestamp || null,
+              restoredFromHistory: true,
+            };
+          });
+          db.ref().update(updates);
+        }
         historyRef
           .orderByChild("timestamp")
           .limitToLast(50)
@@ -500,6 +759,9 @@
               historyData = dedupeHistoryEntries(historyData);
             }
             renderHistory();
+            if (lastDevicesSnap) {
+              renderDevicesFromSnap(lastDevicesSnap);
+            }
           });
         function dedupeHistoryEntries(entries) {
           const out = [];

@@ -154,11 +154,12 @@ RTC_DATA_ATTR int8_t rtcCapturedClosed = -1;  // sensor state captured immediate
 #define PERIODIC_RESTART_WAKES 50
 RTC_DATA_ATTR uint16_t rtcWakeCount = 0;
 
-#define EVENT_QUEUE_MAGIC 0x41555241UL
+#define EVENT_QUEUE_MAGIC 0x41555242UL
 #define EVENT_QUEUE_CAPACITY 32
 
 struct PendingSensorEvent {
     uint32_t sequence;
+    uint32_t nonce;
     int64_t capturedAt;
     uint8_t closed;
 };
@@ -223,6 +224,8 @@ static bool enqueueSensorEvent(bool closed) {
     PendingSensorEvent &event = eventQueue.events[eventQueue.count++];
     event.sequence = eventQueue.nextSequence++;
     if (eventQueue.nextSequence == 0) eventQueue.nextSequence = 1;
+    event.nonce = esp_random();
+    if (event.nonce == 0) event.nonce = 1;
     event.capturedAt = timestampMsNow();
     event.closed = closed ? 1 : 0;
     if (!saveEventQueue()) {
@@ -403,8 +406,10 @@ String buildHistoryKey(const String& deviceID, bool isClosed, unsigned long tsMs
         + String((uint32_t)(esp_random() & 0xFFFF));
 }
 
-String buildQueuedHistoryKey(const String& deviceID, uint32_t sequence) {
-    return deviceID + "_event_" + String(sequence);
+String buildQueuedHistoryKey(const String& deviceID, uint32_t sequence, uint32_t nonce) {
+    // Sequence alone can repeat after NVS erase or reflashing. Persisted nonce keeps retries
+    // idempotent while ensuring a fresh queue never overwrites an older RTDB history child.
+    return deviceID + "_event_" + String(sequence) + "_" + String(nonce, HEX);
 }
 
 int readBatteryPercent(char* powerSourceOut, size_t powerSourceLen) {
@@ -832,7 +837,8 @@ void setup() {
         if (shouldSendEvent) {
             int64_t histTs = pendingEvent.capturedAt;
             if (histTs < 1700000000000LL) histTs = timestampMsNow();
-            String historyKey = buildQueuedHistoryKey(deviceID, pendingEvent.sequence);
+            String historyKey =
+                buildQueuedHistoryKey(deviceID, pendingEvent.sequence, pendingEvent.nonce);
             String historyPath = userPath + "/history/" + historyKey;
             FirebaseJson jsonHist;
             jsonHist.set("deviceId", deviceID);

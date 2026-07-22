@@ -336,6 +336,88 @@
         const historyRef = db.ref(userPath + "/history");
         let lastDevicesSnap = null;
         let lastRemovedSnap = null;
+        var SENSOR_EMOJI_OPTIONS = [
+          "🚪", "🪟", "🚗", "🏠", "🏢", "🔒", "🔓", "🛏️",
+          "🍳", "🛁", "📦", "🌳", "⚡", "🔑", "🐕", "📍",
+        ];
+        function getIconForSensor(name) {
+          var n = String(name || "")
+            .toLowerCase()
+            .trim();
+          if (/garaj|garage|гараж|garáž|garaze|garaż/i.test(n)) return "🚗";
+          if (
+            /vrata|врата|door|tür|tuer|porte|entrance|vhod|вход|dver|dveři|puerta|porta|drzwi|doorway|gate|zadna|back|заден/i.test(
+              n,
+            )
+          )
+            return "🚪";
+          if (
+            /prozorec|прозорец|window|fenster|fenêtre|fenetre|finestra|ventana|okno|janela|predna|preden|предна|преден|front/i.test(
+              n,
+            )
+          )
+            return "🪟";
+          return "📍";
+        }
+        function resolveSensorIcon(name, displayIcon) {
+          if (
+            displayIcon &&
+            SENSOR_EMOJI_OPTIONS.indexOf(String(displayIcon)) !== -1
+          ) {
+            return displayIcon;
+          }
+          return getIconForSensor(name);
+        }
+        function buildDeviceIconLookup() {
+          var byId = {};
+          var byName = {};
+          var data = lastDevicesSnap && lastDevicesSnap.val();
+          if (!data || typeof data !== "object") {
+            return { byId: byId, byName: byName };
+          }
+          Object.entries(data).forEach(function (pair) {
+            var id = pair[0];
+            var d = pair[1] || {};
+            var name = String(d.displayName || d.deviceName || id).trim();
+            var icon = resolveSensorIcon(name, d.displayIcon);
+            byId[id] = icon;
+            if (name) byName[name] = icon;
+          });
+          return { byId: byId, byName: byName };
+        }
+        function buildEmojiPickerSection(deviceId, deviceName) {
+          var emojiButtons = SENSOR_EMOJI_OPTIONS.map(function (emoji) {
+            return (
+              '<button type="button" class="device-emoji-btn" role="menuitem" data-device-action="set-icon" data-device-icon="' +
+              emoji +
+              '" data-device-id="' +
+              escapeHtml(deviceId) +
+              '" data-device-name="' +
+              escapeHtml(deviceName) +
+              '" aria-label="' +
+              escapeHtml(emoji) +
+              '">' +
+              emoji +
+              "</button>"
+            );
+          }).join("");
+          return (
+            '<button type="button" class="device-menu-item" role="menuitem" data-device-action="pick-icon-toggle" data-device-id="' +
+            escapeHtml(deviceId) +
+            '">' +
+            escapeHtml(authT("dashboard.chooseIcon")) +
+            "</button>" +
+            '<div class="device-menu-emojis" hidden role="group" aria-label="' +
+            escapeHtml(authT("dashboard.chooseIcon")) +
+            '">' +
+            emojiButtons +
+            '<button type="button" class="device-menu-item device-menu-item--muted" role="menuitem" data-device-action="clear-icon" data-device-id="' +
+            escapeHtml(deviceId) +
+            '">' +
+            escapeHtml(authT("dashboard.autoIcon")) +
+            "</button></div>"
+          );
+        }
         function getRemovedDeviceIds() {
           const removed = lastRemovedSnap && lastRemovedSnap.val();
           if (!removed || typeof removed !== "object") return new Set();
@@ -397,6 +479,7 @@
               return {
                 id: id,
                 name: (d && (d.displayName || d.deviceName)) || id,
+                displayIcon: d && d.displayIcon ? String(d.displayIcon) : null,
                 status: (d && d.status) === true ? "closed" : "open",
                 lastSeen: d && d.lastSeen,
                 battery:
@@ -495,7 +578,7 @@
               }
               const tintClass =
                 "device-tint-" + getTintIndexForSensor(dev.name || dev.id);
-              const icon = getIconForSensor(dev.name || dev.id);
+              const icon = resolveSensorIcon(dev.name, dev.displayIcon);
               const lastSeenHtml =
                 dev.lastSeen != null
                   ? '<span class="device-last-seen" title="' +
@@ -521,6 +604,7 @@
                 '">' +
                 escapeHtml(authT("dashboard.renameSensor")) +
                 "</button>" +
+                buildEmojiPickerSection(dev.id, dev.name) +
                 '<button type="button" class="device-menu-item device-menu-item--danger" role="menuitem" data-device-action="remove" data-device-id="' +
                 escapeHtml(dev.id) +
                 '" data-device-name="' +
@@ -588,6 +672,9 @@
           devicesCard.querySelectorAll(".device-menu-dropdown").forEach(function (menu) {
             menu.hidden = true;
           });
+          devicesCard.querySelectorAll(".device-menu-emojis").forEach(function (panel) {
+            panel.hidden = true;
+          });
         }
         if (devicesCard) {
           document.addEventListener("click", function () {
@@ -610,12 +697,40 @@
             }
             var btn = e.target.closest("[data-device-action]");
             if (!btn) return;
-            e.stopPropagation();
-            closeAllDeviceMenus();
             var action = btn.getAttribute("data-device-action");
             var deviceId = btn.getAttribute("data-device-id");
             var deviceName = btn.getAttribute("data-device-name") || deviceId;
             if (!deviceId) return;
+            if (action === "pick-icon-toggle") {
+              e.stopPropagation();
+              var pickerMenu = btn.closest(".device-menu-dropdown");
+              var panel =
+                pickerMenu && pickerMenu.querySelector(".device-menu-emojis");
+              if (panel) panel.hidden = !panel.hidden;
+              return;
+            }
+            e.stopPropagation();
+            if (action === "set-icon") {
+              var emoji = btn.getAttribute("data-device-icon");
+              if (
+                emoji &&
+                SENSOR_EMOJI_OPTIONS.indexOf(emoji) !== -1
+              ) {
+                db.ref(userPath + "/devices/" + deviceId).update({
+                  displayIcon: emoji,
+                });
+              }
+              closeAllDeviceMenus();
+              return;
+            }
+            if (action === "clear-icon") {
+              db.ref(userPath + "/devices/" + deviceId).update({
+                displayIcon: null,
+              });
+              closeAllDeviceMenus();
+              return;
+            }
+            closeAllDeviceMenus();
             if (action === "rename") {
               var nextName = window.prompt(
                 authT("dashboard.renameSensorPrompt", { name: deviceName }),
@@ -652,6 +767,7 @@
                   lastPowerSource: d.powerSource,
                   lastSeen: d.lastSeen,
                   displayName: d.displayName || null,
+                  displayIcon: d.displayIcon || null,
                 };
                 db.ref().update(updates);
               });
@@ -673,6 +789,9 @@
                     };
                     if (info.displayName) {
                       restored.displayName = info.displayName;
+                    }
+                    if (info.displayIcon) {
+                      restored.displayIcon = info.displayIcon;
                     }
                     if (typeof info.lastBattery === "number") {
                       restored.battery = info.lastBattery;
@@ -807,7 +926,11 @@
               const htint =
                 "history-tint-" +
                 getTintIndexForSensor(entry.deviceName || entry.deviceId);
-              const icon = getIconForSensor(entry.deviceName || entry.deviceId);
+              const iconLookup = buildDeviceIconLookup();
+              const icon =
+                iconLookup.byId[entry.deviceId] ||
+                iconLookup.byName[entry.deviceName] ||
+                getIconForSensor(entry.deviceName || entry.deviceId);
               return `<li class="history-item ${entry.status} ${htint}"><span class="sensor-icon" aria-hidden="true">${icon}</span><span class="history-name">${escapeHtml(entry.deviceName)}</span> <span class="history-status">${label}</span> <time class="history-time">${timeStr}</time></li>`;
             })
             .join("");
@@ -835,25 +958,6 @@
             h = h & h;
           }
           return Math.abs(h) % 4;
-        }
-        function getIconForSensor(name) {
-          var n = String(name || "")
-            .toLowerCase()
-            .trim();
-          if (/garaj|garage|гараж|garáž|garaze|garaż/i.test(n)) return "🚗";
-          if (
-            /vrata|врата|door|tür|tuer|porte|entrance|vhod|вход|dver|dveři|puerta|porta|drzwi|doorway|gate|zadna|back|заден/i.test(
-              n,
-            )
-          )
-            return "🚪";
-          if (
-            /prozorec|прозорец|window|fenster|fenêtre|fenetre|finestra|ventana|okno|janela|predna|preden|предна|преден|front/i.test(
-              n,
-            )
-          )
-            return "🪟";
-          return "📍";
         }
         window.addEventListener("aura-lang-applied", function () {
           db.ref(userPath + "/systemEnabled").once("value", function (snap) {

@@ -1000,6 +1000,53 @@ body.dashboard-overlay-open {
     background: rgba(248, 113, 113, 0.12);
 }
 
+.device-menu-item--muted {
+    color: #94a3b8;
+    margin-top: 4px;
+    border-top: 1px solid rgba(148, 163, 184, 0.14);
+    border-radius: 0 0 8px 8px;
+}
+
+.device-menu-emojis {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+    padding: 6px 4px 4px;
+    border-top: 1px solid rgba(148, 163, 184, 0.14);
+    margin-top: 2px;
+}
+
+.device-menu-emojis[hidden] {
+    display: none;
+}
+
+.device-emoji-btn {
+    appearance: none;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: transparent;
+    font-size: 1.35rem;
+    line-height: 1;
+    padding: 0;
+    width: 100%;
+    aspect-ratio: 1;
+    min-height: 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+
+.device-emoji-btn:hover {
+    background: rgba(51, 65, 85, 0.55);
+    border-color: rgba(148, 163, 184, 0.25);
+}
+
+.device-emoji-btn:active {
+    transform: scale(0.94);
+}
+
 .removed-devices-section {
     margin-top: 24px;
     padding-top: 20px;

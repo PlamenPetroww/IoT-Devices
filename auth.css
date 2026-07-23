@@ -1043,7 +1043,7 @@ body.dashboard-overlay-open {
     padding: 6px 4px 4px;
     border-top: 1px solid rgba(148, 163, 184, 0.14);
     margin-top: 2px;
-    max-height: 13.5rem;
+    max-height: 11rem;
     overflow-y: auto;
     overscroll-behavior: contain;
 }

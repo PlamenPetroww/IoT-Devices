@@ -340,9 +340,7 @@
           "🚪", "🪟", "🚗", "🏠",
           "🛏️", "🛋️", "🍳", "🛁",
           "🧺", "📦", "🪜", "🏡",
-          "🌳", "☀️", "🏢", "🛡️",
-          "🔒", "🔓", "🔑", "🛎️",
-          "👶", "🐕", "⚡", "📍",
+          "🌳", "🏢", "👶", "🍽️",
         ];
         function getIconForSensor(name) {
           var n = String(name || "")
@@ -350,7 +348,7 @@
             .trim();
           if (/garaj|garage|гараж|garáž|garaze|garaż|carport/i.test(n)) return "🚗";
           if (
-            /vrata|врата|door|tür|tuer|porte|entrance|vhod|вход|dver|dveři|puerta|porta|drzwi|doorway|gate|portal|задн|zadna|back|veranda/i.test(
+            /vrata|врата|door|tür|tuer|porte|entrance|vhod|вход|dver|dveři|puerta|porta|drzwi|doorway|gate|portal|задн|zadna|back|veranda|koridor|hall|холл/i.test(
               n,
             )
           )
@@ -363,19 +361,17 @@
             return "🪟";
           if (/spaln|bedroom|спалня|schlaf|chambre|dormitor/i.test(n)) return "🛏️";
           if (/kuhn|kitchen|кухня|küche|kuche|kochen/i.test(n)) return "🍳";
-          if (/ban|bath|баня|bade|douche|shower|wc|toalet/i.test(n)) return "🛁";
-          if (/dnevna|living|хол|wohn|salon|lounge|sofa/i.test(n)) return "🛋️";
+          if (/ban|bath|баня|bade|douche|shower|wc|toalet|sanitar/i.test(n)) return "🛁";
+          if (/dnevna|living|хол|wohn|salon|lounge/i.test(n)) return "🛋️";
+          if (/trapez|dining|траpez|esszimmer|salle.*manger/i.test(n)) return "🍽️";
           if (/prane|laundry|перал|wash|wasch/i.test(n)) return "🧺";
-          if (/sklad|storage|мазе|cellar|клад|attic|tavan|склад/i.test(n)) return "📦";
+          if (/sklad|storage|мазе|cellar|клад|attic|tavan|склад|podrum/i.test(n)) return "📦";
           if (/stuen|stairs|стълб|stair|lesten|trepp/i.test(n)) return "🪜";
-          if (/gradina|garden|градина|dvor|двор|yard|außen|outdoor|van/i.test(n))
-            return "🌳";
-          if (/ofis|office|офис|büro|buro|firma|studio|study/i.test(n)) return "🏢";
+          if (/gradina|garden|градина|dvor|двор|yard|außen|outdoor/i.test(n)) return "🌳";
+          if (/ofis|office|офис|büro|buro|firma|study|кабинет/i.test(n)) return "🏢";
           if (/bebe|baby|дете|детска|kids|kinder|nursery/i.test(n)) return "👶";
-          if (/dog|cat|куче|котка|pet|haustier|hund|katze/i.test(n)) return "🐕";
-          if (/sigurn|security|охран|alarm|secure/i.test(n)) return "🛡️";
-          if (/dom|home|къща|haus|house|apartment|апарт/i.test(n)) return "🏠";
-          return "📍";
+          if (/dom|home|къща|haus|house|apartment|апарт|kashta|къщ/i.test(n)) return "🏡";
+          return "🏠";
         }
         function resolveSensorIcon(name, displayIcon) {
           if (

@@ -21,7 +21,11 @@
     <priority>0.85</priority>
   </url>
   <url>
-    <loc>https://aurahomesystems.eu/login.html</loc>
+    <loc>https://aurahomesystems.eu/fenstersensor.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>

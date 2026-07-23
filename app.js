@@ -137,6 +137,7 @@ function applyFaqSchema(lang) {
 
 function getLandingPageDefaultLang() {
     const path = (window.location.pathname || "").toLowerCase();
+    if (path.includes("fenstersensor")) return "de";
     if (path.includes("senzor-za-prozorec")) return "bg";
     if (path.includes("window-sensor")) return "en";
     return null;

@@ -959,6 +959,7 @@ body.dashboard-overlay-open {
     position: absolute;
     top: calc(100% + 6px);
     right: 0;
+    left: auto;
     min-width: 11.5rem;
     padding: 6px;
     border-radius: 10px;
@@ -967,6 +968,34 @@ body.dashboard-overlay-open {
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
     z-index: 30;
     white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+    .device-item {
+        align-items: flex-start;
+    }
+
+    .device-item .device-name-wrap {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .device-item .device-right {
+        flex: 1 1 100%;
+        width: 100%;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .device-item .device-menu {
+        margin-left: auto;
+        flex-shrink: 0;
+    }
+
+    .device-menu-dropdown {
+        max-width: min(11.5rem, calc(100vw - 24px));
+    }
 }
 
 .device-menu-dropdown[hidden] {
@@ -1014,6 +1043,9 @@ body.dashboard-overlay-open {
     padding: 6px 4px 4px;
     border-top: 1px solid rgba(148, 163, 184, 0.14);
     margin-top: 2px;
+    max-height: 13.5rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
 }
 
 .device-menu-emojis[hidden] {

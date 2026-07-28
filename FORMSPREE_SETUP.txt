@@ -1,9 +1,9 @@
-Как да получаваш запитванията директно на solutions.petrov@gmail.com (без Outlook)
+Как да получаваш запитванията директно на office@aurahomesystems.eu (без Outlook)
 
 1. Отвори https://formspree.io и регистрирай се (безплатно).
 
 2. Натисни "New Form" и задай:
-   - Email: solutions.petrov@gmail.com
+   - Email: office@aurahomesystems.eu
    - Име на формуляра: напр. "Aura HomeSystems контакт"
 
 3. След създаване ще видиш "Form Endpoint" – нещо като:
@@ -14,6 +14,6 @@
    const FORMSPREE_FORM_ID = "YOUR_FORMSPREE_FORM_ID";
    Замени YOUR_FORMSPREE_FORM_ID с твоето ID (напр. xjvqjwqw).
 
-5. Запази и презареди сайта. При "Изпрати запитване" данните се изпращат към Formspree и ти получаваш имейл на solutions.petrov@gmail.com – без да се отваря Outlook.
+5. Запази и презареди сайта. При "Изпрати запитване" данните се изпращат към Formspree и ти получаваш имейл на office@aurahomesystems.eu – без да се отваря Outlook.
 
 Безплатният план позволява до 50 изпращания месечно.

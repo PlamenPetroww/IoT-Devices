@@ -25,6 +25,7 @@ final class AlarmRtdbListener {
     private static final String TAG = "AuraRtdbListener";
     private static final String API_BASE = "https://cleverhaus.onrender.com";
     private static final long AUTH_REFRESH_MS = 45L * 60L * 1000L;
+    private static final long RECONNECT_DELAY_MS = 5000L;
 
     interface Callback {
         void onPendingAlarm(AlarmPendingEvent event);
@@ -35,10 +36,20 @@ final class AlarmRtdbListener {
     private final Callback callback;
 
     private volatile boolean active;
+    private volatile boolean listenerAttached;
+    private volatile boolean reconnectScheduled;
     private volatile String userKey = "";
     private DatabaseReference pendingRef;
     private ChildEventListener childListener;
     private long authFetchedAt;
+    private final Runnable reconnectRunnable =
+            () -> {
+                reconnectScheduled = false;
+                if (!active || listenerAttached) {
+                    return;
+                }
+                new Thread(this::ensureAuthAndAttach, "AuraRtdbReconnect").start();
+            };
 
     AlarmRtdbListener(Context context, Callback callback) {
         this.appContext = context.getApplicationContext();
@@ -56,7 +67,14 @@ final class AlarmRtdbListener {
 
     void stop() {
         active = false;
+        listenerAttached = false;
+        reconnectScheduled = false;
+        mainHandler.removeCallbacks(reconnectRunnable);
         mainHandler.post(this::detachListener);
+    }
+
+    boolean isHealthy() {
+        return active && listenerAttached;
     }
 
     private void ensureAuthAndAttach() {
@@ -69,6 +87,8 @@ final class AlarmRtdbListener {
             if (current == null || now - authFetchedAt > AUTH_REFRESH_MS) {
                 if (!signInFromServer()) {
                     Log.w(TAG, "RTDB auth unavailable");
+                    listenerAttached = false;
+                    scheduleReconnect();
                     return;
                 }
                 authFetchedAt = now;
@@ -76,7 +96,17 @@ final class AlarmRtdbListener {
             mainHandler.post(this::attachListener);
         } catch (Exception e) {
             Log.w(TAG, "RTDB auth/listener setup failed", e);
+            listenerAttached = false;
+            scheduleReconnect();
         }
+    }
+
+    private synchronized void scheduleReconnect() {
+        if (!active || listenerAttached || reconnectScheduled) {
+            return;
+        }
+        reconnectScheduled = true;
+        mainHandler.postDelayed(reconnectRunnable, RECONNECT_DELAY_MS);
     }
 
     private boolean signInFromServer() throws Exception {
@@ -167,9 +197,14 @@ final class AlarmRtdbListener {
                     @Override
                     public void onCancelled(DatabaseError error) {
                         Log.w(TAG, "pendingAlarmEvents listener cancelled: " + error.getMessage());
+                        listenerAttached = false;
+                        scheduleReconnect();
                     }
                 };
         pendingRef.addChildEventListener(childListener);
+        listenerAttached = true;
+        reconnectScheduled = false;
+        mainHandler.removeCallbacks(reconnectRunnable);
         Log.i(TAG, "RTDB listener attached for " + userKey);
     }
 
@@ -186,6 +221,7 @@ final class AlarmRtdbListener {
     }
 
     private void detachListener() {
+        listenerAttached = false;
         if (pendingRef != null && childListener != null) {
             pendingRef.removeEventListener(childListener);
         }

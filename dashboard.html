@@ -243,6 +243,7 @@
     <script src="auth-i18n.js"></script>
     <script src="firebase-config.js"></script>
     <script src="lang-sync.js"></script>
+    <script src="ios-push-bridge.js"></script>
     <script src="push-notifications.js"></script>
     <script>
       initAuthI18n("dashboard");
@@ -503,6 +504,7 @@
                 batteryPinMv:
                   d && typeof d.batteryPinMv === "number" ? d.batteryPinMv : null,
                 powerSource: (d && d.powerSource) || "",
+                batteryStatus: (d && d.batteryStatus) || "",
               };
             });
           function formatLastSeen(ms) {
@@ -550,44 +552,38 @@
               let powerHtml = "";
               if (dev.powerSource === "usb") {
                 powerHtml = '<span class="device-power usb">USB</span>';
-              } else if (
-                dev.powerSource === "no_battery" ||
-                dev.battery === -1
-              ) {
-                powerHtml =
-                  '<span class="device-power no-battery" title="' +
-                  escapeHtml(authT("dashboard.noBatteryTitle")) +
-                  '">' +
-                  escapeHtml(authT("dashboard.noBattery")) +
-                  "</span>";
-              } else if (dev.battery != null && dev.battery >= 0) {
+              } else {
+                var isBatteryLow =
+                  dev.batteryStatus === "low" ||
+                  (dev.battery != null &&
+                    dev.battery >= 0 &&
+                    dev.battery <= 20);
                 var battTitle =
-                  dev.batteryPinMv != null
-                    ? "GPIO sense: " + dev.batteryPinMv + " mV"
-                    : authT("dashboard.batteryTitle") || "Battery level";
-                if (
-                  dev.battery === 0 &&
-                  dev.batteryPinMv != null &&
-                  dev.batteryPinMv < 120
-                ) {
+                  (authT("dashboard.batteryTitle") || "Battery level") +
+                  (dev.battery != null && dev.battery >= 0
+                    ? ": " + dev.battery + "%"
+                    : "");
+                if (isBatteryLow) {
                   powerHtml =
-                    '<span class="device-power no-battery" title="' +
+                    '<span class="device-power battery-low" title="' +
                     escapeHtml(
-                      authT("dashboard.batteryNoSenseTitle") ||
-                        "Connect battery + to GPIO0 via 100k/100k divider"
+                      authT("dashboard.batteryLowTitle") ||
+                        "Battery level is low"
                     ) +
                     '">' +
                     escapeHtml(
-                      authT("dashboard.batteryNoSense") || "⚠ No sense wire"
+                      authT("dashboard.batteryLow") || "Battery Low"
                     ) +
                     "</span>";
                 } else {
                   powerHtml =
-                    '<span class="device-battery" title="' +
+                    '<span class="device-power battery-ok" title="' +
                     escapeHtml(battTitle) +
                     '">' +
-                    dev.battery +
-                    "%</span>";
+                    escapeHtml(
+                      authT("dashboard.batteryOk") || "Battery OK"
+                    ) +
+                    "</span>";
                 }
               }
               const tintClass =

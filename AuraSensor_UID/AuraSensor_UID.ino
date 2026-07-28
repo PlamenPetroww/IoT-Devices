@@ -28,8 +28,8 @@
 // 1 = lastSeen/history via Firebase .sv (if the library supports it). 0 = millis() ÔÇö more reliable for writes.
 #define RTDB_USE_SV_TIMESTAMP 0
 // With deep sleep: 0 = magnet only. E.g. 3600 = also send once per hour (alive check, battery).
-#define DEEP_SLEEP_HEARTBEAT_SEC 900
-// 0 = disabled. If >0: only when powerSource is "battery" and % is below the threshold (see readBatteryPercent ÔÇö ADC gray zone = no_battery, no skip).
+#define DEEP_SLEEP_HEARTBEAT_SEC 3600
+// 0 = disabled. If >0: only when powerSource is "battery" and % is below the threshold.
 #define LOW_BATT_SKIP_WIFI_PCT 0
 #define LOW_BATT_RETRY_SEC (6UL * 3600UL)
 // --- FIREBASE CONFIGURATION ---
@@ -54,7 +54,7 @@ const int sensorPin = 4;
 #define BATTERY_ADC_EMPTY 1500
 #define BATTERY_ADC_FULL  2500
 #define USB_DETECT_PIN -1
-#define BATTERY_ADC_NO_CELL 400
+#define BATTERY_LOW_PCT 20
 // --- Defaults (after first entry via the portal they are kept in flash) ---
 #define DEVICE_NAME_DEFAULT "Senzor1"
 // ---
@@ -412,6 +412,7 @@ String buildQueuedHistoryKey(const String& deviceID, uint32_t sequence, uint32_t
     return deviceID + "_event_" + String(sequence) + "_" + String(nonce, HEX);
 }
 
+// Returns 0–100. powerSourceOut: "usb" | "battery" (never "no_battery").
 int readBatteryPercent(char* powerSourceOut, size_t powerSourceLen) {
     powerSourceOut[0] = '\0';
     if (USB_DETECT_PIN >= 0 && digitalRead(USB_DETECT_PIN) == HIGH) {
@@ -419,9 +420,10 @@ int readBatteryPercent(char* powerSourceOut, size_t powerSourceLen) {
         powerSourceOut[powerSourceLen - 1] = '\0';
         return 100;
     }
+    // Battery product: always report battery (OK / Low), never "no_battery".
+    strncpy(powerSourceOut, "battery", powerSourceLen - 1);
+    powerSourceOut[powerSourceLen - 1] = '\0';
     if (BATTERY_ADC_PIN < 0) {
-        strncpy(powerSourceOut, "usb", powerSourceLen - 1);
-        powerSourceOut[powerSourceLen - 1] = '\0';
         return 100;
     }
     long sum = 0;
@@ -430,23 +432,21 @@ int readBatteryPercent(char* powerSourceOut, size_t powerSourceLen) {
         delay(2);
     }
     int raw = sum / 5;
-    if (raw < BATTERY_ADC_NO_CELL) {
-        strncpy(powerSourceOut, "usb", powerSourceLen - 1);
-        powerSourceOut[powerSourceLen - 1] = '\0';
-        return 100;
-    }
-    // Between NO_CELL and EMPTY: no valid divider/cell (floating ADC on GPIO0 etc.) ÔÇö not "battery", so Wi-Fi is never skipped.
+    // No / very low ADC reading → treat as depleted battery (shows Battery Low).
     if (raw < BATTERY_ADC_EMPTY) {
-        strncpy(powerSourceOut, "no_battery", powerSourceLen - 1);
-        powerSourceOut[powerSourceLen - 1] = '\0';
         return 0;
     }
-    strncpy(powerSourceOut, "battery", powerSourceLen - 1);
-    powerSourceOut[powerSourceLen - 1] = '\0';
-    if (raw <= BATTERY_ADC_EMPTY) return 0;
     if (raw >= BATTERY_ADC_FULL) return 100;
     int pct = map(raw, BATTERY_ADC_EMPTY, BATTERY_ADC_FULL, 0, 100);
     return (pct < 0) ? 0 : (pct > 100 ? 100 : pct);
+}
+
+// "ok" | "low" — used by dashboard as Battery OK / Battery Low.
+static const char* batteryStatusLabel(const char* powerSource, int batteryPct) {
+    if (strcmp(powerSource, "battery") == 0 && batteryPct <= BATTERY_LOW_PCT) {
+        return "low";
+    }
+    return "ok";
 }
 
 static bool readSystemEnabled(const String& userPath) {
@@ -816,6 +816,11 @@ void setup() {
     }
     char powerSource[16];
     int batteryPct = readBatteryPercent(powerSource, sizeof(powerSource));
+    const char* battStatus = batteryStatusLabel(powerSource, batteryPct);
+    Serial.print("Battery ");
+    Serial.print(batteryPct);
+    Serial.print("% → ");
+    Serial.println(strcmp(battStatus, "low") == 0 ? "Battery Low" : "Battery OK");
     FirebaseJson json;
     json.set("status", currentStatus);
     json.set("deviceName", String(device_name));
@@ -826,6 +831,7 @@ void setup() {
 #endif
     json.set("battery", batteryPct);
     json.set("powerSource", powerSource);
+    json.set("batteryStatus", battStatus);
     bool deviceWriteOk = false;
     for (int attempt = 1; attempt <= 3 && !deviceWriteOk; attempt++) {
         deviceWriteOk = Firebase.RTDB.setJSON(&fbdo, devicePath, &json);
@@ -934,6 +940,11 @@ void loop() {
         Serial.println(currentStatus ? "CLOSED" : "OPEN");
         char powerSource[16];
         int batteryPct = readBatteryPercent(powerSource, sizeof(powerSource));
+        const char* battStatus = batteryStatusLabel(powerSource, batteryPct);
+        Serial.print("Battery ");
+        Serial.print(batteryPct);
+        Serial.print("% → ");
+        Serial.println(strcmp(battStatus, "low") == 0 ? "Battery Low" : "Battery OK");
         FirebaseJson json;
         json.set("status", currentStatus);
         json.set("deviceName", String(device_name));
@@ -944,6 +955,7 @@ void loop() {
 #endif
         json.set("battery", batteryPct);
         json.set("powerSource", powerSource);
+        json.set("batteryStatus", battStatus);
         if (Firebase.RTDB.setJSON(&fbdo, devicePath, &json)) {
             Serial.println("Firebase updated!");
             // History + push only on a real change; periodic sends are just for battery/lastSeen.

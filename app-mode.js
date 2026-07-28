@@ -20,6 +20,15 @@
 
   function isStandaloneDisplay() {
     try {
+      if (
+        global.Capacitor &&
+        typeof global.Capacitor.isNativePlatform === "function" &&
+        global.Capacitor.isNativePlatform()
+      ) {
+        return true;
+      }
+    } catch (_) {}
+    try {
       if (global.matchMedia("(display-mode: standalone)").matches) return true;
       if (global.matchMedia("(display-mode: fullscreen)").matches) return true;
     } catch (_) {}
@@ -154,6 +163,17 @@
       return playApp;
     },
     getAppVersion: getAppVersion,
+    getNativePlatform: function () {
+      try {
+        if (
+          global.Capacitor &&
+          typeof global.Capacitor.getPlatform === "function"
+        ) {
+          return global.Capacitor.getPlatform();
+        }
+      } catch (_) {}
+      return "";
+    },
     siteUrl: siteUrl,
     openOnWebsite: function (path) {
       global.open(siteUrl(path), "_blank", "noopener,noreferrer");

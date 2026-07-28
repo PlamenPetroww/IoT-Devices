@@ -26,12 +26,12 @@ public class AlarmMonitorService extends Service {
     private static final String CHANNEL_ID = "aura_monitoring";
     private static final int NOTIFICATION_ID = 2601;
     private static final String API_BASE = "https://cleverhaus.onrender.com";
-    private static final long POLL_WHILE_ARMED_MS = 5000L;
+    private static final long POLL_WHILE_ARMED_FAST_MS = 5000L;
+    private static final long POLL_WHILE_ARMED_SLOW_MS = 30000L;
     private static final long POLL_WHILE_DISARMED_MS = 300000L;
 
     private volatile boolean running;
     private Thread worker;
-    private int pollFailures;
     private AlarmRtdbListener rtdbListener;
     private volatile boolean rtdbStarted;
 
@@ -102,8 +102,7 @@ public class AlarmMonitorService extends Service {
             long delay = POLL_WHILE_DISARMED_MS;
             try {
                 PollResult result = pollAlarmEvents();
-                pollFailures = 0;
-                delay = result.armed ? POLL_WHILE_ARMED_MS : POLL_WHILE_DISARMED_MS;
+                delay = result.armed ? armedPollDelayMs() : POLL_WHILE_DISARMED_MS;
                 if (result.armed) {
                     ensureRtdbListener(result.userKey);
                     for (AlarmPendingEvent event : result.events) {
@@ -116,14 +115,21 @@ public class AlarmMonitorService extends Service {
                     return;
                 }
             } catch (Exception e) {
-                pollFailures++;
                 Log.w(TAG, "monitor poll failed", e);
-                if (pollFailures <= 12) {
-                    delay = 2000L;
-                }
+                delay =
+                        rtdbListener != null && rtdbListener.isHealthy()
+                                ? POLL_WHILE_ARMED_SLOW_MS
+                                : POLL_WHILE_ARMED_FAST_MS;
             }
             sleepQuiet(delay);
         }
+    }
+
+    private long armedPollDelayMs() {
+        if (rtdbListener != null && rtdbListener.isHealthy()) {
+            return POLL_WHILE_ARMED_SLOW_MS;
+        }
+        return POLL_WHILE_ARMED_FAST_MS;
     }
 
     private void ensureRtdbListener(String resolvedUserKey) {

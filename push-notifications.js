@@ -28,6 +28,14 @@
     return "Notification" in global && typeof firebase !== "undefined" && !!firebase.messaging;
   }
 
+  function isAuraIosApp() {
+    return !!(
+      global.AuraIosPush &&
+      typeof global.AuraIosPush.isIosApp === "function" &&
+      global.AuraIosPush.isIosApp()
+    );
+  }
+
   function getVapidKey() {
     return (
       global.FIREBASE_VAPID_KEY ||
@@ -428,6 +436,18 @@
     var snap = await state.db.ref(state.userPath + "/pushTokens").once("value");
     var val = snap.val();
     if (!val || typeof val !== "object") return "none";
+    if (isAuraIosApp()) {
+      var iosKey = "";
+      try {
+        iosKey = localStorage.getItem("auraIosPushKey") || "";
+      } catch (_) {}
+      return iosKey &&
+        val[iosKey] &&
+        val[iosKey].token &&
+        val[iosKey].platform === "ios"
+        ? "native"
+        : "none";
+    }
     if (val.native_android && val.native_android.token) return "native";
     var hasWeb = Object.keys(val).some(function (k) {
       return val[k] && val[k].token;
@@ -437,7 +457,7 @@
 
   async function hasServerPushToken() {
     var kind = await getPushTokenKind();
-    if (isAuraAndroidTwa()) return kind === "native";
+    if (isAuraAndroidTwa() || isAuraIosApp()) return kind === "native";
     return kind !== "none";
   }
 
@@ -572,7 +592,9 @@
 
   async function registerPush(opts) {
     opts = opts || {};
-    var useNative = isAuraAndroidTwa() && !opts.forceWeb;
+    var useAndroidNative = isAuraAndroidTwa() && !opts.forceWeb;
+    var useIosNative = isAuraIosApp() && !opts.forceWeb;
+    var useNative = useAndroidNative || useIosNative;
 
     if (!useNative && !isSupported()) {
       state.status = "unsupported";
@@ -591,13 +613,41 @@
       return false;
     }
 
-    var permission = Notification.permission;
+    var permission = useIosNative ? "default" : Notification.permission;
     if (permission === "default" && !opts.skipPermissionRequest && !useNative) {
       if (state.overlayMode !== "away") hideOverlay();
       permission = await Notification.requestPermission();
     }
 
     if (useNative) {
+      if (useIosNative) {
+        try {
+          var iosOk = await global.AuraIosPush.register(
+            state.userPath,
+            state.db,
+            opts.userInitiated !== false
+          );
+          await syncPushStatusFromServer();
+          if (iosOk) {
+            setOnboardingDismissed();
+            hideOverlay();
+            notify();
+            return true;
+          }
+          state.status = "denied";
+          state.message =
+            (global.authT && global.authT("push.denied")) ||
+            "Notifications denied.";
+          notify();
+          return false;
+        } catch (iosErr) {
+          state.status = "error";
+          state.message =
+            (iosErr && iosErr.message) || "iPhone push registration failed.";
+          notify();
+          return false;
+        }
+      }
       if (!opts.userInitiated) {
         return !!(await hasServerPushToken());
       }
@@ -889,13 +939,21 @@
     bindUi();
     captureDeviceId();
 
-    if (!isSupported() && !isAuraAndroidTwa()) {
+    if (!isSupported() && !isAuraAndroidTwa() && !isAuraIosApp()) {
       state.status = "unsupported";
       notify();
       return;
     }
 
     await syncPushStatusFromServer();
+
+    if (isAuraIosApp()) {
+      global.AuraIosPush.register(state.userPath, state.db, false)
+        .then(function () {
+          return syncPushStatusFromServer();
+        })
+        .catch(function () {});
+    }
 
     if (isAuraAndroidTwa()) {
       var userKeyFromPath = (state.userPath || "").replace(/^users\//, "");

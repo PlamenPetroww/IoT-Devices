@@ -244,7 +244,7 @@ function initFooterYear() {
     }
 }
 
-const CONTACT_EMAIL = "solutions.petrov@gmail.com";
+const CONTACT_EMAIL = "office@aurahomesystems.eu";
 
 // Форма с потвърждение по имейл: задай INQUIRY_FUNCTIONS_BASE_URL в inquiry-config.js (URL на Cloud Functions).
 // Ако е празно, формата изпраща директно към Formspree (без потвърждение).
@@ -323,7 +323,7 @@ function initContactForm() {
         const formData = new FormData(form);
         const lang = document.documentElement.lang || "en";
         const msgSuccess = { bg: "Изпратено! Ще получите отговор на посочения имейл.", en: "Sent! You will get a reply at the email you provided.", de: "Gesendet! Sie erhalten eine Antwort an Ihre E-Mail." };
-        const msgError = { bg: "Неуспешно изпращане. Опитайте отново или пишете на solutions.petrov@gmail.com", en: "Send failed. Try again or email solutions.petrov@gmail.com", de: "Senden fehlgeschlagen. Bitte erneut versuchen oder an solutions.petrov@gmail.com schreiben." };
+        const msgError = { bg: "Неуспешно изпращане. Опитайте отново или пишете на office@aurahomesystems.eu", en: "Send failed. Try again or email office@aurahomesystems.eu", de: "Senden fehlgeschlagen. Bitte erneut versuchen oder an office@aurahomesystems.eu schreiben." };
         const msgSuccessTitle = { bg: "Имейлът е изпратен!", en: "Email sent!", de: "E-Mail gesendet!" };
         const msgVerifyTitle = { bg: "Проверете имейла си", en: "Check your email", de: "E-Mail prüfen" };
         const msgVerifyText = {

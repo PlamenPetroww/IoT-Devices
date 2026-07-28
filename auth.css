@@ -906,6 +906,16 @@ body.dashboard-overlay-open {
     background: rgba(248, 113, 113, 0.25);
 }
 
+.device-item .device-power.battery-low {
+    color: #fecaca;
+    background: rgba(248, 113, 113, 0.25);
+}
+
+.device-item .device-power.battery-ok {
+    color: #bbf7d0;
+    background: rgba(34, 197, 94, 0.2);
+}
+
 .device-item .status {
     font-size: 0.85rem;
     padding: 4px 10px;

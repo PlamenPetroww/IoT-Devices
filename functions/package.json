@@ -1,6 +1,6 @@
 {
   "name": "aura-inquiry-functions",
-  "description": "Submit inquiry + confirm email, then forward to solutions.petrov@gmail.com",
+  "description": "Submit inquiry + confirm email, then forward to office@aurahomesystems.eu",
   "main": "index.js",
   "type": "module",
   "engines": { "node": "20" },

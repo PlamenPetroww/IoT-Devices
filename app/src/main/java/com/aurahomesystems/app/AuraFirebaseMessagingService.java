@@ -281,20 +281,6 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
 
         int notificationId = notificationIdForAlarm(dedupeTag, eventTag, eventCreatedAt, title, body);
         String notifyTag = notificationTagForAlarm(dedupeTag, eventTag, eventCreatedAt, title, body);
-        Intent fullScreenIntent = new Intent(context, AlarmAlertActivity.class);
-        fullScreenIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-        fullScreenIntent.putExtra(EXTRA_ALERT_TITLE, title);
-        fullScreenIntent.putExtra(EXTRA_ALERT_BODY, body);
-        fullScreenIntent.putExtra(EXTRA_EVENT_TAG, eventTag);
-        fullScreenIntent.putExtra(EXTRA_USER_KEY, userKey);
-        fullScreenIntent.putExtra(EXTRA_NOTIFICATION_TAG, notifyTag);
-        fullScreenIntent.putExtra(EXTRA_NOTIFICATION_ID, notificationId);
-        PendingIntent fullScreenPendingIntent =
-                PendingIntent.getActivity(
-                        context,
-                        notificationRequestCode(eventTag) + 2,
-                        fullScreenIntent,
-                        PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_notification_icon)
@@ -306,7 +292,6 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
                 .setPriority(NotificationCompat.PRIORITY_MAX)
                 .setCategory(NotificationCompat.CATEGORY_ALARM)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-                .setFullScreenIntent(fullScreenPendingIntent, true)
                 .setVibrate(new long[]{0, 300, 200, 300});
 
         if (playSound) {

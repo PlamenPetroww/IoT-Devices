@@ -48,45 +48,66 @@ function isDeadFcmError(err) {
     );
 }
 
-async function resolveNativeAndroidTokens(userKey) {
+async function resolveNativeTokens(userKey) {
     const key = String(userKey || "").trim();
     if (!key) return [];
 
     const targets = new Map();
-    const consider = (token, updatedAt, deviceId = "") => {
+    const consider = (token, platform, updatedAt, deviceId = "", pushTokenKey = "") => {
         const t = String(token || "").trim();
+        const p = String(platform || "").toLowerCase();
         const at = Number(updatedAt) || 0;
-        if (!t) return;
-        const current = targets.get(t) || { token: t, updatedAt: 0, deviceIds: new Set() };
+        if (!t || (p !== "android" && p !== "ios")) return;
+        const current = targets.get(t) || {
+            token: t,
+            platform: p,
+            updatedAt: 0,
+            deviceIds: new Set(),
+            pushTokenKeys: new Set(),
+        };
+        current.platform = p;
         current.updatedAt = Math.max(current.updatedAt, at);
         if (deviceId) current.deviceIds.add(deviceId);
+        if (pushTokenKey) current.pushTokenKeys.add(pushTokenKey);
         targets.set(t, current);
     };
 
     const [storedSnap, allSnap] = await Promise.all([
-        rtdb.ref(`users/${key}/pushTokens/native_android`).get(),
+        rtdb.ref(`users/${key}/pushTokens`).get(),
         rtdb.ref("nativeDeviceTokens").get(),
     ]);
     const stored = storedSnap.val() || {};
-    consider(stored.token, stored.createdAt);
+    for (const [pushTokenKey, row] of Object.entries(stored)) {
+        if (!row || typeof row !== "object") continue;
+        const platform =
+            row.platform || (pushTokenKey === "native_android" ? "android" : "");
+        consider(row.token, platform, row.createdAt, "", pushTokenKey);
+    }
     allSnap.forEach((child) => {
         const row = child.val();
         if (row && String(row.userKey || "").trim() === key) {
-            consider(row.token, row.updatedAt, String(child.key || ""));
+            consider(row.token, "android", row.updatedAt, String(child.key || ""));
         }
     });
 
     const result = Array.from(targets.values())
         .map((target) => ({
             token: target.token,
+            platform: target.platform,
             updatedAt: target.updatedAt,
             deviceIds: Array.from(target.deviceIds),
+            pushTokenKeys: Array.from(target.pushTokenKeys),
         }))
         .sort((a, b) => b.updatedAt - a.updatedAt);
 
-    if (result.length > 0 && result[0].token !== String(stored.token || "").trim()) {
+    const newestAndroid = result.find((target) => target.platform === "android");
+    const legacyAndroid = stored.native_android || {};
+    if (
+        newestAndroid &&
+        newestAndroid.token !== String(legacyAndroid.token || "").trim()
+    ) {
         await rtdb.ref(`users/${key}/pushTokens/native_android`).set({
-            token: result[0].token,
+            token: newestAndroid.token,
             platform: "android",
             createdAt: Date.now(),
         });
@@ -99,11 +120,16 @@ async function removeDeadNativeToken(userKey, target) {
     const token = String(target?.token || "").trim();
     if (!token) return;
     const removals = [];
-    const userRef = rtdb.ref(`users/${userKey}/pushTokens/native_android`);
+    const pushTokensRef = rtdb.ref(`users/${userKey}/pushTokens`);
     removals.push(
-        userRef.get().then((snap) => {
-            if (String(snap.val()?.token || "").trim() === token) return userRef.remove();
-            return null;
+        pushTokensRef.get().then(async (snap) => {
+            const deletes = [];
+            snap.forEach((child) => {
+                if (String(child.val()?.token || "").trim() === token) {
+                    deletes.push(child.ref.remove());
+                }
+            });
+            await Promise.all(deletes);
         })
     );
     for (const deviceId of target.deviceIds || []) {
@@ -301,7 +327,14 @@ async function purgeWebPushTokens(userKey) {
     if (!val || typeof val !== "object") return;
     const removes = [];
     for (const key of Object.keys(val)) {
-        if (key === "native_android") continue;
+        const row = val[key];
+        if (
+            key === "native_android" ||
+            row?.platform === "android" ||
+            row?.platform === "ios"
+        ) {
+            continue;
+        }
         removes.push(rtdb.ref(`users/${userKey}/pushTokens/${key}`).remove());
     }
     if (removes.length) {
@@ -328,7 +361,7 @@ async function sendAlarmPushToUser(userKey, title, body, eventTag, eventCreatedA
     const playSound = soundSnap.val() !== false;
     const playFlag = playSound ? "1" : "0";
 
-    const nativeTargets = await resolveNativeAndroidTokens(userKey);
+    const nativeTargets = await resolveNativeTokens(userKey);
     let targets = nativeTargets;
     let isNative = targets.length > 0;
 
@@ -343,7 +376,13 @@ async function sendAlarmPushToUser(userKey, title, body, eventTag, eventCreatedA
                     platform: (val[key] && val[key].platform) || "web",
                     createdAt: Number((val[key] && val[key].createdAt) || 0),
                 }))
-                .filter((entry) => entry.token && entry.platform !== "android" && entry.key !== "native_android")
+                .filter(
+                    (entry) =>
+                        entry.token &&
+                        entry.platform !== "android" &&
+                        entry.platform !== "ios" &&
+                        entry.key !== "native_android"
+                )
                 .sort((a, b) => b.createdAt - a.createdAt);
             if (webEntries.length > 0) {
                 targets = [{ token: String(webEntries[0].token).trim(), deviceIds: [] }];
@@ -370,8 +409,8 @@ async function sendAlarmPushToUser(userKey, title, body, eventTag, eventCreatedA
     const bodyStr = String(body || "");
     const dedupeTag = safeEventTagKey(eventTag) || safeEventTagKey(collapseKey) || "aura-alarm";
 
-    const buildMessage = (token) => ({
-        token,
+    const buildMessage = (target) => ({
+        token: target.token,
         data: {
             title: titleStr,
             body: bodyStr,
@@ -382,7 +421,7 @@ async function sendAlarmPushToUser(userKey, title, body, eventTag, eventCreatedA
             skipWeb: isNative ? "1" : "0",
             dedupeTag,
         },
-        ...(isNative
+        ...(isNative && target.platform === "android"
             ? {
                   // High-priority data messages invoke FirebaseMessagingService even while the
                   // screen is off. Notification messages may be deferred by Redmi/HyperOS until
@@ -392,15 +431,34 @@ async function sendAlarmPushToUser(userKey, title, body, eventTag, eventCreatedA
                       ttl: 86400000,
                   },
               }
-            : {
+            : isNative && target.platform === "ios"
+              ? {
+                    notification: {
+                        title: titleStr,
+                        body: bodyStr,
+                    },
+                    apns: {
+                        headers: {
+                            "apns-priority": "10",
+                            "apns-push-type": "alert",
+                        },
+                        payload: {
+                            aps: {
+                                "mutable-content": 1,
+                                ...(playSound ? { sound: "default" } : {}),
+                            },
+                        },
+                    },
+                }
+              : {
                   webpush: { headers: { Urgency: "high" } },
-              }),
+                }),
     });
 
     const results = await Promise.all(
         targets.map(async (target) => {
             try {
-                await messaging.send(buildMessage(target.token));
+                await messaging.send(buildMessage(target));
                 return true;
             } catch (err) {
                 if (isNative && isDeadFcmError(err)) {
@@ -415,7 +473,7 @@ async function sendAlarmPushToUser(userKey, title, body, eventTag, eventCreatedA
                     console.warn(
                         "[sensor-alarm] FCM target failed",
                         userKey,
-                        isNative ? "native_android" : "web",
+                        isNative ? `native_${target.platform || "unknown"}` : "web",
                         err.message || err
                     );
                 }
@@ -675,7 +733,7 @@ export const onSensorHistoryAlarm = onValueCreated(
     }
 );
 
-const OWNER_EMAIL = "solutions.petrov@gmail.com";
+const OWNER_EMAIL = "office@aurahomesystems.eu";
 const SITE_NAME = "Aura HomeSystems";
 const PENDING_PATH = "pendingInquiries";
 

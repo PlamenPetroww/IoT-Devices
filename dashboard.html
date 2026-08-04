@@ -141,8 +141,8 @@
               <button type="button" class="history-limit-btn" data-limit="10">
                 10
               </button>
-              <button type="button" class="history-limit-btn" data-limit="50">
-                50
+              <button type="button" class="history-limit-btn" data-limit="20">
+                20
               </button>
             </div>
             <ul id="historyList" class="history-list">
@@ -879,7 +879,7 @@
         }
         historyRef
           .orderByChild("timestamp")
-          .limitToLast(50)
+          .limitToLast(20)
           .on("value", (snap) => {
             const val = snap.val();
             if (!val || typeof val !== "object") {

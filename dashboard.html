@@ -553,17 +553,37 @@
               if (dev.powerSource === "usb") {
                 powerHtml = '<span class="device-power usb">USB</span>';
               } else {
+                var isUnknown =
+                  dev.batteryStatus === "unknown" ||
+                  (dev.battery != null && dev.battery < 0);
                 var isBatteryLow =
-                  dev.batteryStatus === "low" ||
-                  (dev.battery != null &&
-                    dev.battery >= 0 &&
-                    dev.battery <= 20);
+                  !isUnknown &&
+                  (dev.batteryStatus === "low" ||
+                    (dev.battery != null &&
+                      dev.battery >= 0 &&
+                      dev.battery <= 20));
+                var pctLabel =
+                  !isUnknown && dev.battery != null && dev.battery >= 0
+                    ? " (" + dev.battery + "%)"
+                    : "";
                 var battTitle =
                   (authT("dashboard.batteryTitle") || "Battery level") +
                   (dev.battery != null && dev.battery >= 0
                     ? ": " + dev.battery + "%"
                     : "");
-                if (isBatteryLow) {
+                if (isUnknown) {
+                  powerHtml =
+                    '<span class="device-power battery-unknown" title="' +
+                    escapeHtml(
+                      authT("dashboard.batteryNoSenseTitle") ||
+                        "Battery sense not connected"
+                    ) +
+                    '">' +
+                    escapeHtml(
+                      authT("dashboard.batteryNoSense") || "Battery —"
+                    ) +
+                    "</span>";
+                } else if (isBatteryLow) {
                   powerHtml =
                     '<span class="device-power battery-low" title="' +
                     escapeHtml(
@@ -572,7 +592,7 @@
                     ) +
                     '">' +
                     escapeHtml(
-                      authT("dashboard.batteryLow") || "Battery Low"
+                      (authT("dashboard.batteryLow") || "Battery Low") + pctLabel
                     ) +
                     "</span>";
                 } else {
@@ -581,7 +601,7 @@
                     escapeHtml(battTitle) +
                     '">' +
                     escapeHtml(
-                      authT("dashboard.batteryOk") || "Battery OK"
+                      (authT("dashboard.batteryOk") || "Battery OK") + pctLabel
                     ) +
                     "</span>";
                 }

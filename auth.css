@@ -916,6 +916,11 @@ body.dashboard-overlay-open {
     background: rgba(34, 197, 94, 0.2);
 }
 
+.device-item .device-power.battery-unknown {
+    color: #cbd5e1;
+    background: rgba(148, 163, 184, 0.2);
+}
+
 .device-item .status {
     font-size: 0.85rem;
     padding: 4px 10px;

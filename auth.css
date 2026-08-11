@@ -1,4 +1,8 @@
 /* Общи стилове за Вход / Регистрация / Табло */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
 .auth-page {
     min-height: 100vh;
     display: flex;
@@ -208,6 +212,8 @@
 
 .dashboard-header {
     padding: 16px 20px;
+    padding-left: max(20px, env(safe-area-inset-left, 0px));
+    padding-right: max(20px, env(safe-area-inset-right, 0px));
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     align-items: center;
@@ -335,9 +341,12 @@
     flex-direction: column;
     gap: 28px;
     padding: 28px 24px 40px;
+    padding-left: max(24px, env(safe-area-inset-left, 0px));
+    padding-right: max(24px, env(safe-area-inset-right, 0px));
     max-width: 900px;
     margin: 0 auto;
     width: 100%;
+    min-width: 0;
 }
 
 .dashboard-top {
@@ -366,6 +375,8 @@
 @media (max-width: 768px) {
     .dashboard-layout {
         padding: 20px 16px 32px;
+        padding-left: max(16px, env(safe-area-inset-left, 0px));
+        padding-right: max(16px, env(safe-area-inset-right, 0px));
         gap: 24px;
     }
     .dashboard-bottom {
@@ -556,6 +567,9 @@
     border: 1px solid rgba(148, 163, 184, 0.2);
     border-radius: 18px;
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
 }
 
 .mode-card h2 {
@@ -762,6 +776,9 @@ body.dashboard-overlay-open {
     border: 1px solid rgba(148, 163, 184, 0.2);
     border-radius: 18px;
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
 }
 
 .devices-card h2 {
@@ -821,6 +838,8 @@ body.dashboard-overlay-open {
     gap: 12px;
     transition: border-color 0.2s, box-shadow 0.2s;
     overflow: visible;
+    min-width: 0;
+    max-width: 100%;
 }
 
 .device-item:hover {
@@ -858,6 +877,8 @@ body.dashboard-overlay-open {
     display: inline-flex;
     align-items: center;
     gap: 10px;
+    min-width: 0;
+    flex: 1 1 auto;
 }
 
 .device-item .sensor-icon {
@@ -879,6 +900,8 @@ body.dashboard-overlay-open {
     align-items: center;
     gap: 10px;
     flex-wrap: wrap;
+    min-width: 0;
+    flex-shrink: 0;
 }
 
 .device-item .device-battery {
@@ -1146,6 +1169,9 @@ body.dashboard-overlay-open {
     border: 1px solid rgba(148, 163, 184, 0.2);
     border-radius: 18px;
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
 }
 
 .history-card h2 {
@@ -1528,15 +1554,26 @@ html.aura-play-app {
 html.aura-play-app body {
     overflow-x: hidden;
     overscroll-behavior-x: none;
+    width: 100%;
     max-width: 100%;
     touch-action: pan-y pinch-zoom;
 }
 
 html.aura-play-app .auth-page,
-html.aura-play-app .dashboard-page,
-html.aura-play-app .dashboard-layout {
+html.aura-play-app .dashboard-page {
     overflow-x: hidden;
+    width: 100%;
     max-width: 100%;
+}
+
+html.aura-play-app .dashboard-layout,
+html.aura-play-app .dashboard-top,
+html.aura-play-app .dashboard-bottom,
+html.aura-play-app .devices-card,
+html.aura-play-app .history-card,
+html.aura-play-app .mode-card {
+    max-width: 100%;
+    min-width: 0;
 }
 
 html.aura-play-app .device-menu-dropdown {

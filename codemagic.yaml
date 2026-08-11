@@ -1,0 +1,48 @@
+workflows:
+  ios-testflight:
+    name: Aura HomeSystems iOS
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    integrations:
+      app_store_connect: Aura HomeSystems
+    environment:
+      groups:
+        - ios_credentials
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.aurahomesystems.app
+      vars:
+        XCODE_PROJECT: ios/App/App.xcodeproj
+        XCODE_SCHEME: App
+      node: latest
+      xcode: latest
+      cocoapods: default
+    triggering:
+      events:
+        - tag
+      tag_patterns:
+        - pattern: "ios-v*"
+          include: true
+    scripts:
+      - name: Install JavaScript dependencies
+        script: npm ci
+      - name: Restore Firebase iOS configuration
+        script: |
+          echo "$GOOGLE_SERVICE_INFO_PLIST" | base64 --decode \
+            > ios/App/App/GoogleService-Info.plist
+      - name: Sync Capacitor iOS project
+        script: npx cap sync ios
+      - name: Apply App Store signing profiles
+        script: xcode-project use-profiles
+      - name: Build signed IPA
+        script: |
+          xcode-project build-ipa \
+            --project "$XCODE_PROJECT" \
+            --scheme "$XCODE_SCHEME"
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true

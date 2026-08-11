@@ -45,6 +45,8 @@ FirebaseAuth auth;
 FirebaseConfig config;
 // Reed to GND when "active": INPUT_PULLUP. For lower sleep current use an external 100kÔÇô1M pull-up to 3V3.
 const int sensorPin = 4;
+// Typical 2-wire reed: magnet near closes the switch → pin pulled LOW to GND → CLOSED.
+#define SENSOR_CLOSED_WHEN_LOW 1
 // Battery: classic ESP32 = GPIO 34. ESP32-C3 = GPIO 0 (D0) if the battery is wired there.
 #if CONFIG_IDF_TARGET_ESP32C3
 #define BATTERY_ADC_PIN 0
@@ -258,8 +260,9 @@ static bool removeQueuedSensorEvent(uint32_t sequence, int8_t acknowledgedStatus
 
 #define SENSOR_DEBOUNCE_MS 50
 #define SENSOR_DEBOUNCE_SAMPLES 5
+#define SENSOR_SETTLE_MS 300
 
-// HIGH = magnet near = closed. Majority vote filters reed bounce on open/close.
+// Reed polarity: see SENSOR_CLOSED_WHEN_LOW. Majority vote filters reed bounce.
 static bool readSensorClosedDebounced() {
     delay(SENSOR_DEBOUNCE_MS);
     int highCount = 0;
@@ -271,7 +274,30 @@ static bool readSensorClosedDebounced() {
             delay(40);
         }
     }
-    return highCount * 2 >= SENSOR_DEBOUNCE_SAMPLES;
+    const bool pinHigh = highCount * 2 >= SENSOR_DEBOUNCE_SAMPLES;
+#if SENSOR_CLOSED_WHEN_LOW
+    return !pinHigh;
+#else
+    return pinHigh;
+#endif
+}
+
+// Two consistent reads — door vibration at wake used to enqueue the wrong state (app updates, no push).
+static bool readSensorClosedStable() {
+    bool first = readSensorClosedDebounced();
+    delay(SENSOR_SETTLE_MS);
+    bool second = readSensorClosedDebounced();
+    if (first == second) return first;
+    delay(SENSOR_SETTLE_MS);
+    return readSensorClosedDebounced();
+}
+
+static int wakeLevelForClosed(bool closed) {
+#if SENSOR_CLOSED_WHEN_LOW
+    return closed ? 1 : 0;
+#else
+    return closed ? 0 : 1;
+#endif
 }
 String transliterateToLatin(String s) {
     String out = "";
@@ -602,17 +628,21 @@ void setup() {
 #if USE_DEEP_SLEEP
     {
         const esp_sleep_wakeup_cause_t earlyWake = esp_sleep_get_wakeup_cause();
-        bool st = readSensorClosedDebounced();
-        nextWakeLevel = st ? 0 : 1;
-        // Persist the transition before Wi-Fi. A network outage or reset must not lose it.
-        enqueueSensorEvent(st);
-        if (earlyWake == ESP_SLEEP_WAKEUP_EXT0
+        const bool gpioWake = (earlyWake == ESP_SLEEP_WAKEUP_EXT0
 #if CONFIG_IDF_TARGET_ESP32C3
             || earlyWake == ESP_SLEEP_WAKEUP_GPIO
 #endif
-        ) {
+        );
+        bool st = readSensorClosedStable();
+        nextWakeLevel = wakeLevelForClosed(st);
+        // Try to queue on every wake; dedupe inside enqueueSensorEvent skips same status.
+        enqueueSensorEvent(st);
+        if (gpioWake) {
             rtcCapturedClosed = st ? 1 : 0;
-            Serial.print("Sensor at wake: ");
+            Serial.print("Sensor at wake (GPIO): ");
+            Serial.println(st ? "CLOSED" : "OPEN");
+        } else {
+            Serial.print("Sensor at wake (non-GPIO): ");
             Serial.println(st ? "CLOSED" : "OPEN");
         }
     }
@@ -783,12 +813,6 @@ void setup() {
     String userPath = "/users/" + userKey;
 #if USE_DEEP_SLEEP
     const esp_sleep_wakeup_cause_t wakeCause = esp_sleep_get_wakeup_cause();
-    const bool wakeFromTimer = (wakeCause == ESP_SLEEP_WAKEUP_TIMER);
-    const bool wakeFromSensor = (wakeCause == ESP_SLEEP_WAKEUP_EXT0
-#if CONFIG_IDF_TARGET_ESP32C3
-        || wakeCause == ESP_SLEEP_WAKEUP_GPIO
-#endif
-    );
     if (wakeCause != ESP_SLEEP_WAKEUP_UNDEFINED) {
         Serial.print("Wakeup cause: ");
         Serial.println((int)wakeCause);
@@ -801,18 +825,22 @@ void setup() {
     const bool hasPendingEvent = peekSensorEvent(pendingEvent);
     bool currentStatus = hasPendingEvent
         ? (pendingEvent.closed == 1)
-        : readSensorClosedDebounced();
+        : readSensorClosedStable();
     rtcCapturedClosed = -1;
     Serial.print("Sensor ");
     Serial.print(device_name);
     Serial.print(" -> ");
     Serial.println(currentStatus ? "CLOSED" : "OPEN");
     const int8_t curSt = currentStatus ? 1 : 0;
-    const bool shouldSendEvent = hasPendingEvent;
+    // Push when queue has an event OR the live status differs from the last successful send.
+    // Do not require GPIO wake cause — ESP sometimes reports timer wake after a real door move.
+    const bool shouldSendEvent =
+        hasPendingEvent
+        || (rtcLastSentStatus >= 0 && curSt != rtcLastSentStatus);
     if (shouldSendEvent) {
         Serial.println("Alarm push via Firebase Cloud Function.");
     } else {
-        Serial.println("No Render event: timer/no status change.");
+        Serial.println("No alarm event: heartbeat / no status change.");
     }
     char powerSource[16];
     int batteryPct = readBatteryPercent(powerSource, sizeof(powerSource));
@@ -841,10 +869,11 @@ void setup() {
     if (deviceWriteOk) {
         Serial.println("Firebase: OK");
         if (shouldSendEvent) {
-            int64_t histTs = pendingEvent.capturedAt;
+            int64_t histTs = hasPendingEvent ? pendingEvent.capturedAt : timestampMsNow();
             if (histTs < 1700000000000LL) histTs = timestampMsNow();
-            String historyKey =
-                buildQueuedHistoryKey(deviceID, pendingEvent.sequence, pendingEvent.nonce);
+            String historyKey = hasPendingEvent
+                ? buildQueuedHistoryKey(deviceID, pendingEvent.sequence, pendingEvent.nonce)
+                : buildHistoryKey(deviceID, currentStatus, (unsigned long)histTs);
             String historyPath = userPath + "/history/" + historyKey;
             FirebaseJson jsonHist;
             jsonHist.set("deviceId", deviceID);
@@ -866,7 +895,7 @@ void setup() {
     }
     if (deviceWriteOk && historyWriteOk) {
         bool queueCommitOk = true;
-        if (shouldSendEvent) {
+        if (shouldSendEvent && hasPendingEvent) {
             queueCommitOk = removeQueuedSensorEvent(pendingEvent.sequence, curSt);
         }
         if (queueCommitOk) {
@@ -878,10 +907,8 @@ void setup() {
         Serial.println("Event remains queued for retry.");
     }
 
-    // Capture a transition that happened while Wi-Fi/Firebase was busy.
-    bool liveStatus = readSensorClosedDebounced();
-    enqueueSensorEvent(liveStatus);
-    nextWakeLevel = liveStatus ? 0 : 1;
+    bool liveStatus = readSensorClosedStable();
+    nextWakeLevel = wakeLevelForClosed(liveStatus);
     rtcWakeCount++;
     delay(300);
     Serial.flush();

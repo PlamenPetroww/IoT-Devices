@@ -11,7 +11,8 @@
   }
 
   function normalizeLang(lang) {
-    if (lang === "bg" || lang === "de" || lang === "en") return lang;
+    if (lang === "bg") return "en";
+    if (lang === "de" || lang === "en") return lang;
     return "en";
   }
 

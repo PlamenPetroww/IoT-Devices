@@ -37,14 +37,15 @@ function applySeoMeta(lang) {
     if (ogLocale) {
         ogLocale.setAttribute(
             "content",
-            lang === "de" ? "de_DE" : lang === "en" ? "en_GB" : "bg_BG"
+            lang === "de" ? "de_DE" : "en_GB"
         );
     }
 }
 
 function applyLanguage(lang) {
+    if (lang === "bg") lang = "en";
     if (!translations[lang]) lang = "en";
-    document.documentElement.lang = lang === "de" ? "de" : lang === "bg" ? "bg" : "en";
+    document.documentElement.lang = lang === "de" ? "de" : "en";
 
     applySeoMeta(lang);
 
@@ -77,9 +78,9 @@ function applyLanguage(lang) {
 
     const triggerFlag = document.getElementById("langTriggerFlag");
     const triggerCode = document.getElementById("langTriggerCode");
-    const codes = { bg: "BG", en: "EN", de: "DE" };
+    const codes = { en: "EN", de: "DE" };
     if (triggerFlag) {
-        triggerFlag.className = "lang-flag-icon lang-flag-" + (lang === "bg" ? "bg" : lang === "en" ? "en" : "de");
+        triggerFlag.className = "lang-flag-icon lang-flag-" + (lang === "de" ? "de" : "en");
     }
     if (triggerCode) triggerCode.textContent = codes[lang] || codes.en;
     document.querySelectorAll(".lang-option").forEach((opt) => {
@@ -138,7 +139,7 @@ function applyFaqSchema(lang) {
 function getLandingPageDefaultLang() {
     const path = (window.location.pathname || "").toLowerCase();
     if (path.includes("fenstersensor")) return "de";
-    if (path.includes("senzor-za-prozorec")) return "bg";
+    if (path.includes("senzor-za-prozorec")) return "en";
     if (path.includes("window-sensor")) return "en";
     return null;
 }
@@ -147,11 +148,14 @@ function initI18n() {
     let lang = "en";
     try {
         const params = new URLSearchParams(window.location.search);
-        const urlLang = params.get("lang");
+        let urlLang = params.get("lang");
+        if (urlLang === "bg") urlLang = "en";
         if (urlLang && translations[urlLang]) {
             lang = urlLang;
         } else {
-            lang = localStorage.getItem("aura-lang") || getLandingPageDefaultLang() || "en";
+            let stored = localStorage.getItem("aura-lang") || getLandingPageDefaultLang() || "en";
+            if (stored === "bg") stored = "en";
+            lang = stored;
         }
     } catch (_) {}
     applyLanguage(lang);
@@ -322,14 +326,11 @@ function initContactForm() {
 
         const formData = new FormData(form);
         const lang = document.documentElement.lang || "en";
-        const msgSuccess = { bg: "Изпратено! Ще получите отговор на посочения имейл.", en: "Sent! You will get a reply at the email you provided.", de: "Gesendet! Sie erhalten eine Antwort an Ihre E-Mail." };
-        const msgError = { bg: "Неуспешно изпращане. Опитайте отново или пишете на office@aurahomesystems.eu", en: "Send failed. Try again or email office@aurahomesystems.eu", de: "Senden fehlgeschlagen. Bitte erneut versuchen oder an office@aurahomesystems.eu schreiben." };
-        const msgSuccessTitle = { bg: "Имейлът е изпратен!", en: "Email sent!", de: "E-Mail gesendet!" };
-        const msgVerifyTitle = { bg: "Проверете имейла си", en: "Check your email", de: "E-Mail prüfen" };
-        const msgVerifyText = {
-            bg: "Изпратихме ви имейл за потвърждение. Моля, проверете пощата си и кликнете на линка в писмото – след това ще получим запитването и ще ви отговорим.",
-            en: "We sent you a confirmation email. Please check your inbox and click the link in the email – then we will receive your inquiry and reply.",
-            de: "Wir haben Ihnen eine Bestätigungs-E-Mail geschickt. Bitte prüfen Sie Ihren Posteingang und klicken Sie auf den Link – dann erhalten wir Ihre Anfrage und antworten."
+        const msgError = { en: "Send failed. Try again or email office@aurahomesystems.eu", de: "Senden fehlgeschlagen. Bitte erneut versuchen oder an office@aurahomesystems.eu schreiben." };
+        const msgSuccessTitle = { en: "Inquiry sent!", de: "Anfrage gesendet!" };
+        const msgSuccessText = {
+            en: "Thank you! We received your message and will get back to you at the email you provided as soon as possible.",
+            de: "Vielen Dank! Wir haben Ihre Nachricht erhalten und melden uns so schnell wie möglich an die von Ihnen angegebene E-Mail-Adresse."
         };
 
         try {
@@ -350,7 +351,7 @@ function initContactForm() {
                     statusEl.textContent = "";
                     statusEl.className = "form-status";
                     form.reset();
-                    showSuccessNotification(msgVerifyTitle[lang] || msgVerifyTitle.en, msgVerifyText[lang] || msgVerifyText.en);
+                    showSuccessNotification(msgSuccessTitle[lang] || msgSuccessTitle.en, msgSuccessText[lang] || msgSuccessText.en);
                 } else {
                     statusEl.textContent = data.error || msgError[lang] || msgError.en;
                     statusEl.className = "form-status form-status-error";
@@ -366,7 +367,7 @@ function initContactForm() {
                     statusEl.textContent = "";
                     statusEl.className = "form-status";
                     form.reset();
-                    showSuccessNotification(msgSuccessTitle[lang] || msgSuccessTitle.en);
+                    showSuccessNotification(msgSuccessTitle[lang] || msgSuccessTitle.en, msgSuccessText[lang] || msgSuccessText.en);
                 } else {
                     statusEl.textContent = msgError[lang] || msgError.en;
                     statusEl.className = "form-status form-status-error";
@@ -429,7 +430,7 @@ function initBuyPanel() {
             sel.remove(1);
         }
         const lang = document.documentElement.lang || "en";
-        const loc = lang === "bg" ? "bg" : lang === "de" ? "de" : "en";
+        const loc = lang === "de" ? "de" : "en";
         let names;
         try {
             names = new Intl.DisplayNames([loc], { type: "region" });
@@ -464,7 +465,7 @@ function initBuyPanel() {
         const postal = (buyForm.querySelector('[name="deliveryPostalCode"]') && buyForm.querySelector('[name="deliveryPostalCode"]').value) || "";
         const street = (buyForm.querySelector('[name="deliveryStreet"]') && buyForm.querySelector('[name="deliveryStreet"]').value) || "";
         const lang = document.documentElement.lang || "en";
-        const loc = lang === "bg" ? "bg" : lang === "de" ? "de" : "en";
+        const loc = lang === "de" ? "de" : "en";
         let countryName = "";
         if (countryCode) {
             try {
@@ -629,7 +630,7 @@ function initBuyPanel() {
 
     function formatPrice(amount) {
         const lang = document.documentElement.lang || "en";
-        const locale = lang === "bg" ? "bg-BG" : lang === "de" ? "de-DE" : "en-US";
+        const locale = lang === "de" ? "de-DE" : "en-US";
         try {
             return (
                 new Intl.NumberFormat(locale, {
@@ -796,7 +797,6 @@ function initBuyPanel() {
 
     function getRevolutCardFieldLocale() {
         const lang = document.documentElement.lang || "en";
-        if (lang === "bg") return "bg-BG";
         if (lang === "de") return "de-DE";
         return "en-GB";
     }
@@ -985,7 +985,7 @@ function initBuyPanel() {
         const zoneId = shippingZoneSelect && shippingZoneSelect.value ? shippingZoneSelect.value.trim() : "";
         if (!zoneId) {
             const lang = document.documentElement.lang || "en";
-            const msg = { bg: "Изберете държава / регион за доставка.", en: "Please select country / region for delivery.", de: "Bitte wählen Sie Land / Region für die Lieferung." };
+            const msg = { en: "Please select country / region for delivery.", de: "Bitte wählen Sie Land / Region für die Lieferung." };
             if (buyStatus) { buyStatus.textContent = msg[lang] || msg.en; buyStatus.className = "form-status form-status-error"; }
             return false;
         }
@@ -1012,8 +1012,8 @@ function initBuyPanel() {
         }
 
         const lang = document.documentElement.lang || "en";
-        const msgError = { bg: "Неуспешно. Опитайте отново.", en: "Failed. Try again.", de: "Fehlgeschlagen. Bitte erneut versuchen." };
-        const msgSuccessTitle = { bg: "Поръчката е приета!", en: "Order received!", de: "Bestellung angenommen!" };
+        const msgError = { en: "Failed. Try again.", de: "Fehlgeschlagen. Bitte erneut versuchen." };
+        const msgSuccessTitle = { en: "Order received!", de: "Bestellung angenommen!" };
 
         const quantity = (qtyInput && qtyInput.value) || "1";
         const paymentMethod = (buyForm.querySelector('select[name="paymentMethod"]') && buyForm.querySelector('select[name="paymentMethod"]').value) || "";

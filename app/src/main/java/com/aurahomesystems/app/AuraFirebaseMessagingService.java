@@ -18,6 +18,7 @@ import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 public class AuraFirebaseMessagingService extends FirebaseMessagingService {
@@ -177,11 +178,14 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
                         : (data != null && data.containsKey("body") ? data.get("body") : "");
         NativePushRegistrar.sendAck(this, "received", eventTag, "", userKey);
         if (remoteMessage.getNotification() != null) {
-            if (!isAppInForeground()) {
+            // Redmi/HyperOS (v46): background alerts are reliable via the system FCM tray UI.
+            // Posting our own notification here caused conflicts when waking the phone.
+            // Samsung One UI: system often vibrates without lighting the screen — post ourselves.
+            if (!isAppInForeground() && !isSamsung()) {
                 android.util.Log.i("AuraFCM", "background notification handled by system " + eventTag);
                 NativePushRegistrar.sendAck(this, "shown_system", eventTag, CHANNEL_ID, userKey);
                 if (eventCreatedAt > 0L || (eventTag != null && !eventTag.isEmpty())) {
-                    AlarmMonitorService.rememberSeenEvent(this, eventTag, eventCreatedAt);
+                    AlarmMonitorService.markEventHandledExternally(this, eventTag, eventCreatedAt);
                 }
                 return;
             }
@@ -197,7 +201,7 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
                     dedupeTag,
                     true);
             if (shown && (eventCreatedAt > 0L || (eventTag != null && !eventTag.isEmpty()))) {
-                AlarmMonitorService.rememberSeenEvent(this, eventTag, eventCreatedAt);
+                AlarmMonitorService.markEventHandledExternally(this, eventTag, eventCreatedAt);
             }
             return;
         }
@@ -212,7 +216,7 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
         boolean shown = showAlarmNotification(
                 this, title, body, playSound, eventTag, userKey, eventCreatedAt, dedupeTag, true);
         if (shown && (eventCreatedAt > 0L || (eventTag != null && !eventTag.isEmpty()))) {
-            AlarmMonitorService.rememberSeenEvent(this, eventTag, eventCreatedAt);
+            AlarmMonitorService.markEventHandledExternally(this, eventTag, eventCreatedAt);
         }
     }
 
@@ -249,7 +253,7 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
             return false;
         }
         ensureChannel(context, playSound);
-        wakeScreen(context);
+        wakeScreenIfNeeded(context);
 
         NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         Intent intent = new Intent(context, LauncherActivity.class);
@@ -296,6 +300,9 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
 
         if (playSound) {
             builder.setDefaults(NotificationCompat.DEFAULT_ALL);
+        } else if (isSamsung()) {
+            builder.setDefaults(NotificationCompat.DEFAULT_VIBRATE);
+            builder.setSound(null);
         } else {
             builder.setSilent(true);
         }
@@ -312,6 +319,30 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
         }
         NativePushRegistrar.sendAck(context, "shown", eventTag, CHANNEL_ID, userKey);
         return true;
+    }
+
+    private static boolean isSamsung() {
+        String m =
+                Build.MANUFACTURER != null
+                        ? Build.MANUFACTURER.toLowerCase(Locale.US)
+                        : "";
+        return m.contains("samsung");
+    }
+
+    private static boolean isXiaomiFamily() {
+        String m =
+                Build.MANUFACTURER != null
+                        ? Build.MANUFACTURER.toLowerCase(Locale.US)
+                        : "";
+        return m.contains("xiaomi") || m.contains("redmi") || m.contains("poco");
+    }
+
+    @SuppressWarnings("deprecation")
+    private static void wakeScreenIfNeeded(Context context) {
+        if (isXiaomiFamily()) {
+            return;
+        }
+        wakeScreen(context);
     }
 
     @SuppressWarnings("deprecation")

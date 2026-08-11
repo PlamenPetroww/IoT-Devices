@@ -1,0 +1,36 @@
+{
+  "appId": "com.aurahomesystems.app",
+  "appName": "Aura HomeSystems",
+  "webDir": "ios-web",
+  "server": {
+    "url": "https://aurahomesystems.eu/login.html?aura_app=1",
+    "allowNavigation": [
+      "aurahomesystems.eu",
+      "*.firebaseapp.com",
+      "*.googleapis.com",
+      "*.onrender.com"
+    ]
+  },
+  "ios": {
+    "backgroundColor": "#0f172a",
+    "contentInset": "always",
+    "preferredContentMode": "mobile",
+    "scheme": "AuraHome"
+  },
+  "plugins": {
+    "FirebaseMessaging": {
+      "presentationOptions": ["badge", "sound", "alert"]
+    }
+  },
+  "experimental": {
+    "ios": {
+      "spm": {
+        "packageOptions": {
+          "@capacitor-firebase/messaging": {
+            "symlink": true
+          }
+        }
+      }
+    }
+  }
+}

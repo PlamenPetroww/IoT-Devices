@@ -1,6 +1,10 @@
 function getAuraLang() {
     try {
-        const lang = localStorage.getItem("aura-lang") || "en";
+        let lang = localStorage.getItem("aura-lang") || "en";
+        if (lang === "bg") {
+            lang = "en";
+            localStorage.setItem("aura-lang", "en");
+        }
         return translations[lang] ? lang : "en";
     } catch (_) {
         return "en";
@@ -19,14 +23,12 @@ function authT(key, vars) {
 
 function firebaseAuthLang() {
     const lang = getAuraLang();
-    if (lang === "bg") return "bg";
     if (lang === "de") return "de";
     return "en";
 }
 
 function auraDateLocale() {
     const lang = getAuraLang();
-    if (lang === "bg") return "bg-BG";
     if (lang === "de") return "de-DE";
     return "en-GB";
 }
@@ -45,8 +47,6 @@ function langDropdownInnerHtml() {
         '<div class="lang-dropdown-menu" id="langDropdownMenu" role="menu" hidden>' +
         '<button type="button" class="lang-option" data-lang="en" role="menuitem">' +
         '<span class="lang-flag-icon lang-flag-en"></span> EN</button>' +
-        '<button type="button" class="lang-option" data-lang="bg" role="menuitem">' +
-        '<span class="lang-flag-icon lang-flag-bg"></span> BG</button>' +
         '<button type="button" class="lang-option" data-lang="de" role="menuitem">' +
         '<span class="lang-flag-icon lang-flag-de"></span> DE</button>' +
         "</div></div>"
@@ -96,12 +96,12 @@ function initHeaderMenuLangPicker() {
 }
 
 function updateLangDropdownUi(lang) {
-    var codes = { bg: "BG", en: "EN", de: "DE" };
+    var codes = { en: "EN", de: "DE" };
     var triggerFlag = document.getElementById("langTriggerFlag");
     var triggerCode = document.getElementById("langTriggerCode");
     if (triggerFlag) {
         triggerFlag.className =
-            "lang-flag-icon lang-flag-" + (lang === "bg" ? "bg" : lang === "de" ? "de" : "en");
+            "lang-flag-icon lang-flag-" + (lang === "de" ? "de" : "en");
     }
     if (triggerCode) triggerCode.textContent = codes[lang] || codes.en;
     document.querySelectorAll(".lang-option").forEach(function (opt) {
@@ -162,8 +162,7 @@ function initAuraLangPicker() {
 
 function initAuthI18n(page) {
     const lang = getAuraLang();
-    document.documentElement.lang =
-        lang === "de" ? "de" : lang === "bg" ? "bg" : "en";
+    document.documentElement.lang = lang === "de" ? "de" : "en";
 
     const titleKeys = {
         register: "auth.registerPageTitle",

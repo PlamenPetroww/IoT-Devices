@@ -21,17 +21,14 @@ function flatten(obj, prefix = "") {
     return out;
 }
 
-const bg = flatten(translations.bg);
 const en = flatten(translations.en);
 const de = flatten(translations.de);
 
-console.log("Keys:", "bg", Object.keys(bg).length, "en", Object.keys(en).length, "de", Object.keys(de).length);
+console.log("Keys:", "en", Object.keys(en).length, "de", Object.keys(de).length);
 
 for (const [base, name, other] of [
-    [bg, "en", en],
-    [bg, "de", de],
-    [en, "bg", bg],
-    [de, "bg", bg],
+    [en, "de", de],
+    [de, "en", en],
 ]) {
     const missing = Object.keys(base).filter((k) => !(k in other));
     if (missing.length) {

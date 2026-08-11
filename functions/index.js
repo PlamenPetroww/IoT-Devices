@@ -423,12 +423,22 @@ async function sendAlarmPushToUser(userKey, title, body, eventTag, eventCreatedA
         },
         ...(isNative && target.platform === "android"
             ? {
-                  // High-priority data messages invoke FirebaseMessagingService even while the
-                  // screen is off. Notification messages may be deferred by Redmi/HyperOS until
-                  // the screen wakes. App-side event dedupe prevents poll/RTDB duplicates.
+                  // Redmi/HyperOS often drops data-only FCM in deep standby. Include a system
+                  // notification so the tray alert still appears when the app process is dead.
+                  notification: {
+                      title: titleStr,
+                      body: bodyStr,
+                  },
                   android: {
                       priority: "high",
                       ttl: 86400000,
+                      notification: {
+                          channelId: "aura_alarm_alerts_v2",
+                          priority: "max",
+                          defaultSound: true,
+                          defaultVibrateTimings: true,
+                          visibility: "public",
+                      },
                   },
               }
             : isNative && target.platform === "ios"
@@ -500,7 +510,8 @@ async function createAlarmDelivery(
     title,
     body,
     createdAt,
-    lang
+    lang,
+    includePending = false
 ) {
     const delivery = {
         userKey,
@@ -516,19 +527,32 @@ async function createAlarmDelivery(
         updatedAt: Date.now(),
     };
     const updates = {};
-    updates[`users/${userKey}/pendingAlarmEvents/${eventTag}`] = delivery;
+    if (includePending) {
+        updates[`users/${userKey}/pendingAlarmEvents/${eventTag}`] = delivery;
+    }
     updates[`users/${userKey}/alarmDeliveries/${eventTag}`] = delivery;
     updates[`alarmDeliveryQueue/${eventTag}`] = delivery;
     await rtdb.ref().update(updates);
+    return delivery;
+}
+
+async function enqueuePendingAlarmEvent(userKey, eventTag, delivery) {
+    if (!userKey || !eventTag || !delivery) return;
+    await rtdb.ref(`users/${userKey}/pendingAlarmEvents/${eventTag}`).set(delivery);
 }
 
 async function updateAlarmDelivery(userKey, eventTag, values) {
     const update = { ...values, updatedAt: Date.now() };
     const updates = {};
     for (const [key, value] of Object.entries(update)) {
-        updates[`users/${userKey}/pendingAlarmEvents/${eventTag}/${key}`] = value;
         updates[`users/${userKey}/alarmDeliveries/${eventTag}/${key}`] = value;
         updates[`alarmDeliveryQueue/${eventTag}/${key}`] = value;
+    }
+    const pendingSnap = await rtdb.ref(`users/${userKey}/pendingAlarmEvents/${eventTag}`).get();
+    if (pendingSnap.exists()) {
+        for (const [key, value] of Object.entries(update)) {
+            updates[`users/${userKey}/pendingAlarmEvents/${eventTag}/${key}`] = value;
+        }
     }
     await rtdb.ref().update(updates);
 }
@@ -556,6 +580,16 @@ async function processAlarmEmailFallback(userKey, eventTag) {
     let delivery = (await deliveryRef.get()).val();
     if (!delivery || delivery.ackShownAt || delivery.emailSentAt) {
         console.log("[sensor-alarm] email fallback cancelled by shown ACK", key, tag);
+        return false;
+    }
+    // System notification path: FCM accepted means the phone should show a tray alert even
+    // without app ACK. Do not also send email in that case.
+    if (
+        delivery.fcmAcceptedAt ||
+        delivery.state === "fcm_accepted" ||
+        delivery.state === "fcm_retried"
+    ) {
+        console.log("[sensor-alarm] email skipped; FCM already accepted", key, tag);
         return false;
     }
 
@@ -676,7 +710,7 @@ export const onSensorHistoryAlarm = onValueCreated(
             return;
         }
 
-        await createAlarmDelivery(
+        const delivery = await createAlarmDelivery(
             userKey,
             historyId,
             eventTag,
@@ -684,18 +718,9 @@ export const onSensorHistoryAlarm = onValueCreated(
             title,
             bodyText,
             eventCreatedAt,
-            normalizeAlarmLang(langSnap.val())
+            normalizeAlarmLang(langSnap.val()),
+            false
         );
-        try {
-            await scheduleAlarmEmailFallback(userKey, eventTag);
-        } catch (e) {
-            console.error(
-                "[sensor-alarm] email task scheduling failed; scheduler will recover",
-                userKey,
-                eventTag,
-                e.message || e
-            );
-        }
 
         const collapseKey = safeEventTagKey(deviceKey + "-" + status) || "aura-alarm";
         const sent = await sendAlarmPushToUser(
@@ -725,11 +750,29 @@ export const onSensorHistoryAlarm = onValueCreated(
             lastAttemptAt: Date.now(),
             fcmAcceptedAt: sent ? Date.now() : null,
         });
+        if (!sent) {
+            await enqueuePendingAlarmEvent(userKey, eventTag, delivery);
+        }
         console.log(
-            sent ? "[sensor-alarm] awaiting shown ACK" : "[sensor-alarm] queued after FCM failure",
+            sent ? "[sensor-alarm] FCM accepted" : "[sensor-alarm] FCM failed",
             userKey,
             eventTag
         );
+
+        // Email only when FCM could not send. Standby Redmi often never ACKs even when the
+        // system tray notification is shown, so do not email after a successful FCM accept.
+        if (!sent) {
+            try {
+                await scheduleAlarmEmailFallback(userKey, eventTag);
+            } catch (e) {
+                console.error(
+                    "[sensor-alarm] email task scheduling failed; scheduler will recover",
+                    userKey,
+                    eventTag,
+                    e.message || e
+                );
+            }
+        }
     }
 );
 
@@ -758,34 +801,34 @@ function directOrderSummaryListHtml(data) {
     const rev = data.revolutId ? escapeHtml(String(data.revolutId).trim()) : "";
     return `
     <ul style="margin:12px 0;padding-left:20px;line-height:1.6">
-      <li><strong>Брой сензори:</strong> ${q || "—"}</li>
-      <li><strong>Начин на плащане:</strong> ${pm || "—"}</li>
+      <li><strong>Sensor quantity:</strong> ${q || "—"}</li>
+      <li><strong>Payment method:</strong> ${pm || "—"}</li>
       ${rev ? `<li><strong>Revolut:</strong> ${rev}</li>` : ""}
-      <li><strong>Адрес за доставка:</strong> ${addr || "—"}</li>
-      ${phone ? `<li><strong>Телефон:</strong> ${phone}</li>` : ""}
+      <li><strong>Delivery address:</strong> ${addr || "—"}</li>
+      ${phone ? `<li><strong>Phone:</strong> ${phone}</li>` : ""}
     </ul>`;
 }
 
 function customerDirectOrderConfirmationEmailHtml(data) {
     return `<!DOCTYPE html>
-<html lang="bg">
+<html lang="en">
 <head><meta charset="UTF-8" /></head>
 <body style="font-family:system-ui,sans-serif;line-height:1.55;color:#1a1a1a;max-width:560px">
-  <p>Здравейте,</p>
-  <p>Поръчката ви до <strong>${escapeHtml(SITE_NAME)}</strong> е <strong>потвърдена</strong>. Резюме:</p>
+  <p>Hello,</p>
+  <p>Your order with <strong>${escapeHtml(SITE_NAME)}</strong> is <strong>confirmed</strong>. Summary:</p>
   ${directOrderSummaryListHtml(data)}
-  <p>Ще се свържем с вас при необходимост относно плащане и изпращане.</p>
-  <p>Поздрави,<br/><strong>${escapeHtml(SITE_NAME)}</strong></p>
+  <p>We will contact you if needed regarding payment and shipping.</p>
+  <p>Best regards,<br/><strong>${escapeHtml(SITE_NAME)}</strong></p>
 </body>
 </html>`;
 }
 
 function confirmHtml(success, message, baseUrl) {
-    const title = success ? "Потвърдено" : "Грешка";
+    const title = success ? "Confirmed" : "Error";
     const color = success ? "#22c55e" : "#f97373";
     const backLink = baseUrl ? `${baseUrl}/` : "/";
     return `<!DOCTYPE html>
-<html lang="bg">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -803,7 +846,7 @@ function confirmHtml(success, message, baseUrl) {
   <div class="box">
     <h1>${escapeHtml(title)}</h1>
     <p>${escapeHtml(message)}</p>
-    <a href="${escapeHtml(backLink)}">← Обратно към сайта</a>
+    <a href="${escapeHtml(backLink)}">← Back to site</a>
   </div>
 </body>
 </html>`;
@@ -1023,6 +1066,17 @@ export const retryUnacknowledgedAlarms = onSchedule(
                 continue;
             }
 
+            if (job.ackShownAt || job.state === "ack_shown" || job.state === "email_fallback") {
+                await rtdb.ref(`alarmDeliveryQueue/${job.key}`).remove();
+                continue;
+            }
+            if (job.fcmAcceptedAt || job.state === "fcm_accepted" || job.state === "fcm_retried") {
+                if (now - createdAt >= 10 * 60 * 1000) {
+                    await rtdb.ref(`alarmDeliveryQueue/${job.key}`).remove();
+                }
+                continue;
+            }
+
             if (now - lastAttemptAt >= 15000 && attempts < 3) {
                 const sent = await sendAlarmPushToUser(
                     userKey,
@@ -1037,11 +1091,13 @@ export const retryUnacknowledgedAlarms = onSchedule(
                     state: sent ? "fcm_retried" : "fcm_retry_failed",
                     attempts,
                     lastAttemptAt: Date.now(),
+                    fcmAcceptedAt: sent ? Date.now() : job.fcmAcceptedAt || null,
                 });
                 console.log("[alarm-retry]", userKey, eventTag, "attempt", attempts, "sent", sent);
+                continue;
             }
 
-            if (now - createdAt >= 90000) {
+            if (attempts >= 3 && now - createdAt >= 90000) {
                 await processAlarmEmailFallback(userKey, eventTag);
             }
           } catch (e) {
@@ -1051,7 +1107,17 @@ export const retryUnacknowledgedAlarms = onSchedule(
     }
 );
 
-const HISTORY_LIMIT = 50;
+// Hard caps so RTDB stays small even with many sensors / years of use.
+const HISTORY_LIMIT = 20;
+const DELIVERY_META_LIMIT = 20;
+const SETTINGS_MAP_LIMIT = 40;
+const IN_FLIGHT_PROTECT_MS = 2 * 60 * 60 * 1000; // never prune active deliveries younger than 2h
+const STALE_PENDING_MS = 24 * 60 * 60 * 1000;
+
+function isTerminalDeliveryState(state) {
+    const s = String(state || "");
+    return s === "ack_shown" || s === "email_fallback";
+}
 
 async function pruneUserHistory(userKey) {
     const histRef = rtdb.ref(`users/${userKey}/history`);
@@ -1069,46 +1135,175 @@ async function pruneUserHistory(userKey) {
 
     entries.sort((a, b) => a.timestamp - b.timestamp || a.key.localeCompare(b.key));
     const toDelete = entries.slice(0, entries.length - HISTORY_LIMIT);
-    const updates = {};
-    for (const entry of toDelete) updates[entry.key] = null;
-    await histRef.update(updates);
+    const rootUpdates = {};
+    for (const entry of toDelete) {
+        rootUpdates[`users/${userKey}/history/${entry.key}`] = null;
+        rootUpdates[`users/${userKey}/settings/dispatchedHistory/${entry.key}`] = null;
+    }
+    await rtdb.ref().update(rootUpdates);
     console.log(`[prune-history] ${userKey}: deleted ${toDelete.length}, kept ${HISTORY_LIMIT}`);
     return toDelete.length;
 }
 
-async function pruneUserDeliveryMetadata(userKey) {
-    const ref = rtdb.ref(`users/${userKey}/alarmDeliveries`);
-    const snap = await ref.once("value");
+async function pruneTimestampKeyedMap(userKey, relativePath, limit, maxAgeMs = 0) {
+    const snap = await rtdb.ref(`users/${userKey}/${relativePath}`).once("value");
     if (!snap.exists()) return 0;
-    const terminal = [];
+    const now = Date.now();
+    const rows = [];
     snap.forEach((child) => {
-        const value = child.val() || {};
-        if (value.state === "ack_shown" || value.state === "email_fallback") {
-            terminal.push({
-                eventTag: child.key,
-                historyId: String(value.historyId || ""),
-                at: Number(value.ackShownAt || value.emailSentAt || value.createdAt) || 0,
-            });
+        const val = child.val();
+        let at = 0;
+        if (typeof val === "number") at = val;
+        else if (val && typeof val === "object") {
+            at = Number(val.sentAt || val.claimedAt || val.at || val.updatedAt || val.createdAt) || 0;
         }
+        rows.push({ key: child.key, at });
     });
-    if (terminal.length <= HISTORY_LIMIT) return 0;
-    terminal.sort((a, b) => a.at - b.at || a.eventTag.localeCompare(b.eventTag));
-    const expired = terminal.slice(0, terminal.length - HISTORY_LIMIT);
+    if (!rows.length) return 0;
+    rows.sort((a, b) => a.at - b.at || a.key.localeCompare(b.key));
     const updates = {};
-    for (const item of expired) {
-        updates[`users/${userKey}/alarmDeliveries/${item.eventTag}`] = null;
-        updates[`users/${userKey}/pushAcks/${item.eventTag}`] = null;
-        updates[`users/${userKey}/settings/emailSent/${item.eventTag}`] = null;
-        updates[`users/${userKey}/settings/pushSendLock/${item.eventTag}`] = null;
-        if (item.historyId) {
-            updates[`users/${userKey}/settings/dispatchedHistory/${item.historyId}`] = null;
+    let deleted = 0;
+    if (maxAgeMs > 0) {
+        for (const row of rows) {
+            if (row.at > 0 && now - row.at > maxAgeMs) {
+                updates[`users/${userKey}/${relativePath}/${row.key}`] = null;
+                deleted++;
+            }
         }
     }
-    await rtdb.ref().update(updates);
-    return expired.length;
+    const remaining = rows.filter((row) => !updates[`users/${userKey}/${relativePath}/${row.key}`]);
+    if (remaining.length > limit) {
+        const expired = remaining.slice(0, remaining.length - limit);
+        for (const row of expired) {
+            updates[`users/${userKey}/${relativePath}/${row.key}`] = null;
+            deleted++;
+        }
+    }
+    if (deleted > 0) await rtdb.ref().update(updates);
+    return deleted;
 }
 
-// Enforce the limit immediately after every newly created sensor event.
+async function pruneUserDeliveryMetadata(userKey) {
+    const now = Date.now();
+    const updates = {};
+    let deleted = 0;
+
+    const deliverySnap = await rtdb.ref(`users/${userKey}/alarmDeliveries`).once("value");
+    const keepTags = new Set();
+    if (deliverySnap.exists()) {
+        const rows = [];
+        deliverySnap.forEach((child) => {
+            const value = child.val() || {};
+            const createdAt = Number(value.createdAt || value.updatedAt || 0) || 0;
+            const state = String(value.state || "");
+            const inFlight =
+                !isTerminalDeliveryState(state) &&
+                createdAt > 0 &&
+                now - createdAt < IN_FLIGHT_PROTECT_MS;
+            rows.push({
+                eventTag: child.key,
+                historyId: String(value.historyId || ""),
+                at: Number(value.ackShownAt || value.emailSentAt || value.updatedAt || value.createdAt) || 0,
+                inFlight,
+                state,
+            });
+        });
+        rows.sort((a, b) => a.at - b.at || a.eventTag.localeCompare(b.eventTag));
+
+        const protectedRows = rows.filter((r) => r.inFlight);
+        const prunable = rows.filter((r) => !r.inFlight);
+        const keepPrunable = prunable.slice(-DELIVERY_META_LIMIT);
+        const drop = prunable.slice(0, Math.max(0, prunable.length - DELIVERY_META_LIMIT));
+
+        for (const row of protectedRows.concat(keepPrunable)) {
+            keepTags.add(row.eventTag);
+        }
+        for (const item of drop) {
+            updates[`users/${userKey}/alarmDeliveries/${item.eventTag}`] = null;
+            updates[`users/${userKey}/pushAcks/${item.eventTag}`] = null;
+            updates[`users/${userKey}/pendingAlarmEvents/${item.eventTag}`] = null;
+            updates[`alarmDeliveryQueue/${item.eventTag}`] = null;
+            updates[`users/${userKey}/settings/emailSent/${safeEventTagKey(item.eventTag)}`] = null;
+            updates[`users/${userKey}/settings/pushSendLock/${safeEventTagKey(item.eventTag)}`] = null;
+            updates[
+                `users/${userKey}/settings/emailFallbackClaims/${safeEventTagKey(item.eventTag)}`
+            ] = null;
+            if (item.historyId) {
+                updates[`users/${userKey}/settings/dispatchedHistory/${item.historyId}`] = null;
+            }
+            deleted++;
+        }
+    }
+
+    // Orphan pushAcks / pending events not tied to kept deliveries.
+    const ackSnap = await rtdb.ref(`users/${userKey}/pushAcks`).once("value");
+    if (ackSnap.exists()) {
+        ackSnap.forEach((child) => {
+            if (!keepTags.has(child.key)) {
+                updates[`users/${userKey}/pushAcks/${child.key}`] = null;
+                deleted++;
+            }
+        });
+    }
+    const pendingSnap = await rtdb.ref(`users/${userKey}/pendingAlarmEvents`).once("value");
+    if (pendingSnap.exists()) {
+        pendingSnap.forEach((child) => {
+            const createdAt = Number((child.val() || {}).createdAt) || 0;
+            const stale = createdAt > 0 && now - createdAt > STALE_PENDING_MS;
+            if (!keepTags.has(child.key) || stale) {
+                updates[`users/${userKey}/pendingAlarmEvents/${child.key}`] = null;
+                updates[`alarmDeliveryQueue/${child.key}`] = null;
+                deleted++;
+            }
+        });
+    }
+
+    if (deleted > 0) await rtdb.ref().update(updates);
+
+    // Cap timestamped settings maps (dedupe locks, etc.).
+    deleted += await pruneTimestampKeyedMap(
+        userKey,
+        "settings/dispatchedHistory",
+        SETTINGS_MAP_LIMIT,
+        STALE_PENDING_MS
+    );
+    deleted += await pruneTimestampKeyedMap(
+        userKey,
+        "settings/pushSendLock",
+        SETTINGS_MAP_LIMIT,
+        STALE_PENDING_MS
+    );
+    deleted += await pruneTimestampKeyedMap(
+        userKey,
+        "settings/emailSent",
+        SETTINGS_MAP_LIMIT,
+        STALE_PENDING_MS
+    );
+    deleted += await pruneTimestampKeyedMap(
+        userKey,
+        "settings/dispatchedEventTags",
+        SETTINGS_MAP_LIMIT,
+        STALE_PENDING_MS
+    );
+    deleted += await pruneTimestampKeyedMap(
+        userKey,
+        "settings/emailFallbackClaims",
+        SETTINGS_MAP_LIMIT,
+        STALE_PENDING_MS
+    );
+
+    if (deleted > 0) {
+        console.log(`[prune-meta] ${userKey}: cleaned ${deleted} nodes`);
+    }
+    return deleted;
+}
+
+async function pruneUserData(userKey) {
+    await pruneUserHistory(userKey);
+    await pruneUserDeliveryMetadata(userKey);
+}
+
+// Enforce limits immediately after every newly created sensor event.
 export const pruneHistoryOnCreate = onValueCreated(
     {
         ref: "/users/{userKey}/history/{historyId}",
@@ -1119,14 +1314,14 @@ export const pruneHistoryOnCreate = onValueCreated(
     async (event) => {
         const userKey = String(event.params.userKey || "").trim();
         if (!userKey) return;
-        await pruneUserHistory(userKey);
+        await pruneUserData(userKey);
     }
 );
 
-// Daily safety pass also cleans users that already had more than 50 records.
+// Periodic safety pass for all users (also cleans already-bloated accounts).
 export const pruneHistory = onSchedule(
     {
-        schedule: "every 24 hours",
+        schedule: "every 6 hours",
         region: "europe-west1",
         timeZone: "Europe/Sofia",
     },
@@ -1136,8 +1331,7 @@ export const pruneHistory = onSchedule(
             if (!usersSnap.exists()) return;
             const users = usersSnap.val();
             for (const userKey of Object.keys(users)) {
-                await pruneUserHistory(userKey);
-                await pruneUserDeliveryMetadata(userKey);
+                await pruneUserData(userKey);
             }
         } catch (e) {
             console.error("[prune-history] error", e.message || e);

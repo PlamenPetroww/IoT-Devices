@@ -40,13 +40,9 @@ final class AlarmPendingEvent {
         String title = stringValue(map.get("title"), "Aura HomeSystems");
         String body = stringValue(map.get("body"), "");
         if (body.isEmpty()) {
-            String deviceName = stringValue(map.get("deviceName"), "Sensor");
-            String state = stringValue(map.get("state"), "");
-            if ("fcm_send_failed".equals(state) || "pending".equals(state)) {
-                body = "Alarm event pending delivery.";
-            } else {
-                body = deviceName + " status update.";
-            }
+            // Incomplete/stale RTDB rows (e.g. heartbeat leftovers) — do not invent
+            // a "status update" notification; skip them.
+            return null;
         }
         return new AlarmPendingEvent(userKey, eventTag, createdAt, title, body);
     }

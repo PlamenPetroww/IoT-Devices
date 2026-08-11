@@ -24,3 +24,13 @@ build/
 local.properties
 google-services.json
 .gradle-local/
+
+# iOS signing / Firebase secrets / build artifacts
+GoogleService-Info.plist
+ios/App/App/GoogleService-Info.plist
+ios/App/Pods/
+ios/App/App.xcworkspace/xcuserdata/
+ios/App/App.xcodeproj/xcuserdata/
+ios/App/DerivedData/
+*.xcarchive
+*.ipa

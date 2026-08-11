@@ -1,12 +1,4 @@
 const ALARM_I18N = {
-    bg: {
-        title: "Aura HomeSystems",
-        open: (name) => `${name} — отворено`,
-        closed: (name) => `${name} — затворено`,
-        emailSubject: (name) => `Аларма — ${name}`,
-        emailIntro:
-            "Push \u0438\u0437\u0432\u0435\u0441\u0442\u0438\u0435\u0442\u043e \u043d\u0435 \u0441\u0442\u0438\u0433\u043d\u0430 \u0434\u043e \u0442\u0435\u043b\u0435\u0444\u043e\u043d\u0430 (\u043d\u044f\u043c\u0430 \u0442\u043e\u043a\u0435\u043d \u0438\u043b\u0438 \u0434\u043e\u0441\u0442\u0430\u0432\u043a\u0430\u0442\u0430 \u0435 \u043d\u0435\u0443\u0441\u043f\u0435\u0448\u043d\u0430).",
-    },
     en: {
         title: "Aura HomeSystems",
         open: (name) => `${name} was opened.`,
@@ -30,6 +22,7 @@ export function normalizeAlarmLang(lang) {
         .trim()
         .toLowerCase()
         .slice(0, 2);
+    if (code === "bg") return "en";
     return ALARM_I18N[code] ? code : "en";
 }
 

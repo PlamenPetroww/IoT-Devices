@@ -64,6 +64,15 @@ public class AlarmMonitorService extends Service {
                 .apply();
     }
 
+    /** FCM/system already showed this alarm — block RTDB/poll duplicate delivery. */
+    static void markEventHandledExternally(
+            Context context, String eventTag, long eventCreatedAt) {
+        rememberSeenEvent(context, eventTag, eventCreatedAt);
+        if (eventTag != null && !eventTag.trim().isEmpty()) {
+            markDeliveredTag(context, eventTag.trim());
+        }
+    }
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -203,8 +212,12 @@ public class AlarmMonitorService extends Service {
     }
 
     private void markDelivered(String eventTag) {
+        markDeliveredTag(this, eventTag);
+    }
+
+    private static void markDeliveredTag(Context context, String eventTag) {
         android.content.SharedPreferences prefs =
-                getSharedPreferences("aura_app", MODE_PRIVATE);
+                context.getSharedPreferences("aura_app", Context.MODE_PRIVATE);
         String stored = prefs.getString("delivered_event_tags", "");
         String updated = stored.isEmpty() ? eventTag : stored + "\n" + eventTag;
         String[] parts = updated.split("\n");

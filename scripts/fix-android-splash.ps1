@@ -1,16 +1,18 @@
-# Removes light gray corner artifacts from TWA splash PNGs (visible as white dots on launch).
+# Removes light corner artifacts from TWA splash PNGs (visible as white dots on launch).
+# Force-paints corner boxes + thin edges to splash background #0F172A.
 Add-Type -AssemblyName System.Drawing
 
 $ErrorActionPreference = "Stop"
 $root = Join-Path $PSScriptRoot ".."
-$bg = [System.Drawing.Color]::FromArgb(255, 15, 23, 42) # #0F172A – splash background
+$bg = [System.Drawing.Color]::FromArgb(255, 15, 23, 42) # #0F172A
 
 Get-ChildItem (Join-Path $root "app/src/main/res/drawable-*/splash.png") | ForEach-Object {
     $path = $_.FullName
     $src = [System.Drawing.Bitmap]::FromFile($path)
     $w = $src.Width
     $h = $src.Height
-    $margin = [Math]::Max(12, [int]([Math]::Min($w, $h) * 0.02))
+    $box = [Math]::Max(24, [int]([Math]::Min($w, $h) * 0.045))
+    $edge = [Math]::Max(8, [int]([Math]::Min($w, $h) * 0.012))
 
     $out = New-Object System.Drawing.Bitmap $w, $h, ([System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
     $g = [System.Drawing.Graphics]::FromImage($out)
@@ -19,18 +21,39 @@ Get-ChildItem (Join-Path $root "app/src/main/res/drawable-*/splash.png") | ForEa
     $g.Dispose()
     $src.Dispose()
 
+    $fixed = 0
     for ($y = 0; $y -lt $h; $y++) {
         for ($x = 0; $x -lt $w; $x++) {
-            $nearEdge = ($x -lt $margin -or $y -lt $margin -or $x -gt ($w - 1 - $margin) -or $y -gt ($h - 1 - $margin))
-            if (-not $nearEdge) { continue }
-            $c = $out.GetPixel($x, $y)
-            if ($c.R -gt 180 -and $c.G -gt 180 -and $c.B -gt 180) {
+            $inCorner =
+                ($x -lt $box -and $y -lt $box) -or
+                ($x -ge ($w - $box) -and $y -lt $box) -or
+                ($x -lt $box -and $y -ge ($h - $box)) -or
+                ($x -ge ($w - $box) -and $y -ge ($h - $box))
+            $nearEdge = ($x -lt $edge -or $y -lt $edge -or $x -ge ($w - $edge) -or $y -ge ($h - $edge))
+            if (-not $inCorner -and -not $nearEdge) { continue }
+
+            if ($inCorner) {
                 $out.SetPixel($x, $y, $bg)
+                $fixed++
+                continue
+            }
+
+            $c = $out.GetPixel($x, $y)
+            $lum = ([int]$c.R + [int]$c.G + [int]$c.B) / 3
+            $dr = [Math]::Abs([int]$c.R - 15)
+            $dg = [Math]::Abs([int]$c.G - 23)
+            $db = [Math]::Abs([int]$c.B - 42)
+            if ($c.A -lt 250 -or $lum -gt 35 -or $dr -gt 25 -or $dg -gt 25 -or $db -gt 25) {
+                $out.SetPixel($x, $y, $bg)
+                $fixed++
             }
         }
     }
 
-    $out.Save($path, [System.Drawing.Imaging.ImageFormat]::Png)
+    $tmp = "$path.tmp.png"
+    $out.Save($tmp, [System.Drawing.Imaging.ImageFormat]::Png)
     $out.Dispose()
-    Write-Host "Fixed $path"
+    Remove-Item -Force $path
+    Move-Item -Force $tmp $path
+    Write-Host "Fixed $path (box=$box edge=$edge pixels=$fixed)"
 }

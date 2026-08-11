@@ -417,18 +417,6 @@ const PASSWORD_RESET_CONTINUE_URL =
 function buildPasswordResetEmail(lang, resetLink) {
   const safeLink = escapeHtmlEmail(resetLink);
   const templates = {
-    bg: {
-      subject: "Нова парола – Aura HomeSystems",
-      html:
-        "<!DOCTYPE html><html lang=\"bg\"><head><meta charset=\"UTF-8\"></head>" +
-        "<body style=\"font-family:system-ui,sans-serif;line-height:1.55;color:#1a1a1a;max-width:560px\">" +
-        "<p>Здравейте,</p>" +
-        "<p>Поискахте смяна на парола за <strong>Aura HomeSystems</strong>.</p>" +
-        "<p><a href=\"" + safeLink + "\" style=\"display:inline-block;padding:12px 20px;background:#22c55e;color:#022c22;text-decoration:none;border-radius:8px;font-weight:600\">Задайте нова парола</a></p>" +
-        "<p style=\"font-size:0.9rem;color:#555\">Ако бутонът не работи, копирайте линка:<br><a href=\"" + safeLink + "\">" + safeLink + "</a></p>" +
-        "<p style=\"font-size:0.85rem;color:#777\">Ако не сте поискали това, игнорирайте имейла.</p>" +
-        "</body></html>",
-    },
     en: {
       subject: "Reset your password – Aura HomeSystems",
       html:
@@ -460,18 +448,6 @@ function buildPasswordResetEmail(lang, resetLink) {
 function buildWelcomeEmail(lang, resetLink) {
   const safeLink = escapeHtmlEmail(resetLink);
   const templates = {
-    bg: {
-      subject: "Вашият сензор е готов – Aura HomeSystems",
-      html:
-        "<!DOCTYPE html><html lang=\"bg\"><head><meta charset=\"UTF-8\"></head>" +
-        "<body style=\"font-family:system-ui,sans-serif;line-height:1.55;color:#1a1a1a;max-width:560px\">" +
-        "<p>Здравейте,</p>" +
-        "<p>Настроихте сензор Aura HomeSystems с този имейл. Създадохме акаунт за вас.</p>" +
-        "<p><a href=\"" + safeLink + "\" style=\"display:inline-block;padding:12px 20px;background:#22c55e;color:#022c22;text-decoration:none;border-radius:8px;font-weight:600\">Задайте парола и влезте</a></p>" +
-        "<p style=\"font-size:0.9rem;color:#555\">След това отворете <a href=\"https://aurahomesystems.eu/login.html\">aurahomesystems.eu</a> и вижте сензора в таблото.</p>" +
-        "<p style=\"font-size:0.85rem;color:#777\">Ако не сте настройвали сензор, игнорирайте имейла.</p>" +
-        "</body></html>",
-    },
     en: {
       subject: "Your sensor is ready – Aura HomeSystems",
       html:
@@ -873,7 +849,7 @@ function handlePasswordResetRequest(email, lang, callback) {
     return;
   }
   const auth = firebaseAdmin.auth();
-  const mailLang = lang === "bg" || lang === "de" ? lang : "en";
+  const mailLang = lang === "de" ? "de" : "en";
   auth
     .getUserByEmail(emailNorm)
     .then(() =>

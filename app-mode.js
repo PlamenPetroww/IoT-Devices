@@ -133,6 +133,7 @@
   function patchLinks() {
     captureAppMeta();
     global.document.documentElement.classList.add("aura-play-app");
+    lockHorizontalPanInApp();
 
     global.document.querySelectorAll('a[href="index.html"], a[href="/"]').forEach(function (link) {
       if (link.dataset.i18n === "auth.backToSite" || link.classList.contains("back-home")) {
@@ -154,6 +155,36 @@
     });
 
     showAppVersionUi();
+  }
+
+  /** TWA/WebView: stop slight left-right wiggle (horizontal overscroll). */
+  var horizontalPanLocked = false;
+  function lockHorizontalPanInApp() {
+    if (horizontalPanLocked) return;
+    horizontalPanLocked = true;
+    var startX = 0;
+    var startY = 0;
+    global.document.addEventListener(
+      "touchstart",
+      function (e) {
+        if (e.touches.length !== 1) return;
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+      },
+      { passive: true }
+    );
+    global.document.addEventListener(
+      "touchmove",
+      function (e) {
+        if (e.touches.length !== 1) return;
+        var dx = Math.abs(e.touches[0].clientX - startX);
+        var dy = Math.abs(e.touches[0].clientY - startY);
+        if (dx > dy && dx > 8) {
+          e.preventDefault();
+        }
+      },
+      { passive: false }
+    );
   }
 
   var playApp = isPlayApp();
@@ -183,6 +214,15 @@
   if (!playApp) return;
 
   captureAppMeta();
+
+  try {
+    global.document.documentElement.classList.add("aura-play-app");
+  } catch (_) {}
+  if (global.document.readyState === "loading") {
+    global.document.addEventListener("DOMContentLoaded", lockHorizontalPanInApp);
+  } else {
+    lockHorizontalPanInApp();
+  }
 
   var page = pageName();
 

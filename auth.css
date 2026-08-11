@@ -1516,3 +1516,29 @@ body.dashboard-overlay-open {
     font-size: 1.125rem;
     line-height: 1;
 }
+
+/* Play Store TWA: prevent horizontal rubber-band / side wiggle */
+html.aura-play-app {
+    overflow-x: hidden;
+    overscroll-behavior-x: none;
+    width: 100%;
+    max-width: 100%;
+}
+
+html.aura-play-app body {
+    overflow-x: hidden;
+    overscroll-behavior-x: none;
+    max-width: 100%;
+    touch-action: pan-y pinch-zoom;
+}
+
+html.aura-play-app .auth-page,
+html.aura-play-app .dashboard-page,
+html.aura-play-app .dashboard-layout {
+    overflow-x: hidden;
+    max-width: 100%;
+}
+
+html.aura-play-app .device-menu-dropdown {
+    max-width: min(11.5rem, calc(100% - 24px));
+}

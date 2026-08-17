@@ -1671,9 +1671,9 @@ main {
 .product-note {
     display: flex;
     align-items: center;
-    justify-content: center;
     gap: 16px;
-    padding: 18px 28px;
+    /* Slightly more top padding so content sits optically centered in the row */
+    padding: 22px 22px 14px;
 }
 
 .product-note + .product-note {
@@ -1696,23 +1696,22 @@ main {
 .product-note-icon svg {
     width: 19px;
     height: 19px;
+    display: block;
 }
 
 .product-note p {
     margin: 0;
-    max-width: 42rem;
     font-size: 14px;
     line-height: 1.65;
     font-weight: 400;
     color: var(--text-muted);
-    text-align: center;
+    text-align: left;
 }
 
 @media (max-width: 520px) {
     .product-note {
-        flex-direction: column;
-        padding: 16px 18px;
-        gap: 12px;
+        padding: 20px 18px 12px;
+        gap: 14px;
     }
 
     .product-note-icon {
@@ -1723,10 +1722,6 @@ main {
     .product-note-icon svg {
         width: 17px;
         height: 17px;
-    }
-
-    .product-note p {
-        max-width: none;
     }
 }
 

@@ -2593,6 +2593,15 @@ main {
     width: 100%;
 }
 
+.buy-qty-pack-hint {
+    margin: 0;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--color-accent, #0d7377);
+    text-align: center;
+}
+
 .quantity-stepper {
     display: flex;
     align-items: center;

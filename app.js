@@ -1016,6 +1016,10 @@ function initBuyPanel() {
         const msgSuccessTitle = { en: "Order received!", de: "Bestellung angenommen!" };
 
         const quantity = (qtyInput && qtyInput.value) || "1";
+        const qtyNum = parseInt(quantity, 10) || 1;
+        const packSuffix =
+            qtyNum === 3 ? " (Standard package)" :
+            qtyNum === 5 ? " (Advanced package)" : "";
         const paymentMethod = (buyForm.querySelector('select[name="paymentMethod"]') && buyForm.querySelector('select[name="paymentMethod"]').value) || "";
         let revolutId = (buyForm.querySelector('input[name="revolutId"]') && buyForm.querySelector('input[name="revolutId"]').value.trim()) || "";
         if (fromRevolutPay) revolutId = "Revolut Pay";
@@ -1026,7 +1030,7 @@ function initBuyPanel() {
         const phone = (buyForm.querySelector('input[name="phone"]') && buyForm.querySelector('input[name="phone"]').value) || "";
         const email = (buyForm.querySelector('input[name="_replyto"]') && buyForm.querySelector('input[name="_replyto"]').value.trim()) || "";
 
-        let payMsg = `Direct order: ${quantity} pcs, Payment: ${paymentMethod}, Address: ${deliveryAddress}`;
+        let payMsg = `Direct order: ${quantity} pcs${packSuffix}, Payment: ${paymentMethod}, Address: ${deliveryAddress}`;
         if (fromRevolutPay) payMsg += " [Revolut Pay: payment completed]";
         if (fromCardPay) payMsg += " [Card payment: completed]";
 
@@ -1038,7 +1042,7 @@ function initBuyPanel() {
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
                         email,
-                        subject: "Direct order",
+                        subject: "Direct order" + packSuffix,
                         message: payMsg,
                         phone,
                         orderType: "direct",
@@ -1066,7 +1070,7 @@ function initBuyPanel() {
                 }
             } else {
                 const formData = new FormData(buyForm);
-                formData.set("_subject", "Direct order – " + quantity + " pcs");
+                formData.set("_subject", "Direct order – " + quantity + " pcs" + packSuffix);
                 if (fromRevolutPay) formData.set("revolutId", "Revolut Pay");
                 const res = await fetch(`https://formspree.io/f/${FORMSPREE_FORM_ID}`, {
                     method: "POST",
@@ -1342,19 +1346,42 @@ function initBuyPanel() {
         const formatted = formatPrice(total);
         const summaryUnitPrice = document.getElementById("buySummaryUnitPrice");
         const summaryPriceLabel = document.getElementById("buySummaryPriceLabel");
+        const summaryQtyValue = document.getElementById("buySummaryQtyValue");
+        const qtyPackHint = document.getElementById("buyQtyPackHint");
         const lang = document.documentElement.lang || "en";
         const t = typeof getTranslation === "function" ? (key) => getTranslation(lang, key) : () => "";
-        if (summaryQty) summaryQty.textContent = String(q);
+        const packStandard = t("buyPanel.summaryStandardPack") || "3 pcs – Standard package";
+        const packAdvanced = t("buyPanel.summaryAdvancedPack") || "5 pcs – Advanced package";
+        const packLabelStandard = t("buyPanel.summaryPriceLabelStandard") || "Standard package";
+        const packLabelAdvanced = t("buyPanel.summaryPriceLabelAdvanced") || "Advanced package";
+        if (summaryQtyValue) {
+            if (q === 3) summaryQtyValue.textContent = packStandard;
+            else if (q === 5) summaryQtyValue.textContent = packAdvanced;
+            else summaryQtyValue.textContent = "× " + q;
+        } else if (summaryQty) {
+            summaryQty.textContent = String(q);
+        }
+        if (qtyPackHint) {
+            if (q === 3) {
+                qtyPackHint.hidden = false;
+                qtyPackHint.textContent = packLabelStandard;
+            } else if (q === 5) {
+                qtyPackHint.hidden = false;
+                qtyPackHint.textContent = packLabelAdvanced;
+            } else {
+                qtyPackHint.hidden = true;
+                qtyPackHint.textContent = "";
+            }
+        }
         if (summaryPriceLabel) {
             if (q === 1) summaryPriceLabel.textContent = t("buyPanel.summaryPriceLabelUnit") || "Price for 1 sensor";
-            else if (q === 3) summaryPriceLabel.textContent = t("buyPanel.summaryPriceLabelStandard") || "Standard bundle";
-            else if (q === 5) summaryPriceLabel.textContent = t("buyPanel.summaryPriceLabelAdvanced") || "Advanced bundle";
+            else if (q === 3) summaryPriceLabel.textContent = packLabelStandard;
+            else if (q === 5) summaryPriceLabel.textContent = packLabelAdvanced;
             else summaryPriceLabel.textContent = t("buyPanel.summaryPriceLabelMulti") || "Price";
         }
         if (summaryUnitPrice) {
             const br = t("buyPanel.summaryBr") || "pcs";
-            if (q === 3) summaryUnitPrice.textContent = formatted;
-            else if (q === 5) summaryUnitPrice.textContent = formatted;
+            if (q === 3 || q === 5) summaryUnitPrice.textContent = formatted;
             else summaryUnitPrice.textContent = formatted + " (" + q + " " + br + ")";
         }
         if (summarySubtotal) summarySubtotal.textContent = formatted;

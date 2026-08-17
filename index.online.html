@@ -966,7 +966,7 @@
                 <ul class="buy-summary-list">
                   <li class="buy-summary-row">
                     <span class="buy-summary-label" data-i18n="buyPanel.summarySensors">Sensors</span>
-                    <span class="buy-summary-value"
+                    <span class="buy-summary-value" id="buySummaryQtyValue"
                       >× <span id="buySummaryQty">1</span></span
                     >
                   </li>
@@ -1047,6 +1047,7 @@
                       +
                     </button>
                   </div>
+                  <p id="buyQtyPackHint" class="buy-qty-pack-hint" hidden></p>
                 </div>
                 <label class="form-label">
                   <span class="form-label-text" data-i18n="buyPanel.paymentMethod">Payment method</span>

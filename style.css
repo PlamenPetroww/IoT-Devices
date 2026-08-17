@@ -1670,9 +1670,10 @@ main {
 
 .product-note {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
+    justify-content: center;
     gap: 16px;
-    padding: 18px 22px;
+    padding: 18px 28px;
 }
 
 .product-note + .product-note {
@@ -1699,18 +1700,19 @@ main {
 
 .product-note p {
     margin: 0;
-    padding-top: 1px;
+    max-width: 42rem;
     font-size: 14px;
     line-height: 1.65;
     font-weight: 400;
     color: var(--text-muted);
-    text-align: left;
+    text-align: center;
 }
 
 @media (max-width: 520px) {
     .product-note {
+        flex-direction: column;
         padding: 16px 18px;
-        gap: 14px;
+        gap: 12px;
     }
 
     .product-note-icon {
@@ -1721,6 +1723,10 @@ main {
     .product-note-icon svg {
         width: 17px;
         height: 17px;
+    }
+
+    .product-note p {
+        max-width: none;
     }
 }
 

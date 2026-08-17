@@ -2217,6 +2217,53 @@ main {
     margin-top: 60px;
 }
 
+.app-qr-block {
+    margin: 28px auto 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    max-width: 280px;
+}
+
+.app-qr-label {
+    margin: 0;
+    font-size: 0.95rem;
+    color: var(--text-muted, #94a3b8);
+    text-align: center;
+}
+
+.app-qr-link {
+    display: block;
+    border-radius: 16px;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+    line-height: 0;
+    transition: transform 0.15s ease;
+}
+
+.app-qr-link:hover {
+    transform: scale(1.02);
+}
+
+.app-qr-image {
+    display: block;
+    width: 180px;
+    height: 180px;
+}
+
+.app-qr-store {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #4ade80;
+    text-decoration: none;
+}
+
+.app-qr-store:hover {
+    text-decoration: underline;
+}
+
 .cta-steps {
     margin: 18px 0 0;
     padding-left: 20px;

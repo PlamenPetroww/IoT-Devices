@@ -177,7 +177,9 @@ const translations = {
             returnPolicy: "Within <strong>7 days</strong> of receiving the product you may return it provided it is in the same condition as received – unopened, undamaged and not otherwise altered.",
             buyDirect: "Buy directly",
             or: "or",
-            inquiryLabel: "Send an inquiry"
+            inquiryLabel: "Send an inquiry",
+            scanQr: "Scan to download the Android app",
+            playStore: "Get it on Google Play"
         },
         form: {
             title: "Subject",
@@ -700,7 +702,9 @@ const translations = {
             returnPolicy: "Bis <strong>7 Tage</strong> nach Erhalt des Produkts können Sie es zurückgeben, sofern es im gleichen Zustand wie beim Erhalt ist – ungeöffnet, unbeschädigt und nicht anderweitig verändert.",
             buyDirect: "Direkt kaufen",
             or: "oder",
-            inquiryLabel: "Anfrage senden"
+            inquiryLabel: "Anfrage senden",
+            scanQr: "Scannen, um die Android-App herunterzuladen",
+            playStore: "Im Google Play Store laden"
         },
         form: {
             title: "Betreff",

@@ -869,46 +869,88 @@ void setup() {
     bool historyWriteOk = !shouldSendEvent;
     if (deviceWriteOk) {
         Serial.println("Firebase: OK");
-        if (shouldSendEvent) {
-            int64_t histTs = hasPendingEvent ? pendingEvent.capturedAt : timestampMsNow();
+    } else {
+        Serial.print("Firebase FAIL: ");
+        Serial.println(fbdo.errorReason());
+    }
+    bool liveStatus = currentStatus;
+    bool sampledLive = false;
+    if (deviceWriteOk && shouldSendEvent) {
+        // Send every queued transition before sleeping. A door opened and closed
+        // within a few seconds must produce both events in this same Wi-Fi session.
+        for (int sentCount = 0; sentCount < 4; sentCount++) {
+            PendingSensorEvent ev;
+            bool fromQueue = peekSensorEvent(ev);
+            bool closed = fromQueue ? (ev.closed == 1) : currentStatus;
+            int8_t closedSt = closed ? 1 : 0;
+            if (!fromQueue && rtcLastSentStatus == closedSt) {
+                historyWriteOk = true;
+                break;
+            }
+            int64_t histTs = fromQueue ? ev.capturedAt : timestampMsNow();
             if (histTs < 1700000000000LL) histTs = timestampMsNow();
-            String historyKey = hasPendingEvent
-                ? buildQueuedHistoryKey(deviceID, pendingEvent.sequence, pendingEvent.nonce)
-                : buildHistoryKey(deviceID, currentStatus, (unsigned long)histTs);
+            String historyKey = fromQueue
+                ? buildQueuedHistoryKey(deviceID, ev.sequence, ev.nonce)
+                : buildHistoryKey(deviceID, closed, (unsigned long)histTs);
             String historyPath = userPath + "/history/" + historyKey;
             FirebaseJson jsonHist;
             jsonHist.set("deviceId", deviceID);
             jsonHist.set("deviceName", String(device_name));
-            jsonHist.set("status", currentStatus ? "closed" : "open");
+            jsonHist.set("status", closed ? "closed" : "open");
 #if RTDB_USE_SV_TIMESTAMP
             jsonHist.set("timestamp/.sv", "timestamp");
 #else
             jsonHist.set("timestamp", histTs);
 #endif
-            for (int attempt = 1; attempt <= 3 && !historyWriteOk; attempt++) {
-                historyWriteOk = Firebase.RTDB.setJSON(&fbdo, historyPath.c_str(), &jsonHist);
-                if (!historyWriteOk) delay(attempt * 1000);
+            bool wrote = false;
+            for (int attempt = 1; attempt <= 3 && !wrote; attempt++) {
+                wrote = Firebase.RTDB.setJSON(&fbdo, historyPath.c_str(), &jsonHist);
+                if (!wrote) delay(attempt * 1000);
             }
-        }
-    } else {
-        Serial.print("Firebase FAIL: ");
-        Serial.println(fbdo.errorReason());
-    }
-    if (deviceWriteOk && historyWriteOk) {
-        bool queueCommitOk = true;
-        if (shouldSendEvent && hasPendingEvent) {
-            queueCommitOk = removeQueuedSensorEvent(pendingEvent.sequence, curSt);
-        }
-        if (queueCommitOk) {
-            rtcLastSentStatus = curSt;
-        } else {
-            Serial.println("Queue commit failed; event will be retried idempotently.");
-        }
-    } else {
-        Serial.println("Event remains queued for retry.");
-    }
+            if (!wrote) {
+                Serial.println("Event remains queued for retry.");
+                historyWriteOk = false;
+                break;
+            }
+            if (fromQueue && !removeQueuedSensorEvent(ev.sequence, closedSt)) {
+                Serial.println("Queue commit failed; event will be retried idempotently.");
+                historyWriteOk = false;
+                break;
+            }
+            rtcLastSentStatus = closedSt;
+            historyWriteOk = true;
+            Serial.println(closed ? "Sent CLOSED" : "Sent OPEN");
 
-    bool liveStatus = readSensorClosedStable();
+            liveStatus = readSensorClosedStable();
+            sampledLive = true;
+            currentStatus = liveStatus;
+            if ((liveStatus ? 1 : 0) != rtcLastSentStatus) {
+                enqueueSensorEvent(liveStatus);
+                continue;
+            }
+            break;
+        }
+        if (historyWriteOk && rtcLastSentStatus >= 0) {
+            FirebaseJson liveJson;
+            liveJson.set("status", rtcLastSentStatus == 1);
+            liveJson.set("deviceName", String(device_name));
+#if RTDB_USE_SV_TIMESTAMP
+            liveJson.set("lastSeen/.sv", "timestamp");
+#else
+            liveJson.set("lastSeen", timestampMsNow());
+#endif
+            liveJson.set("battery", batteryPct);
+            liveJson.set("powerSource", powerSource);
+            liveJson.set("batteryStatus", battStatus);
+            Firebase.RTDB.setJSON(&fbdo, devicePath, &liveJson);
+        }
+    }
+    if (!sampledLive) {
+        liveStatus = readSensorClosedStable();
+        if ((liveStatus ? 1 : 0) != rtcLastSentStatus) {
+            enqueueSensorEvent(liveStatus);
+        }
+    }
     nextWakeLevel = wakeLevelForClosed(liveStatus);
     rtcWakeCount++;
     delay(300);

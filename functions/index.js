@@ -9,7 +9,11 @@ import { onValueCreated } from "firebase-functions/v2/database";
 import { onTaskDispatched } from "firebase-functions/v2/tasks";
 import { defineSecret } from "firebase-functions/params";
 import { Resend } from "resend";
-import { getAlarmTexts, normalizeAlarmLang } from "./alarm-i18n.js";
+import {
+    getAlarmTexts,
+    getSirenAlarmTexts,
+    normalizeAlarmLang,
+} from "./alarm-i18n.js";
 
 initializeApp();
 const rtdb = getDatabase();
@@ -32,7 +36,7 @@ function getResendFromEmail() {
 }
 
 const RTDB_INSTANCE = "cleverhaus-petrov-default-rtdb";
-const EMAIL_FALLBACK_DELAY_SECONDS = 45;
+const EMAIL_FALLBACK_DELAY_SECONDS = 60;
 const ALARM_DEDUPE_MS = 12000;
 const ALARM_PUSH_COALESCE_MS = 8000;
 const RENDER_HEALTH_URL =
@@ -195,7 +199,7 @@ async function sendAlarmFallbackEmail(userKey, deviceName, bodyText, eventTag, l
     }
     let emailSubject = `Alarm alert - ${deviceName}`;
     let emailIntro =
-        "Push notification could not be delivered to your phone (no app token or delivery failed).";
+        "Your phone did not confirm that the alarm was shown. The siren still runs locally.";
     if (!lang) {
         const langSnap = await rtdb.ref(`users/${userKey}/settings/language`).get();
         lang = langSnap.val();
@@ -423,22 +427,14 @@ async function sendAlarmPushToUser(userKey, title, body, eventTag, eventCreatedA
         },
         ...(isNative && target.platform === "android"
             ? {
-                  // Redmi/HyperOS often drops data-only FCM in deep standby. Include a system
-                  // notification so the tray alert still appears when the app process is dead.
-                  notification: {
-                      title: titleStr,
-                      body: bodyStr,
-                  },
+                  // High-priority display notification so Play Services can wake a standby
+                  // phone even when the app process is frozen. TTL must outlast Doze.
                   android: {
+                      // Data-only so the app runs while the phone is in standby and can
+                      // turn the screen on. A system tray notification arrives, but does not wake.
                       priority: "high",
-                      ttl: 86400000,
-                      notification: {
-                          channelId: "aura_alarm_alerts_v2",
-                          priority: "max",
-                          defaultSound: true,
-                          defaultVibrateTimings: true,
-                          visibility: "public",
-                      },
+                      ttl: 60 * 60 * 1000,
+                      directBootOk: true,
                   },
               }
             : isNative && target.platform === "ios"
@@ -455,6 +451,7 @@ async function sendAlarmPushToUser(userKey, title, body, eventTag, eventCreatedA
                         payload: {
                             aps: {
                                 "mutable-content": 1,
+                                "interruption-level": "time-sensitive",
                                 ...(playSound ? { sound: "default" } : {}),
                             },
                         },
@@ -580,16 +577,6 @@ async function processAlarmEmailFallback(userKey, eventTag) {
     let delivery = (await deliveryRef.get()).val();
     if (!delivery || delivery.ackShownAt || delivery.emailSentAt) {
         console.log("[sensor-alarm] email fallback cancelled by shown ACK", key, tag);
-        return false;
-    }
-    // System notification path: FCM accepted means the phone should show a tray alert even
-    // without app ACK. Do not also send email in that case.
-    if (
-        delivery.fcmAcceptedAt ||
-        delivery.state === "fcm_accepted" ||
-        delivery.state === "fcm_retried"
-    ) {
-        console.log("[sensor-alarm] email skipped; FCM already accepted", key, tag);
         return false;
     }
 
@@ -750,29 +737,86 @@ export const onSensorHistoryAlarm = onValueCreated(
             lastAttemptAt: Date.now(),
             fcmAcceptedAt: sent ? Date.now() : null,
         });
-        if (!sent) {
-            await enqueuePendingAlarmEvent(userKey, eventTag, delivery);
+        // Email only if the phone does not confirm the alert was shown within 60s.
+        // FCM accept alone is not enough: the tray can hold the push while the screen stays off.
+        try {
+            await scheduleAlarmEmailFallback(userKey, eventTag);
+        } catch (e) {
+            console.error(
+                "[sensor-alarm] email task scheduling failed; scheduler will recover",
+                userKey,
+                eventTag,
+                e.message || e
+            );
         }
         console.log(
-            sent ? "[sensor-alarm] FCM accepted" : "[sensor-alarm] FCM failed",
+            "[sensor-alarm]",
+            sent ? "FCM accepted; email unless phone shows alert" : "FCM failed; email fallback",
             userKey,
             eventTag
         );
+    }
+);
 
-        // Email only when FCM could not send. Standby Redmi often never ACKs even when the
-        // system tray notification is shown, so do not email after a successful FCM accept.
-        if (!sent) {
-            try {
-                await scheduleAlarmEmailFallback(userKey, eventTag);
-            } catch (e) {
-                console.error(
-                    "[sensor-alarm] email task scheduling failed; scheduler will recover",
-                    userKey,
-                    eventTag,
-                    e.message || e
-                );
-            }
+export const onSirenAlarmActivated = onValueCreated(
+    {
+        ref: "/users/{userKey}/sirenEvents/{eventId}",
+        instance: RTDB_INSTANCE,
+        region: "europe-west1",
+        timeoutSeconds: 120,
+    },
+    async (event) => {
+        const entry = event.data.val();
+        const userKey = String(event.params.userKey || "").trim();
+        const eventId = String(event.params.eventId || "").trim();
+        if (!entry || !userKey || !eventId) return;
+
+        const eventCreatedAt = Number(entry.createdAt) || Date.now();
+        const eventTag = "siren-" + safeEventTagKey(eventId);
+        const langSnap = await rtdb.ref(`users/${userKey}/settings/language`).get();
+        const lang = normalizeAlarmLang(langSnap.val());
+        const alarmText = getSirenAlarmTexts(lang);
+
+        await createAlarmDelivery(
+            userKey,
+            eventId,
+            eventTag,
+            "Siren",
+            alarmText.title,
+            alarmText.body,
+            eventCreatedAt,
+            lang,
+            true
+        );
+
+        const sent = await sendAlarmPushToUser(
+            userKey,
+            alarmText.title,
+            alarmText.body,
+            eventTag,
+            eventCreatedAt,
+            "aura-siren"
+        );
+        await updateAlarmDelivery(userKey, eventTag, {
+            state: sent ? "fcm_accepted" : "fcm_send_failed",
+            attempts: 1,
+            lastAttemptAt: Date.now(),
+            fcmAcceptedAt: sent ? Date.now() : null,
+        });
+
+        try {
+            await scheduleAlarmEmailFallback(userKey, eventTag);
+        } catch (e) {
+            console.error(
+                "[siren-alarm] email task scheduling failed",
+                userKey,
+                eventTag,
+                e.message || e
+            );
         }
+
+        await event.data.ref.remove();
+        console.log("[siren-alarm]", userKey, eventTag, "sent:", sent);
     }
 );
 
@@ -1071,7 +1115,9 @@ export const retryUnacknowledgedAlarms = onSchedule(
                 continue;
             }
             if (job.fcmAcceptedAt || job.state === "fcm_accepted" || job.state === "fcm_retried") {
-                if (now - createdAt >= 10 * 60 * 1000) {
+                if (!job.emailSentAt && now - createdAt >= EMAIL_FALLBACK_DELAY_SECONDS * 1000) {
+                    await processAlarmEmailFallback(userKey, eventTag);
+                } else if (now - createdAt >= 10 * 60 * 1000) {
                     await rtdb.ref(`alarmDeliveryQueue/${job.key}`).remove();
                 }
                 continue;
@@ -1142,6 +1188,36 @@ async function pruneUserHistory(userKey) {
     }
     await rtdb.ref().update(rootUpdates);
     console.log(`[prune-history] ${userKey}: deleted ${toDelete.length}, kept ${HISTORY_LIMIT}`);
+    return toDelete.length;
+}
+
+/** Cap /users/{uid}/devices like history — keep newest 20 by lastSeen. */
+async function pruneUserDevices(userKey) {
+    const devicesRef = rtdb.ref(`users/${userKey}/devices`);
+    const snap = await devicesRef.once("value");
+    if (!snap.exists()) return 0;
+
+    const entries = [];
+    snap.forEach((child) => {
+        const val = child.val() || {};
+        const lastSeen = Number(val.lastSeen) || 0;
+        entries.push({ key: child.key, lastSeen });
+    });
+    if (entries.length <= HISTORY_LIMIT) return 0;
+
+    entries.sort((a, b) => a.lastSeen - b.lastSeen || a.key.localeCompare(b.key));
+    const toDelete = entries.slice(0, entries.length - HISTORY_LIMIT);
+    const rootUpdates = {};
+    for (const entry of toDelete) {
+        rootUpdates[`users/${userKey}/devices/${entry.key}`] = null;
+        rootUpdates[`users/${userKey}/settings/alarmGate/${entry.key}`] = null;
+        rootUpdates[`users/${userKey}/settings/coalescedPush/${safeEventTagKey(entry.key + "_open")}`] =
+            null;
+        rootUpdates[`users/${userKey}/settings/coalescedPush/${safeEventTagKey(entry.key + "_closed")}`] =
+            null;
+    }
+    await rtdb.ref().update(rootUpdates);
+    console.log(`[prune-devices] ${userKey}: deleted ${toDelete.length}, kept ${HISTORY_LIMIT}`);
     return toDelete.length;
 }
 
@@ -1291,6 +1367,18 @@ async function pruneUserDeliveryMetadata(userKey) {
         SETTINGS_MAP_LIMIT,
         STALE_PENDING_MS
     );
+    deleted += await pruneTimestampKeyedMap(
+        userKey,
+        "settings/coalescedPush",
+        SETTINGS_MAP_LIMIT,
+        STALE_PENDING_MS
+    );
+    deleted += await pruneTimestampKeyedMap(
+        userKey,
+        "settings/alarmGate",
+        SETTINGS_MAP_LIMIT,
+        STALE_PENDING_MS
+    );
 
     if (deleted > 0) {
         console.log(`[prune-meta] ${userKey}: cleaned ${deleted} nodes`);
@@ -1300,6 +1388,7 @@ async function pruneUserDeliveryMetadata(userKey) {
 
 async function pruneUserData(userKey) {
     await pruneUserHistory(userKey);
+    await pruneUserDevices(userKey);
     await pruneUserDeliveryMetadata(userKey);
 }
 

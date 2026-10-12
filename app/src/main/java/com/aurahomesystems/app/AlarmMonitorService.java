@@ -26,8 +26,8 @@ public class AlarmMonitorService extends Service {
     private static final String CHANNEL_ID = "aura_monitoring";
     private static final int NOTIFICATION_ID = 2601;
     private static final String API_BASE = "https://cleverhaus.onrender.com";
-    private static final long POLL_WHILE_ARMED_FAST_MS = 5000L;
-    private static final long POLL_WHILE_ARMED_SLOW_MS = 30000L;
+    private static final long POLL_WHILE_ARMED_FAST_MS = 2000L;
+    private static final long POLL_WHILE_ARMED_SLOW_MS = 15000L;
     private static final long POLL_WHILE_DISARMED_MS = 300000L;
 
     private volatile boolean running;
@@ -70,6 +70,8 @@ public class AlarmMonitorService extends Service {
         rememberSeenEvent(context, eventTag, eventCreatedAt);
         if (eventTag != null && !eventTag.trim().isEmpty()) {
             markDeliveredTag(context, eventTag.trim());
+            AuraFirebaseMessagingService.claimEventForNotification(
+                    context, eventTag.trim(), "", "", eventCreatedAt);
         }
     }
 
@@ -182,6 +184,16 @@ public class AlarmMonitorService extends Service {
                     event.userKey);
             return;
         }
+        // FCM may already have shown a system tray alert without waking onMessageReceived.
+        if (AuraFirebaseMessagingService.hasActiveAlarmForEvent(
+                this, event.eventTag, event.title, event.body, event.createdAt)) {
+            Log.i(TAG, "skip tray already active " + event.eventTag);
+            markDelivered(event.eventTag);
+            rememberSeenEvent(this, event.eventTag, event.createdAt);
+            NativePushRegistrar.sendAck(
+                    this, source + "_tray_exists", event.eventTag, "", event.userKey);
+            return;
+        }
         boolean shown =
                 AuraFirebaseMessagingService.showAlarmNotification(
                         this,
@@ -206,9 +218,17 @@ public class AlarmMonitorService extends Service {
     }
 
     private boolean wasRecentlyDelivered(String eventTag) {
+        return wasRecentlyDeliveredPublic(this, eventTag);
+    }
+
+    static boolean wasRecentlyDeliveredPublic(Context context, String eventTag) {
+        if (eventTag == null || eventTag.trim().isEmpty()) {
+            return false;
+        }
         String stored =
-                getSharedPreferences("aura_app", MODE_PRIVATE).getString("delivered_event_tags", "");
-        return ("\n" + stored + "\n").contains("\n" + eventTag + "\n");
+                context.getSharedPreferences("aura_app", Context.MODE_PRIVATE)
+                        .getString("delivered_event_tags", "");
+        return ("\n" + stored + "\n").contains("\n" + eventTag.trim() + "\n");
     }
 
     private void markDelivered(String eventTag) {

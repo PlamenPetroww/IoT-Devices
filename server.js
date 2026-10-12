@@ -81,8 +81,13 @@ function loadShippingZones() {
 function loadPricingConfig() {
   const production = {
     testMode: false,
-    unitPriceEur: 44.99,
-    bundles: { 1: 44.99, 3: 109.99, 5: 169.99 },
+    unitPriceEur: 59,
+    bundles: { 1: 59, 3: 159, 5: 249 },
+    kitRules: {
+      maxSirens: 3,
+      sirenUnitEur: [94, 79, 69],
+      bundleDiscountEur: { 1: 4, 3: 24, 5: 44 },
+    },
     testDeliveryEur: 0.01,
   };
   try {
@@ -100,10 +105,15 @@ function loadPricingConfig() {
     });
     const unitPriceEur = Number(j.unitPriceEur);
     const testDeliveryEur = Number(j.testDeliveryEur);
+    const kitRules =
+      j.kitRules && typeof j.kitRules === "object"
+        ? j.kitRules
+        : production.kitRules;
     return {
       testMode,
       unitPriceEur: Number.isFinite(unitPriceEur) ? unitPriceEur : production.unitPriceEur,
       bundles: Object.keys(bundles).length ? bundles : production.bundles,
+      kitRules,
       testDeliveryEur: Number.isFinite(testDeliveryEur) ? testDeliveryEur : production.testDeliveryEur,
     };
   } catch (e) {
@@ -113,6 +123,11 @@ function loadPricingConfig() {
         testMode: true,
         unitPriceEur: 0.01,
         bundles: { 1: 0.01, 3: 0.03, 5: 0.05 },
+        kitRules: {
+          maxSirens: 3,
+          sirenUnitEur: [0.01, 0.01, 0.01],
+          bundleDiscountEur: { 1: 0, 3: 0, 5: 0 },
+        },
         testDeliveryEur: 0.01,
       };
     }
@@ -124,6 +139,11 @@ const pricingConfig = loadPricingConfig();
 const CHECKOUT_TEST_PRICES = pricingConfig.testMode;
 const UNIT_PRICE_EUR = pricingConfig.unitPriceEur;
 const BUNDLES = pricingConfig.bundles;
+const KIT_RULES = pricingConfig.kitRules || {
+  maxSirens: 3,
+  sirenUnitEur: [94, 79, 69],
+  bundleDiscountEur: { 1: 4, 3: 24, 5: 44 },
+};
 const TEST_DELIVERY_EUR = pricingConfig.testDeliveryEur;
 const BGN_TO_EUR = 1.95583;
 
@@ -132,6 +152,38 @@ function getTotalForQtyOrder(q) {
   if (!Number.isFinite(n) || n < 1 || n > 99) return null;
   if (BUNDLES[n] !== undefined) return BUNDLES[n];
   return n * UNIT_PRICE_EUR;
+}
+
+function computeKitSubtotalEur(sensorPack, sirenCount) {
+  const pack = parseInt(sensorPack, 10);
+  let count = parseInt(sirenCount, 10);
+  if (!Number.isFinite(pack) || pack < 1) return null;
+  const sensors = getTotalForQtyOrder(pack);
+  if (sensors === null) return null;
+  if (!Number.isFinite(count) || count < 1) return sensors;
+  const maxS = KIT_RULES.maxSirens || 3;
+  count = Math.min(Math.max(1, count), maxS);
+  const prices = Array.isArray(KIT_RULES.sirenUnitEur)
+    ? KIT_RULES.sirenUnitEur
+    : [94, 79, 69];
+  let sirenTotal = 0;
+  for (let i = 0; i < count; i++) {
+    sirenTotal += prices[i] !== undefined ? prices[i] : prices[prices.length - 1];
+  }
+  const discMap = KIT_RULES.bundleDiscountEur || {};
+  const discount =
+    discMap[String(pack)] !== undefined ? discMap[String(pack)] : discMap[pack] || 0;
+  return Math.round((sensors + sirenTotal - discount) * 100) / 100;
+}
+
+function getDirectOrderSubtotalEur(orderMode, sensorPack, sirenCount, quantity) {
+  const mode = String(orderMode || "").trim();
+  const pack = parseInt(sensorPack, 10) || parseInt(quantity, 10) || 1;
+  if (mode === "kit") {
+    const kitTotal = computeKitSubtotalEur(pack, sirenCount || 1);
+    if (kitTotal !== null) return kitTotal;
+  }
+  return getTotalForQtyOrder(pack);
 }
 
 function hasExpressZone(zone) {
@@ -148,8 +200,16 @@ function getDeliveryEurForZone(zone, method) {
   return priceMax;
 }
 
-function computeExpectedAmountMinor(quantity, shippingZone, shippingMethod, zones) {
-  const total = getTotalForQtyOrder(quantity);
+function computeExpectedAmountMinor(
+  orderMode,
+  sensorPack,
+  sirenCount,
+  quantity,
+  shippingZone,
+  shippingMethod,
+  zones
+) {
+  const total = getDirectOrderSubtotalEur(orderMode, sensorPack, sirenCount, quantity);
   if (total === null) return null;
   if (!shippingZone || !String(shippingZone).trim()) return null;
   const zone = zones.find((z) => z.id === shippingZone);
@@ -387,7 +447,6 @@ function rememberNativePushAck(eventTag, stage, userKey) {
     const saved = firebaseDb.ref().update(updates);
     if (
       stageStr === "shown" ||
-      stageStr === "shown_system" ||
       stageStr === "poll_shown" ||
       stageStr === "rtdb_shown" ||
       stageStr === "opened" ||
@@ -1224,6 +1283,9 @@ const server = http.createServer((req, res) => {
       const currency = String(parsed.currency || "").toUpperCase();
       const amountMinor = parseInt(parsed.amountMinor, 10);
       const quantity = parsed.quantity;
+      const orderMode = parsed.orderMode ? String(parsed.orderMode).trim() : "";
+      const sensorPack = parsed.sensorPack;
+      const sirenCount = parsed.sirenCount;
       const shippingZone = parsed.shippingZone ? String(parsed.shippingZone).trim() : "";
       const shippingMethod = parsed.shippingMethod ? String(parsed.shippingMethod).trim() : "standard";
       const description = parsed.description
@@ -1243,7 +1305,15 @@ const server = http.createServer((req, res) => {
       }
 
       const zones = loadShippingZones();
-      const expected = computeExpectedAmountMinor(quantity, shippingZone, shippingMethod, zones);
+      const expected = computeExpectedAmountMinor(
+        orderMode,
+        sensorPack,
+        sirenCount,
+        quantity,
+        shippingZone,
+        shippingMethod,
+        zones
+      );
       if (expected === null || Math.abs(amountMinor - expected) > 1) {
         res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
         res.end(JSON.stringify({ error: "Amount does not match order" }));

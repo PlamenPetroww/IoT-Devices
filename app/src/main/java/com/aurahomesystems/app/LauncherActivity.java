@@ -35,6 +35,7 @@ public class LauncherActivity
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        AuraFirebaseMessagingService.ensureChannel(this, true);
         handleAlarmNotificationIntent(getIntent());
         // Setting an orientation crashes the app due to the transparent background on Android 8.0
         // Oreo and below. We only set the orientation on Oreo and above. This only affects the
@@ -100,6 +101,7 @@ public class LauncherActivity
         if (NotificationPermissionHelper.areNotificationsEnabled(this)) {
             notificationRequestScheduled = false;
             BatteryOptimizationHelper.requestIfNeeded(this);
+            FullScreenIntentHelper.requestIfNeeded(this);
             return;
         }
         if (notificationRequestScheduled) {

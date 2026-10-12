@@ -22,7 +22,7 @@ import java.util.Locale;
 import java.util.Map;
 
 public class AuraFirebaseMessagingService extends FirebaseMessagingService {
-    public static final String CHANNEL_ID = "aura_alarm_alerts_v2";
+    public static final String CHANNEL_ID = "aura_alarm_alerts_v4";
     public static final String EXTRA_EVENT_TAG = "alarm_event_tag";
     public static final String EXTRA_USER_KEY = "alarm_user_key";
     public static final String EXTRA_ALERT_TITLE = "alarm_alert_title";
@@ -178,31 +178,14 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
                         : (data != null && data.containsKey("body") ? data.get("body") : "");
         NativePushRegistrar.sendAck(this, "received", eventTag, "", userKey);
         if (remoteMessage.getNotification() != null) {
-            // Redmi/HyperOS (v46): background alerts are reliable via the system FCM tray UI.
-            // Posting our own notification here caused conflicts when waking the phone.
-            // Samsung One UI: system often vibrates without lighting the screen — post ourselves.
-            if (!isAppInForeground() && !isSamsung()) {
-                android.util.Log.i("AuraFCM", "background notification handled by system " + eventTag);
-                NativePushRegistrar.sendAck(this, "shown_system", eventTag, CHANNEL_ID, userKey);
-                if (eventCreatedAt > 0L || (eventTag != null && !eventTag.isEmpty())) {
-                    AlarmMonitorService.markEventHandledExternally(this, eventTag, eventCreatedAt);
-                }
-                return;
-            }
-            RemoteMessage.Notification n = remoteMessage.getNotification();
-            boolean shown = showAlarmNotification(
-                    this,
-                    n.getTitle() != null ? n.getTitle() : "Aura HomeSystems",
-                    n.getBody() != null ? n.getBody() : "",
-                    true,
-                    eventTag,
-                    userKey,
-                    eventCreatedAt,
-                    dedupeTag,
-                    true);
-            if (shown && (eventCreatedAt > 0L || (eventTag != null && !eventTag.isEmpty()))) {
+            // Play Services already showed this alert. Do not post a second copy.
+            android.util.Log.i("AuraFCM", "system notification already shown " + eventTag);
+            wakeScreenIfNeeded(this);
+            NativePushRegistrar.sendAck(this, "shown_system", eventTag, CHANNEL_ID, userKey);
+            if (eventCreatedAt > 0L || (eventTag != null && !eventTag.isEmpty())) {
                 AlarmMonitorService.markEventHandledExternally(this, eventTag, eventCreatedAt);
             }
+            claimEventForNotification(this, eventTag, previewTitle, previewBody, eventCreatedAt);
             return;
         }
 
@@ -214,7 +197,7 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
         String body = data.containsKey("body") ? data.get("body") : "";
         boolean playSound = !"0".equals(data.get("playSound"));
         boolean shown = showAlarmNotification(
-                this, title, body, playSound, eventTag, userKey, eventCreatedAt, dedupeTag, true);
+                this, title, body, playSound, eventTag, userKey, eventCreatedAt, dedupeTag, false);
         if (shown && (eventCreatedAt > 0L || (eventTag != null && !eventTag.isEmpty()))) {
             AlarmMonitorService.markEventHandledExternally(this, eventTag, eventCreatedAt);
         }
@@ -242,9 +225,14 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
             boolean skipDedupeClaim) {
         if (!skipDedupeClaim
                 && !claimEventForNotification(context, eventTag, title, body, eventCreatedAt)) {
-            // Re-posting the same event uses the same notification ID/tag and replaces it.
-            // This lets a retry restore a missing ACK without creating a second tray item.
-            android.util.Log.i("AuraFCM", "reconfirm duplicate notification " + eventTag);
+            android.util.Log.i("AuraFCM", "skip duplicate notification " + eventTag);
+            NativePushRegistrar.sendAck(context, "duplicate_suppressed", eventTag, "", userKey);
+            return false;
+        }
+        if (AlarmMonitorService.wasRecentlyDeliveredPublic(context, eventTag)) {
+            android.util.Log.i("AuraFCM", "skip recently delivered " + eventTag);
+            NativePushRegistrar.sendAck(context, "delivered_suppressed", eventTag, "", userKey);
+            return false;
         }
         if (!NotificationPermissionHelper.areNotificationsEnabled(context)) {
             android.util.Log.w("AuraFCM", "Notifications disabled — enable in phone Settings");
@@ -268,6 +256,22 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
                 context,
                 notificationRequestCode(eventTag),
                 intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        Intent wakeIntent = new Intent(context, AlarmWakeActivity.class);
+        wakeIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        wakeIntent.putExtra(EXTRA_ALERT_TITLE, title);
+        wakeIntent.putExtra(EXTRA_ALERT_BODY, body);
+        if (eventTag != null && !eventTag.isEmpty()) {
+            wakeIntent.putExtra(EXTRA_EVENT_TAG, eventTag);
+        }
+        if (userKey != null && !userKey.isEmpty()) {
+            wakeIntent.putExtra(EXTRA_USER_KEY, userKey);
+        }
+        PendingIntent fullScreenIntent = PendingIntent.getActivity(
+                context,
+                notificationRequestCode(eventTag) + 2,
+                wakeIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
         Intent dismissIntent = new Intent(context, NotificationDismissReceiver.class);
@@ -296,7 +300,8 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
                 .setPriority(NotificationCompat.PRIORITY_MAX)
                 .setCategory(NotificationCompat.CATEGORY_ALARM)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-                .setVibrate(new long[]{0, 300, 200, 300});
+                .setFullScreenIntent(fullScreenIntent, true)
+                .setVibrate(new long[]{0, 600, 200, 600, 200, 600});
 
         if (playSound) {
             builder.setDefaults(NotificationCompat.DEFAULT_ALL);
@@ -311,6 +316,15 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
             nm.notify(notifyTag, notificationId, builder.build());
         } else {
             nm.notify(notificationId, builder.build());
+        }
+        try {
+            PowerManager powerManager =
+                    (PowerManager) context.getSystemService(Context.POWER_SERVICE);
+            if (powerManager != null && !powerManager.isInteractive()) {
+                context.startActivity(wakeIntent);
+            }
+        } catch (Exception e) {
+            android.util.Log.w("AuraFCM", "wake activity start failed", e);
         }
         if (!isNotificationActive(nm, notificationId)) {
             android.util.Log.w("AuraFCM", "notification not active after notify " + eventTag);
@@ -329,19 +343,8 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
         return m.contains("samsung");
     }
 
-    private static boolean isXiaomiFamily() {
-        String m =
-                Build.MANUFACTURER != null
-                        ? Build.MANUFACTURER.toLowerCase(Locale.US)
-                        : "";
-        return m.contains("xiaomi") || m.contains("redmi") || m.contains("poco");
-    }
-
     @SuppressWarnings("deprecation")
     private static void wakeScreenIfNeeded(Context context) {
-        if (isXiaomiFamily()) {
-            return;
-        }
         wakeScreen(context);
     }
 
@@ -359,7 +362,7 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
                                     | PowerManager.ACQUIRE_CAUSES_WAKEUP
                                     | PowerManager.ON_AFTER_RELEASE,
                             "AuraHomeSystems:alarm-screen");
-            wakeLock.acquire(10000L);
+            wakeLock.acquire(15000L);
         } catch (Exception e) {
             android.util.Log.w("AuraFCM", "screen wake failed", e);
         }
@@ -407,6 +410,53 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
         return false;
     }
 
+    /** True if FCM/system already posted this alarm (same tag or id) in the tray. */
+    static boolean hasActiveAlarmForEvent(
+            Context context, String eventTag, String title, String body, long eventCreatedAt) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            return false;
+        }
+        NotificationManager nm =
+                (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (nm == null) {
+            return false;
+        }
+        String dedupeTag = eventTag != null ? eventTag.trim() : "";
+        int notificationId =
+                notificationIdForAlarm(dedupeTag, eventTag, eventCreatedAt, title, body);
+        String notifyTag =
+                notificationTagForAlarm(dedupeTag, eventTag, eventCreatedAt, title, body);
+        try {
+            StatusBarNotification[] active = nm.getActiveNotifications();
+            if (active == null) {
+                return false;
+            }
+            for (StatusBarNotification sbn : active) {
+                if (sbn.getId() == notificationId) {
+                    return true;
+                }
+                String tag = sbn.getTag();
+                if (tag != null && !tag.isEmpty()) {
+                    if (tag.equals(notifyTag) || tag.equals(dedupeTag) || tag.equals(eventTag)) {
+                        return true;
+                    }
+                }
+                Notification n = sbn.getNotification();
+                if (n != null && n.extras != null && title != null && body != null) {
+                    CharSequence t = n.extras.getCharSequence(Notification.EXTRA_TITLE);
+                    CharSequence b = n.extras.getCharSequence(Notification.EXTRA_TEXT);
+                    if (title.contentEquals(t != null ? t : "")
+                            && body.contentEquals(b != null ? b : "")) {
+                        return true;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            android.util.Log.w("AuraFCM", "hasActiveAlarmForEvent failed", e);
+        }
+        return false;
+    }
+
     private static long parseLong(String value) {
         try {
             return Long.parseLong(value);
@@ -445,10 +495,11 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
                 NotificationManager.IMPORTANCE_HIGH);
         channel.setDescription("Urgent door and window sensor alerts");
         channel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
+        channel.setBypassDnd(true);
+        channel.enableLights(true);
         channel.enableVibration(true);
-        channel.setVibrationPattern(new long[]{0, 300, 200, 300});
+        channel.setVibrationPattern(new long[]{0, 600, 200, 600, 200, 600});
         if (playSound) {
-            channel.enableVibration(true);
             channel.setSound(
                     android.provider.Settings.System.DEFAULT_NOTIFICATION_URI,
                     new AudioAttributes.Builder()

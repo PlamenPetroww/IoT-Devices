@@ -1,7 +1,7 @@
 {
   "name": "Aura HomeSystems",
   "short_name": "Aura Home",
-  "description": "Smart door and window sensors – notifications when opened.",
+  "description": "Smart door and window sensors with optional local siren – phone alerts and on-site sound/light alarm.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

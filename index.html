@@ -224,11 +224,11 @@
       </header>
       <main id="main-content" tabindex="-1">
         <section id="hero" class="hero">
+          <p class="hero-promise" data-i18n="hero.headlineLead">No monthly fees. No hubs.</p>
           <div class="hero-text">
             <p class="eyebrow" data-i18n="hero.eyebrow">When nobody's home...</p>
-            <h1 data-i18n="hero.title">Wireless window & door sensors with instant phone alerts</h1>
-            <p class="hero-subtitle" data-i18n="hero.subtitle">Most break-ins happen through windows and the front door. Our WiFi sensors are easy to install – get instant push alerts on your phone whenever something opens.</p>
-            <p class="hero-no-extras" data-i18n="hero.noExtras">Sensors and app only — no hub, no extra smart devices required.</p>
+            <h1 data-i18n="hero.title">Wireless window & door sensors — instant phone alerts and optional local siren</h1>
+            <p class="hero-subtitle" data-i18n="hero.subtitle">Most break-ins happen through windows and the front door. Our WiFi sensors are easy to install — push alerts on your phone when something opens, plus an optional mains-powered siren director for loud on-site sound and light.</p>
             <div class="hero-cta">
               <button class="primary-cta" type="button" data-i18n="hero.cta">Get started with Aura</button>
               <span class="cta-note" data-i18n="hero.ctaNote"
@@ -379,6 +379,28 @@
                 <h3 data-i18n="product.appTitle">Mobile app</h3>
                 <p data-i18n="product.appDesc">An extremely user-friendly app: see each sensor's status in real time, get notifications and event history – right on your phone.</p>
               </article>
+              <article class="product-card">
+                <div class="product-icon product-icon-siren" aria-hidden="true">
+                  <svg
+                    width="48"
+                    height="48"
+                    viewBox="0 0 48 48"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M8 28h4l4-12h16l4 12h4" />
+                    <path d="M12 28v4h24v-4" />
+                    <path d="M20 8v6M28 6v8M36 10v4" />
+                    <circle cx="24" cy="32" r="2" fill="currentColor" />
+                  </svg>
+                </div>
+                <h3 data-i18n="product.sirenTitle">Local siren director (optional)</h3>
+                <p data-i18n="product.sirenDesc">Mains-powered Wi‑Fi unit with wired sound and strobe. Works on the same Aura account as your sensors — not mounted on a sensor. You can add more than one unit in different rooms.</p>
+              </article>
             </div>
             <div class="product-notes">
               <div class="product-note">
@@ -420,8 +442,8 @@
               <li data-i18n-html="advantages.ownCloud"><strong>Own cloud</strong> – not a shared platform.</li>
               <li data-i18n-html="advantages.pushNotifications"><strong>Instant push alerts</strong> on open.</li>
               <li data-i18n-html="advantages.personalAccount"><strong>Personal account.</strong> Your data stays yours.</li>
-              <li data-i18n-html="advantages.longBattery"><strong>Months on battery</strong> without recharging.</li>
-              <li data-i18n-html="advantages.usbRecharge"><strong>USB-C charging.</strong> Batteries can be recharged with a regular USB-C charger.</li>
+              <li data-i18n-html="advantages.longBattery"><strong>Months on battery, USB-C recharge.</strong> Long runtime on a charge — top up anytime with a standard USB-C cable.</li>
+              <li data-i18n-html="advantages.localSiren"><strong>Up to 102 dB on-site alarm.</strong> Optional siren director with wired horn and strobe — loud at home, not only on your phone.</li>
             </ul>
           </div>
         </section>
@@ -482,6 +504,52 @@
               </article>
             </div>
             <p class="pricing-note" data-i18n="pricing.deviceNote">* Each account can be used on up to 3 devices at the same time (e.g. phone, tablet and laptop).</p>
+            <div class="pricing-siren-block">
+            <div class="pricing-siren-header">
+              <h3 class="pricing-subsection-title" data-i18n="pricing.sirenSectionTitle">Local siren &amp; home packs</h3>
+              <p class="pricing-subsection-subtitle" data-i18n="pricing.sirenSectionSubtitle">Phone alerts plus optional on-site sound and light. Same Aura account — several siren units can watch the same sensors.</p>
+            </div>
+            <div class="pricing-grid pricing-grid-siren">
+              <article class="pricing-card">
+                <span class="pricing-card-name" data-i18n="pricing.sirenName">Add-on</span>
+                <h3 class="pricing-card-title" data-i18n="pricing.sirenTitle">Siren director kit</h3>
+                <p class="pricing-card-price">94.00&nbsp;€</p>
+                <p class="pricing-card-desc" data-i18n="pricing.sirenDesc">Mains-powered controller + wired horn/strobe. Enable or stop from the app.</p>
+                <button
+                  type="button"
+                  class="pricing-card-btn cta-primary-link"
+                  data-sku="siren-1"
+                  data-i18n="pricing.choose"
+                >Choose</button>
+              </article>
+              <article class="pricing-card pricing-card-popular">
+                <span class="pricing-badge" data-i18n="pricing.kitSaveBadge">Bundle</span>
+                <span class="pricing-card-name" data-i18n="pricing.kit31Name">Home</span>
+                <h3 class="pricing-card-title" data-i18n="pricing.kit31Title">3 sensors + 1 siren</h3>
+                <p class="pricing-card-price">229.00&nbsp;€</p>
+                <p class="pricing-card-desc" data-i18n="pricing.kit31Desc">Main entry points plus local alarm. Save vs buying separately.</p>
+                <button
+                  type="button"
+                  class="pricing-card-btn cta-primary-link"
+                  data-sku="kit-3-1"
+                  data-i18n="pricing.choose"
+                >Choose</button>
+              </article>
+              <article class="pricing-card pricing-card-value">
+                <span class="pricing-badge pricing-badge-value" data-i18n="pricing.kitSaveBadge">Bundle</span>
+                <span class="pricing-card-name" data-i18n="pricing.kit51Name">Complete</span>
+                <h3 class="pricing-card-title" data-i18n="pricing.kit51Title">5 sensors + 1 siren</h3>
+                <p class="pricing-card-price">299.00&nbsp;€</p>
+                <p class="pricing-card-desc" data-i18n="pricing.kit51Desc">Full-home coverage with on-site alarm.</p>
+                <button
+                  type="button"
+                  class="pricing-card-btn cta-primary-link"
+                  data-sku="kit-5-1"
+                  data-i18n="pricing.choose"
+                >Choose</button>
+              </article>
+            </div>
+            </div>
           </div>
         </section>
         <section id="cta" class="section section-cta">
@@ -889,7 +957,91 @@
                     role="region"
                     aria-labelledby="faq-q8"
                     data-i18n="faq.a8"
-                  >No. Aura works with the sensors and the app only — no hub, smart bulbs, switches, sirens or other gadgets. Each sensor connects directly to your home WiFi (2.4 GHz).</dd>
+                  >No hub. Each sensor uses your home WiFi (2.4 GHz). An optional local siren director (add-on) uses the same Aura account — it is not built into a sensor and does not replace phone notifications.</dd>
+                </div>
+                <div class="faq-item">
+                  <dt class="faq-q">
+                    <button
+                      type="button"
+                      class="faq-trigger"
+                      aria-expanded="false"
+                      aria-controls="faq-a9"
+                      id="faq-q9"
+                    >
+                      <span data-i18n="faq.q9">Can I use two or more sirens in different rooms?</span>
+                      <span class="faq-chevron" aria-hidden="true"></span>
+                    </button>
+                  </dt>
+                  <dd
+                    class="faq-a"
+                    id="faq-a9"
+                    role="region"
+                    aria-labelledby="faq-q9"
+                    data-i18n="faq.a9"
+                  >Yes. A local siren works on the same Aura account as your sensors and needs at least one sensor on that account. If you buy several siren units, they are all linked to those sensors — when any door or window opens, every siren on the account can alarm (useful e.g. upstairs and downstairs).</dd>
+                </div>
+                <div class="faq-item">
+                  <dt class="faq-q">
+                    <button
+                      type="button"
+                      class="faq-trigger"
+                      aria-expanded="false"
+                      aria-controls="faq-a10"
+                      id="faq-q10"
+                    >
+                      <span data-i18n="faq.q10">If I buy a sensor pack with one siren and later buy another siren alone, can it alarm only for one sensor?</span>
+                      <span class="faq-chevron" aria-hidden="true"></span>
+                    </button>
+                  </dt>
+                  <dd
+                    class="faq-a"
+                    id="faq-a10"
+                    role="region"
+                    aria-labelledby="faq-q10"
+                    data-i18n="faq.a10"
+                  >No. On one Aura account every siren always reacts to every sensor on that account — there is no per-sensor pairing. An extra siren ordered later still alarms for the whole pack, not just the door you had in mind. For a separate zone (on-site alarm only for one door or site), order a new sensor + siren kit and set it up under its own Aura account.</dd>
+                </div>
+                <div class="faq-item">
+                  <dt class="faq-q">
+                    <button
+                      type="button"
+                      class="faq-trigger"
+                      aria-expanded="false"
+                      aria-controls="faq-a11"
+                      id="faq-q11"
+                    >
+                      <span data-i18n="faq.q11">Do all sensors and sirens have to be on the same WiFi network?</span>
+                      <span class="faq-chevron" aria-hidden="true"></span>
+                    </button>
+                  </dt>
+                  <dd
+                    class="faq-a"
+                    id="faq-a11"
+                    role="region"
+                    aria-labelledby="faq-q11"
+                    data-i18n="faq.a11"
+                  >No. Each device connects to WiFi (2.4 GHz) on its own and talks to Aura over the internet. Sensors and sirens on your account can use different networks — for example some at home and others at the office — as long as each network has internet and every device is set up on the same Aura account. Then they share one alarm: when any sensor opens, your phone and every siren on that account can react.</dd>
+                </div>
+                <div class="faq-item">
+                  <dt class="faq-q">
+                    <button
+                      type="button"
+                      class="faq-trigger"
+                      aria-expanded="false"
+                      aria-controls="faq-a12"
+                      id="faq-q12"
+                    >
+                      <span data-i18n="faq.q12">How is Aura different from DIY alarm kits with a siren box?</span>
+                      <span class="faq-chevron" aria-hidden="true"></span>
+                    </button>
+                  </dt>
+                  <dd
+                    class="faq-a"
+                    id="faq-a12"
+                    role="region"
+                    aria-labelledby="faq-q12"
+                    data-i18n="faq.a12"
+                  >Many wireless kits use a mains-powered base unit with a built-in siren: door sensors run on replaceable batteries and send alerts to that box over radio — you need the base on each site. Aura sensors connect directly to your Wi‑Fi (2.4 GHz), recharge via USB‑C, and notify your phone with no hub. Add an optional Wi‑Fi siren director for on-site sound and light — still no central alarm station and no monthly app subscription.</dd>
                 </div>
               </dl>
             </div>
@@ -952,6 +1104,9 @@
           <form id="buyPanelForm" class="buy-panel-form">
             <input type="hidden" name="_subject" value="Direct order" />
             <input type="hidden" name="orderType" value="direct" />
+            <input type="hidden" name="orderMode" id="buyOrderModeInput" value="sensors" />
+            <input type="hidden" name="sensorPack" id="buySensorPackInput" value="1" />
+            <input type="hidden" name="sirenCount" id="buySirenCountInput" value="0" />
             <input type="hidden" id="buyShippingZone" value="" />
             <label class="form-label form-label-shipping-method" id="buyShippingMethodWrap" style="display: none;">
               <span class="form-label-text" data-i18n="buyPanel.shippingMethodLabel">Delivery method</span>
@@ -966,9 +1121,11 @@
                 <ul class="buy-summary-list">
                   <li class="buy-summary-row">
                     <span class="buy-summary-label" data-i18n="buyPanel.summarySensors">Sensors</span>
-                    <span class="buy-summary-value" id="buySummaryQtyValue"
-                      >× <span id="buySummaryQty">1</span></span
-                    >
+                    <span class="buy-summary-value" id="buySummaryQtyValue">1 sensor</span>
+                  </li>
+                  <li class="buy-summary-row" id="buySummarySirenRow" hidden>
+                    <span class="buy-summary-label" data-i18n="buyPanel.summarySirens">Siren directors</span>
+                    <span class="buy-summary-value" id="buySummarySirenValue">× 1</span>
                   </li>
                   <li class="buy-summary-row">
                     <span class="buy-summary-label" id="buySummaryPriceLabel" data-i18n="buyPanel.priceLabel"
@@ -1005,50 +1162,33 @@
                 </ul>
               </div>
               <div class="buy-panel-payment">
-                <div class="buy-panel-quantity">
-                  <span
-                    class="form-label-text"
-                    id="buyQtyLabel"
-                    data-i18n="buyPanel.quantity"
-                    >Quantity</span
-                  >
-                  <div
-                    class="quantity-stepper"
-                    role="group"
-                    aria-labelledby="buyQtyLabel"
-                  >
-                    <button
-                      type="button"
-                      class="quantity-btn"
-                      id="buyQtyMinus"
-                      data-i18n-aria-label="buyPanel.quantityDecrease"
-                     
-                     aria-label="Decrease">
-                      −
-                    </button>
-                    <input
-                      type="number"
-                      name="quantity"
-                      id="buyQtyInput"
-                      class="form-input quantity-input"
-                      min="1"
-                      max="99"
-                      value="1"
-                      readonly
-                      aria-labelledby="buyQtyLabel"
-                    />
-                    <button
-                      type="button"
-                      class="quantity-btn"
-                      id="buyQtyPlus"
-                      data-i18n-aria-label="buyPanel.quantityIncrease"
-                     
-                     aria-label="Increase">
-                      +
-                    </button>
+                <fieldset class="buy-fieldset">
+                  <legend class="form-label-text" data-i18n="buyPanel.orderTypeLegend">What do you need?</legend>
+                  <div class="buy-mode-options">
+                    <label class="buy-mode-option">
+                      <input type="radio" name="buyOrderMode" value="sensors" checked />
+                      <span data-i18n="buyPanel.modeSensorsOnly">Sensors only</span>
+                    </label>
+                    <label class="buy-mode-option">
+                      <input type="radio" name="buyOrderMode" value="kit" />
+                      <span data-i18n="buyPanel.modeWithSiren">Sensors + local siren</span>
+                    </label>
                   </div>
-                  <p id="buyQtyPackHint" class="buy-qty-pack-hint" hidden></p>
-                </div>
+                </fieldset>
+                <fieldset class="buy-fieldset" id="buySensorPackFieldset">
+                  <legend class="form-label-text" data-i18n="buyPanel.sensorPackLegend">Sensor pack</legend>
+                  <div class="buy-pack-options" id="buySensorPackOptions">
+                    <label class="buy-pack-option"><input type="radio" name="buySensorPack" value="1" checked /><span data-i18n="buyPanel.pack1">1 sensor — 59 €</span></label>
+                    <label class="buy-pack-option"><input type="radio" name="buySensorPack" value="3" /><span data-i18n="buyPanel.pack3">3 sensors — 159 €</span></label>
+                    <label class="buy-pack-option"><input type="radio" name="buySensorPack" value="5" /><span data-i18n="buyPanel.pack5">5 sensors — 249 €</span></label>
+                  </div>
+                </fieldset>
+                <fieldset class="buy-fieldset" id="buySirenCountFieldset" hidden>
+                  <legend class="form-label-text" data-i18n="buyPanel.sirenCountLegend">How many siren units?</legend>
+                  <p class="buy-fieldset-hint" data-i18n="buyPanel.sirenCountHint">Same Aura account — each unit can alarm in a different room. Extra units are discounted.</p>
+                  <div class="buy-pack-options" id="buySirenCountOptions"></div>
+                </fieldset>
+                <input type="hidden" name="quantity" id="buyQtyInput" value="1" />
                 <label class="form-label">
                   <span class="form-label-text" data-i18n="buyPanel.paymentMethod">Payment method</span>
                   <select

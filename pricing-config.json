@@ -1,6 +1,11 @@
 {
   "testMode": false,
-  "unitPriceEur": 44.99,
-  "bundles": { "1": 44.99, "3": 109.99, "5": 169.99 },
+  "unitPriceEur": 59,
+  "bundles": { "1": 59, "3": 159, "5": 249 },
+  "kitRules": {
+    "maxSirens": 3,
+    "sirenUnitEur": [94, 79, 69],
+    "bundleDiscountEur": { "1": 4, "3": 24, "5": 44 }
+  },
   "testDeliveryEur": 0.01
 }

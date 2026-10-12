@@ -6,13 +6,13 @@
 -----------------------------------------
 
 BG:
-Умни сензори за врати и прозорци – мигновени известия на телефона.
+Сензори и локална сирена – известия на телефона и звук/светлина.
 
 EN:
-Smart sensors for doors and windows – instant alerts on your phone.
+Smart sensors + local siren – phone alerts and sound/light alarm.
 
 DE (по избор):
-Sensoren für Türen und Fenster – sofortige Benachrichtigungen auf dem Handy.
+Sensoren + Sirene – Handy-Alerts und Ton/Licht-Alarm vor Ort.
 
 
 -----------------------------------------
@@ -24,6 +24,12 @@ Aura HomeSystems пази дома ти, когато е празен.
 
 Умни безжични сензори за прозорци и входни врати – закачаш ги, свързват се с приложението и веднага следят статуса в реално време. При всяко отваряне получаваш незабавно известие на телефона. Ясно виждаш кой отвор е засегнат, кога се е случило и дали е останал отворен.
 
+ОПЦИОНАЛНА ЛОКАЛНА СИРЕНА:
+• Жичена сирена със звук и светлинен строб сигнал – допълнителен аксесоар
+• Работи локално у дома, дори ако телефонът е изключен или без интернет
+• При отворен сензор може да включи звуков и светлинен алармен сигнал на място
+• Управление от приложението – включване и спиране на сирената отделно от режим Home/Away
+
 ЗА КОГО Е:
 • Собственици на дом или апартамент, които искат спокойствие когато са на работа или пътуват
 • Наематели и Airbnb hosts – контрол в реално време
@@ -33,6 +39,7 @@ Aura HomeSystems пази дома ти, когато е празен.
 • Сензори за прозорци и врати – без кабели, без хъб, директно WiFi
 • Мобилно приложение с статус в реално време и история на събитията
 • Моментални push известия при отваряне
+• Опционална локална сирена със звук и светлина (при комплект с аксесоар)
 • Работи на до 3 устройства едновременно (телефон, таблет, лаптоп)
 
 ПРЕДИМСТВА:
@@ -41,7 +48,7 @@ Aura HomeSystems пази дома ти, когато е празен.
 • USB-C презареждане с обикновено зарядно
 • Личен акаунт – данните са само ваши
 
-ЦЕНИ (ориентировъчно): 1 сензор 44,99 € · 3 сензора 109,99 € · 5 сензора 169,99 €
+ЦЕНИ (ориентировъчно): 1 сензор 59 € · 3 сензора 159 € · 5 сензора 249 € · сирена 94 € · 3+1 = 229 € · 5+1 = 299 €
 
 Съвместимост: Android 8+, WiFi 2.4 GHz у дома.
 За поръчки и информация: www.aurahomesystems.eu
@@ -50,6 +57,12 @@ EN:
 Aura HomeSystems keeps your home safe when it’s empty.
 
 Smart wireless sensors for windows and doors – attach them, they connect to the app and instantly monitor status in real time. On every opening you get an immediate alert on your phone. You see clearly which opening was affected, when it happened, and whether it stayed open.
+
+OPTIONAL LOCAL SIREN:
+• Wired siren with loud sound and strobe light – available as an add-on
+• Works locally at home, even if your phone is off or offline
+• Can trigger on-site sound and light when a sensor detects an opening
+• Control from the app – enable or stop the siren separately from Home/Away mode
 
 FOR WHO:
 • Home and apartment owners who want peace of mind when at work or travelling
@@ -60,6 +73,7 @@ WHAT YOU GET:
 • Sensors for windows and doors – no cables, no hub, direct WiFi
 • Mobile app with real-time status and event history
 • Instant push notifications on opening
+• Optional local siren with sound and light (with siren accessory kit)
 • Works on up to 3 devices at once (phone, tablet, laptop)
 
 BENEFITS:
@@ -68,19 +82,24 @@ BENEFITS:
 • Long battery life – months without recharging
 • Personal account – your data stays yours
 
+Pricing (approx.): 1 sensor €59 · 3 sensors €159 · 5 sensors €249 · siren kit €94 · 3+1 pack €229 · 5+1 pack €299
+
 Compatibility: Android 8+, 2.4 GHz WiFi at home.
 For orders and info: www.aurahomesystems.eu
 
+DE (по избор – кратък блок за сирена):
+Optionale lokale Sirene mit Ton und Blitzlicht – zusätzliches Zubehör. Steuerung in der App, unabhängig vom Home/Away-Modus.
+
 
 -----------------------------------------
-КАКВО Е НОВОТО (при първо пускане – по избор)
+КАКВО Е НОВОТО (при следваща версия – по избор)
 -----------------------------------------
 
 BG:
-Първо издание на приложението. Достъп до началната страница, информация за продуктите, цени и възможност за запитване и директна поръчка.
+Подобрено управление на локалната сирена в приложението – отделни бутони за включване и спиране, независимо от режим Home/Away.
 
 EN:
-First release. Access to the home page, product info, pricing, and the option to send an inquiry or place a direct order.
+Improved local siren control in the app – separate enable and stop buttons, independent of Home/Away mode.
 
 
 -----------------------------------------

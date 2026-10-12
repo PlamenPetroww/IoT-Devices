@@ -286,6 +286,32 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+function initPricingInquiry() {
+    const subjectInput = document.querySelector('#contactForm input[name="_subject"]');
+    const ctaSection = document.getElementById("cta");
+    if (!subjectInput) return;
+
+    const inquiryKeys = {
+        siren: "form.inquirySubjectSiren",
+        kit31: "form.inquirySubjectKit31",
+        kit51: "form.inquirySubjectKit51",
+    };
+
+    document.querySelectorAll(".pricing-card-btn[data-inquiry]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+            const id = btn.getAttribute("data-inquiry");
+            const lang = document.documentElement.lang === "de" ? "de" : "en";
+            const key = inquiryKeys[id];
+            if (key && typeof getTranslation === "function") {
+                const subject = getTranslation(lang, key);
+                if (subject && subject !== key) subjectInput.value = subject;
+            }
+            if (ctaSection) ctaSection.scrollIntoView({ behavior: "smooth", block: "start" });
+            subjectInput.focus({ preventScroll: true });
+        });
+    });
+}
+
 function initContactForm() {
     const form = document.getElementById("contactForm");
     const statusEl = document.getElementById("formStatus");
@@ -621,12 +647,27 @@ function initBuyPanel() {
 
     const pricingCfg = window.AURA_PRICING || {
         testMode: false,
-        unitPriceEur: 44.99,
-        bundles: { 1: 44.99, 3: 109.99, 5: 169.99 },
+        unitPriceEur: 59,
+        bundles: { 1: 59, 3: 159, 5: 249 },
+        kitRules: {
+            maxSirens: 3,
+            sirenUnitEur: [94, 79, 69],
+            bundleDiscountEur: { 1: 4, 3: 24, 5: 44 },
+        },
         testDeliveryEur: 0.01,
     };
     const UNIT_PRICE_EUR = pricingCfg.unitPriceEur;
     const BUNDLES = pricingCfg.bundles;
+    const KIT_RULES = pricingCfg.kitRules || {
+        maxSirens: 3,
+        sirenUnitEur: [94, 79, 69],
+        bundleDiscountEur: { 1: 4, 3: 24, 5: 44 },
+    };
+    const SKU_PRESET = {
+        "siren-1": { mode: "kit", pack: 1, sirens: 1 },
+        "kit-3-1": { mode: "kit", pack: 3, sirens: 1 },
+        "kit-5-1": { mode: "kit", pack: 5, sirens: 1 },
+    };
 
     function formatPrice(amount) {
         const lang = document.documentElement.lang || "en";
@@ -652,13 +693,181 @@ function initBuyPanel() {
         return q * UNIT_PRICE_EUR;
     }
 
+    function computeKitSubtotalEur(sensorPack, sirenCount) {
+        const pack = parseInt(sensorPack, 10);
+        let count = parseInt(sirenCount, 10);
+        if (!Number.isFinite(pack) || pack < 1) return 0;
+        const sensors = getTotalForQty(pack);
+        if (!Number.isFinite(count) || count < 1) return sensors;
+        const maxS = KIT_RULES.maxSirens || 3;
+        count = Math.min(Math.max(1, count), maxS);
+        const prices = KIT_RULES.sirenUnitEur || [94, 79, 69];
+        let sirenTotal = 0;
+        for (let i = 0; i < count; i++) {
+            sirenTotal += prices[i] !== undefined ? prices[i] : prices[prices.length - 1];
+        }
+        const disc = KIT_RULES.bundleDiscountEur || {};
+        const discount = disc[pack] !== undefined ? disc[pack] : disc[String(pack)] || 0;
+        return Math.round((sensors + sirenTotal - discount) * 100) / 100;
+    }
+
+    function getBuyOrderSelection() {
+        const modeEl = buyForm.querySelector('input[name="buyOrderMode"]:checked');
+        const packEl = buyForm.querySelector('input[name="buySensorPack"]:checked');
+        const mode = modeEl ? modeEl.value : "sensors";
+        const pack = packEl ? parseInt(packEl.value, 10) : 1;
+        let sirenCount = 0;
+        if (mode === "kit") {
+            const sEl = buyForm.querySelector('input[name="buySirenCount"]:checked');
+            sirenCount = sEl ? parseInt(sEl.value, 10) : 1;
+        }
+        return { mode, pack, sirenCount };
+    }
+
+    function syncBuyHiddenFields() {
+        const sel = getBuyOrderSelection();
+        const modeInput = document.getElementById("buyOrderModeInput");
+        const packInput = document.getElementById("buySensorPackInput");
+        const sirenInput = document.getElementById("buySirenCountInput");
+        if (modeInput) modeInput.value = sel.mode;
+        if (packInput) packInput.value = String(sel.pack);
+        if (sirenInput) sirenInput.value = String(sel.sirenCount);
+        if (qtyInput) qtyInput.value = String(sel.pack);
+    }
+
+    function getDirectSubtotalEur() {
+        const sel = getBuyOrderSelection();
+        if (sel.mode === "kit" && sel.sirenCount > 0) {
+            return computeKitSubtotalEur(sel.pack, sel.sirenCount);
+        }
+        return getTotalForQty(sel.pack);
+    }
+
+    function tBuyKey(key) {
+        const lang = document.documentElement.lang === "de" ? "de" : "en";
+        if (typeof getTranslation !== "function") return key;
+        const v = getTranslation(lang, key);
+        return v && v !== key ? v : key;
+    }
+
+    function getPackLabel(pack) {
+        if (pack === 3) return tBuyKey("buyPanel.pack3short");
+        if (pack === 5) return tBuyKey("buyPanel.pack5short");
+        return tBuyKey("buyPanel.pack1short");
+    }
+
+    function getOrderDescription() {
+        const sel = getBuyOrderSelection();
+        if (sel.mode === "kit") {
+            return (
+                getPackLabel(sel.pack) +
+                " + " +
+                sel.sirenCount +
+                " " +
+                tBuyKey("buyPanel.sirenUnitsShort")
+            );
+        }
+        return getPackLabel(sel.pack);
+    }
+
+    function refreshSensorPackLabels() {
+        document.querySelectorAll("#buySensorPackOptions .buy-pack-option").forEach((label) => {
+            const input = label.querySelector('input[name="buySensorPack"]');
+            const span = label.querySelector("span");
+            if (!input || !span) return;
+            const pack = parseInt(input.value, 10);
+            span.textContent =
+                getPackLabel(pack) + " — " + formatPrice(getTotalForQty(pack)).replace("\u00a0", " ");
+        });
+    }
+
+    function populateSirenCountOptions() {
+        const wrap = document.getElementById("buySirenCountOptions");
+        if (!wrap) return;
+        const sel = getBuyOrderSelection();
+        const pack = sel.pack || 1;
+        const prev =
+            buyForm.querySelector('input[name="buySirenCount"]:checked') &&
+            buyForm.querySelector('input[name="buySirenCount"]:checked').value;
+        const maxS = KIT_RULES.maxSirens || 3;
+        wrap.innerHTML = "";
+        for (let n = 1; n <= maxS; n++) {
+            const total = computeKitSubtotalEur(pack, n);
+            const label = document.createElement("label");
+            label.className = "buy-pack-option";
+            const input = document.createElement("input");
+            input.type = "radio";
+            input.name = "buySirenCount";
+            input.value = String(n);
+            if (String(n) === String(prev) || (!prev && n === 1)) input.checked = true;
+            const span = document.createElement("span");
+            const unitWord = n === 1 ? tBuyKey("buyPanel.sirenOne") : tBuyKey("buyPanel.sirenMany");
+            span.textContent =
+                n +
+                " " +
+                unitWord +
+                " — " +
+                tBuyKey("buyPanel.kitTotal") +
+                " " +
+                formatPrice(total).replace("\u00a0", " ");
+            label.appendChild(input);
+            label.appendChild(span);
+            wrap.appendChild(label);
+        }
+    }
+
+    function updateBuyModeVisibility() {
+        const sel = getBuyOrderSelection();
+        const sirenFs = document.getElementById("buySirenCountFieldset");
+        if (sirenFs) sirenFs.hidden = sel.mode !== "kit";
+        if (sel.mode === "kit") populateSirenCountOptions();
+    }
+
+    function applyBuyPreset(preset) {
+        if (!preset) return;
+        const modeRadio = buyForm.querySelector(
+            'input[name="buyOrderMode"][value="' + preset.mode + '"]'
+        );
+        if (modeRadio) modeRadio.checked = true;
+        const packRadio = buyForm.querySelector(
+            'input[name="buySensorPack"][value="' + String(preset.pack) + '"]'
+        );
+        if (packRadio) packRadio.checked = true;
+        updateBuyModeVisibility();
+        if (preset.mode === "kit" && preset.sirens) {
+            const sirenRadio = buyForm.querySelector(
+                'input[name="buySirenCount"][value="' + String(preset.sirens) + '"]'
+            );
+            if (sirenRadio) sirenRadio.checked = true;
+        }
+        syncBuyHiddenFields();
+        updateSummary();
+    }
+
+    function resetBuyDefaults() {
+        applyBuyPreset({ mode: "sensors", pack: 1, sirens: 0 });
+    }
+
     function applyStaticPricingDisplay() {
         document.querySelectorAll(".pricing-card").forEach((card) => {
             const packBtn = card.querySelector("[data-pack]");
-            const qty = packBtn ? parseInt(packBtn.getAttribute("data-pack"), 10) : 0;
+            const skuBtn = card.querySelector("[data-sku]");
             const priceEl = card.querySelector(".pricing-card-price");
-            if (!priceEl || !qty) return;
-            priceEl.textContent = formatPrice(getTotalForQty(qty)).replace(" €", "\u00a0€");
+            if (!priceEl) return;
+            if (packBtn) {
+                const qty = parseInt(packBtn.getAttribute("data-pack"), 10);
+                if (qty) priceEl.textContent = formatPrice(getTotalForQty(qty)).replace(" €", "\u00a0€");
+                return;
+            }
+            if (skuBtn) {
+                const sku = skuBtn.getAttribute("data-sku");
+                const preset = SKU_PRESET[sku];
+                if (preset) {
+                    priceEl.textContent = formatPrice(
+                        computeKitSubtotalEur(preset.pack, preset.sirens)
+                    ).replace(" €", "\u00a0€");
+                }
+            }
         });
 
         const buyPanelPrice = document.querySelector(".buy-panel-price");
@@ -944,7 +1153,8 @@ function initBuyPanel() {
         const baseRaw = typeof window.INQUIRY_FUNCTIONS_BASE_URL === "string" ? window.INQUIRY_FUNCTIONS_BASE_URL : "";
         const base = baseRaw.trim().replace(/\/$/, "");
         if (!base) throw new Error("Backend URL missing");
-        const q = parseInt(qtyInput.value, 10) || 1;
+        const sel = getBuyOrderSelection();
+        syncBuyHiddenFields();
         const z = getCheckoutZoneId();
         const shipMethod = (shippingMethodSelect && shippingMethodSelect.value) || "standard";
         const amountMinor = Math.round(getBuyOrderTotalEur() * 100);
@@ -954,10 +1164,13 @@ function initBuyPanel() {
             body: JSON.stringify({
                 amountMinor: amountMinor,
                 currency: "EUR",
-                quantity: q,
+                quantity: sel.pack,
+                orderMode: sel.mode,
+                sensorPack: sel.pack,
+                sirenCount: sel.sirenCount,
                 shippingZone: z,
                 shippingMethod: shipMethod,
-                description: "Aura HomeSystems — " + q + " sensor(s)",
+                description: "Aura HomeSystems — " + getOrderDescription(),
             }),
         });
         const order = await res.json().catch(() => ({}));
@@ -970,11 +1183,7 @@ function initBuyPanel() {
     }
 
     function getBuyOrderTotalEur() {
-        if (!qtyInput) return 0;
-        let q = parseInt(qtyInput.value, 10);
-        if (!Number.isFinite(q) || q < 1) q = 1;
-        if (q > 99) q = 99;
-        const total = getTotalForQty(q);
+        const total = getDirectSubtotalEur();
         const deliveryEur = getDeliveryAmountEur ? getDeliveryAmountEur() : 0;
         return Math.round((total + deliveryEur) * 100) / 100;
     }
@@ -1015,11 +1224,10 @@ function initBuyPanel() {
         const msgError = { en: "Failed. Try again.", de: "Fehlgeschlagen. Bitte erneut versuchen." };
         const msgSuccessTitle = { en: "Order received!", de: "Bestellung angenommen!" };
 
-        const quantity = (qtyInput && qtyInput.value) || "1";
-        const qtyNum = parseInt(quantity, 10) || 1;
-        const packSuffix =
-            qtyNum === 3 ? " (Standard package)" :
-            qtyNum === 5 ? " (Advanced package)" : "";
+        syncBuyHiddenFields();
+        const sel = getBuyOrderSelection();
+        const quantity = String(sel.pack);
+        const productLabel = getOrderDescription();
         const paymentMethod = (buyForm.querySelector('select[name="paymentMethod"]') && buyForm.querySelector('select[name="paymentMethod"]').value) || "";
         let revolutId = (buyForm.querySelector('input[name="revolutId"]') && buyForm.querySelector('input[name="revolutId"]').value.trim()) || "";
         if (fromRevolutPay) revolutId = "Revolut Pay";
@@ -1030,7 +1238,7 @@ function initBuyPanel() {
         const phone = (buyForm.querySelector('input[name="phone"]') && buyForm.querySelector('input[name="phone"]').value) || "";
         const email = (buyForm.querySelector('input[name="_replyto"]') && buyForm.querySelector('input[name="_replyto"]').value.trim()) || "";
 
-        let payMsg = `Direct order: ${quantity} pcs${packSuffix}, Payment: ${paymentMethod}, Address: ${deliveryAddress}`;
+        let payMsg = `Direct order: ${productLabel} (mode=${sel.mode}, pack=${sel.pack}, sirens=${sel.sirenCount}), Payment: ${paymentMethod}, Address: ${deliveryAddress}`;
         if (fromRevolutPay) payMsg += " [Revolut Pay: payment completed]";
         if (fromCardPay) payMsg += " [Card payment: completed]";
 
@@ -1042,11 +1250,14 @@ function initBuyPanel() {
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
                         email,
-                        subject: "Direct order" + packSuffix,
+                        subject: "Direct order — " + productLabel,
                         message: payMsg,
                         phone,
                         orderType: "direct",
                         quantity,
+                        orderMode: sel.mode,
+                        sensorPack: sel.pack,
+                        sirenCount: sel.sirenCount,
                         paymentMethod,
                         revolutId,
                         deliveryAddress,
@@ -1056,7 +1267,7 @@ function initBuyPanel() {
                 const data = await res.json().catch(() => ({}));
                 if (res.ok && data.success) {
                     buyForm.reset();
-                    if (qtyInput) qtyInput.value = 1;
+                    resetBuyDefaults();
                     teardownOnlinePay();
                     closePanel();
                     showSuccessNotification(msgSuccessTitle[lang] || msgSuccessTitle.en);
@@ -1070,7 +1281,10 @@ function initBuyPanel() {
                 }
             } else {
                 const formData = new FormData(buyForm);
-                formData.set("_subject", "Direct order – " + quantity + " pcs" + packSuffix);
+                formData.set("_subject", "Direct order — " + productLabel);
+                formData.set("orderMode", sel.mode);
+                formData.set("sensorPack", String(sel.pack));
+                formData.set("sirenCount", String(sel.sirenCount));
                 if (fromRevolutPay) formData.set("revolutId", "Revolut Pay");
                 const res = await fetch(`https://formspree.io/f/${FORMSPREE_FORM_ID}`, {
                     method: "POST",
@@ -1080,7 +1294,7 @@ function initBuyPanel() {
                 const data = await res.json().catch(() => ({}));
                 if (res.ok && (data.ok === true || res.status === 200)) {
                     buyForm.reset();
-                    if (qtyInput) qtyInput.value = 1;
+                    resetBuyDefaults();
                     teardownOnlinePay();
                     closePanel();
                     showSuccessNotification(msgSuccessTitle[lang] || msgSuccessTitle.en);
@@ -1337,54 +1551,33 @@ function initBuyPanel() {
     }
 
     function updateSummary() {
-        if (!qtyInput) return;
-        let q = parseInt(qtyInput.value, 10);
-        if (!Number.isFinite(q) || q < 1) q = 1;
-        if (q > 99) q = 99;
-        qtyInput.value = q;
-        const total = getTotalForQty(q);
+        syncBuyHiddenFields();
+        const sel = getBuyOrderSelection();
+        const total = getDirectSubtotalEur();
         const formatted = formatPrice(total);
         const summaryUnitPrice = document.getElementById("buySummaryUnitPrice");
         const summaryPriceLabel = document.getElementById("buySummaryPriceLabel");
         const summaryQtyValue = document.getElementById("buySummaryQtyValue");
-        const qtyPackHint = document.getElementById("buyQtyPackHint");
+        const sirenRow = document.getElementById("buySummarySirenRow");
+        const sirenValue = document.getElementById("buySummarySirenValue");
         const lang = document.documentElement.lang || "en";
         const t = typeof getTranslation === "function" ? (key) => getTranslation(lang, key) : () => "";
-        const packStandard = t("buyPanel.summaryStandardPack") || "3 pcs – Standard package";
-        const packAdvanced = t("buyPanel.summaryAdvancedPack") || "5 pcs – Advanced package";
-        const packLabelStandard = t("buyPanel.summaryPriceLabelStandard") || "Standard package";
-        const packLabelAdvanced = t("buyPanel.summaryPriceLabelAdvanced") || "Advanced package";
-        if (summaryQtyValue) {
-            if (q === 3) summaryQtyValue.textContent = packStandard;
-            else if (q === 5) summaryQtyValue.textContent = packAdvanced;
-            else summaryQtyValue.textContent = "× " + q;
-        } else if (summaryQty) {
-            summaryQty.textContent = String(q);
-        }
-        if (qtyPackHint) {
-            if (q === 3) {
-                qtyPackHint.hidden = false;
-                qtyPackHint.textContent = packLabelStandard;
-            } else if (q === 5) {
-                qtyPackHint.hidden = false;
-                qtyPackHint.textContent = packLabelAdvanced;
+        if (summaryQtyValue) summaryQtyValue.textContent = getPackLabel(sel.pack);
+        if (sirenRow && sirenValue) {
+            if (sel.mode === "kit" && sel.sirenCount > 0) {
+                sirenRow.hidden = false;
+                sirenValue.textContent = "× " + sel.sirenCount;
             } else {
-                qtyPackHint.hidden = true;
-                qtyPackHint.textContent = "";
+                sirenRow.hidden = true;
             }
         }
         if (summaryPriceLabel) {
-            if (q === 1) summaryPriceLabel.textContent = t("buyPanel.summaryPriceLabelUnit") || "Price for 1 sensor";
-            else if (q === 3) summaryPriceLabel.textContent = packLabelStandard;
-            else if (q === 5) summaryPriceLabel.textContent = packLabelAdvanced;
-            else summaryPriceLabel.textContent = t("buyPanel.summaryPriceLabelMulti") || "Price";
+            summaryPriceLabel.textContent = t("buyPanel.summarySubtotal") || "Subtotal";
         }
-        if (summaryUnitPrice) {
-            const br = t("buyPanel.summaryBr") || "pcs";
-            if (q === 3 || q === 5) summaryUnitPrice.textContent = formatted;
-            else summaryUnitPrice.textContent = formatted + " (" + q + " " + br + ")";
-        }
+        if (summaryUnitPrice) summaryUnitPrice.textContent = formatted;
         if (summarySubtotal) summarySubtotal.textContent = formatted;
+        const buyPanelPrice = document.querySelector(".buy-panel-price");
+        if (buyPanelPrice) buyPanelPrice.textContent = formatted.replace(" €", "\u00a0€");
         const deliveryEur = getDeliveryAmountEur ? getDeliveryAmountEur() : 0;
         const totalWithDelivery = Math.round((total + deliveryEur) * 100) / 100;
         if (summaryTotal) summaryTotal.textContent = formatPriceCents(totalWithDelivery);
@@ -1451,27 +1644,43 @@ function initBuyPanel() {
     document.querySelectorAll(".pricing-card-btn[data-pack]").forEach((btn) => {
         btn.addEventListener("click", () => {
             const pack = parseInt(btn.getAttribute("data-pack"), 10);
-            if (qtyInput && Number.isFinite(pack) && pack >= 1) {
-                qtyInput.value = Math.min(99, pack);
-                openPanel();
-            }
+            if (Number.isFinite(pack)) applyBuyPreset({ mode: "sensors", pack, sirens: 0 });
+            openPanel();
         });
     });
 
-    if (qtyMinus && qtyInput) {
-        qtyMinus.addEventListener("click", () => {
-            const v = Math.max(1, parseInt(qtyInput.value, 10) - 1);
-            qtyInput.value = v;
+    document.querySelectorAll(".pricing-card-btn[data-sku]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+            const sku = btn.getAttribute("data-sku");
+            if (sku && SKU_PRESET[sku]) applyBuyPreset(SKU_PRESET[sku]);
+            openPanel();
+        });
+    });
+
+    buyForm.querySelectorAll('input[name="buyOrderMode"]').forEach((el) => {
+        el.addEventListener("change", () => {
+            updateBuyModeVisibility();
             updateSummary();
         });
-    }
-    if (qtyPlus && qtyInput) {
-        qtyPlus.addEventListener("click", () => {
-            const v = Math.min(99, parseInt(qtyInput.value, 10) + 1);
-            qtyInput.value = v;
+    });
+    buyForm.querySelectorAll('input[name="buySensorPack"]').forEach((el) => {
+        el.addEventListener("change", () => {
+            if (getBuyOrderSelection().mode === "kit") populateSirenCountOptions();
             updateSummary();
         });
-    }
+    });
+    buyForm.addEventListener("change", (e) => {
+        if (e.target && e.target.name === "buySirenCount") updateSummary();
+    });
+
+    refreshSensorPackLabels();
+    updateBuyModeVisibility();
+    resetBuyDefaults();
+    window.addEventListener("aura-lang-applied", () => {
+        refreshSensorPackLabels();
+        if (getBuyOrderSelection().mode === "kit") populateSirenCountOptions();
+        updateSummary();
+    });
 
     if (paymentSelect) {
         paymentSelect.addEventListener("change", updatePaymentFields);
@@ -1614,6 +1823,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initSmoothScroll();
     initFooterYear();
     initContactForm();
+    initPricingInquiry();
     initBuyPanel();
     initFaqAccordion();
 });

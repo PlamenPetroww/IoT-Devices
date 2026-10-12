@@ -165,6 +165,20 @@
             <div id="sensorStatusMsg" class="sensor-status-msg home">
               🏠 Сензорите са изключени (режим „Аз съм у дома“).
             </div>
+            <div id="sirenControls" class="siren-controls">
+              <div>
+                <strong data-i18n="dashboard.sirenTitle">Сирена</strong>
+                <span id="sirenStatus" data-i18n="dashboard.sirenUnavailable">Не е свързана</span>
+              </div>
+              <div class="siren-actions">
+                <button type="button" id="sirenEnable" class="mode-btn siren-toggle" data-i18n="dashboard.sirenEnable" disabled>
+                  Включи сирената
+                </button>
+                <button type="button" id="sirenStop" class="mode-btn danger siren-toggle" data-i18n="dashboard.sirenStop" disabled>
+                  Спри сирената
+                </button>
+              </div>
+            </div>
           </div>
         </aside>
       </div>
@@ -302,6 +316,30 @@
         const modeHome = document.getElementById("modeHome");
         const modeAway = document.getElementById("modeAway");
         const statusMsg = document.getElementById("sensorStatusMsg");
+        const sirenStatus = document.getElementById("sirenStatus");
+        const sirenEnable = document.getElementById("sirenEnable");
+        const sirenStop = document.getElementById("sirenStop");
+        let sirenAvailable = false;
+        let sirenEnabled = false;
+        let sirenActive = false;
+
+        function setSirenUI() {
+          sirenEnable.disabled = !sirenAvailable || sirenEnabled;
+          sirenStop.disabled = !sirenAvailable || !sirenEnabled;
+          sirenStatus.className = sirenActive
+            ? "active"
+            : sirenEnabled
+              ? "standby"
+              : "";
+          sirenStatus.textContent = !sirenAvailable
+            ? authT("dashboard.sirenUnavailable")
+            : sirenActive
+              ? authT("dashboard.sirenActive")
+              : sirenEnabled
+                ? authT("dashboard.sirenStandby")
+                : authT("dashboard.sirenOff");
+        }
+
         function setModeUI(enabled) {
           const isAway = !!enabled;
           modeHome.classList.toggle("active", !isAway);
@@ -316,15 +354,36 @@
           const val = snap.val();
           setModeUI(val === true);
         });
+        db.ref(userPath + "/siren").on("value", (snap) => {
+          const value = snap.val() || {};
+          sirenAvailable = value.online === true;
+          sirenEnabled = value.enabled === true;
+          sirenActive = value.active === true;
+          setSirenUI();
+        });
         modeHome.addEventListener("click", () => {
-          db.ref(userPath).update({ systemEnabled: false });
+          db.ref(userPath + "/systemEnabled").set(false);
         });
         modeAway.addEventListener("click", () => {
           Promise.resolve(
             window.AuraPush ? AuraPush.requestAwayModeWithPush() : true
           ).then((ready) => {
             if (ready === false) return;
-            db.ref(userPath).update({ systemEnabled: true });
+            db.ref(userPath + "/systemEnabled").set(true);
+          });
+        });
+        sirenEnable.addEventListener("click", () => {
+          if (!sirenAvailable) return;
+          db.ref(userPath + "/siren").update({
+            enabled: true,
+            testUntil: 0,
+          });
+        });
+        sirenStop.addEventListener("click", () => {
+          if (!sirenAvailable) return;
+          db.ref(userPath + "/siren").update({
+            enabled: false,
+            testUntil: 0,
           });
         });
         const devicesList = document.getElementById("devicesList");
@@ -1003,6 +1062,7 @@
           db.ref(userPath + "/systemEnabled").once("value", function (snap) {
             setModeUI(snap.val() === true);
           });
+          setSirenUI();
           if (lastDevicesSnap) renderDevicesFromSnap(lastDevicesSnap);
           renderHistory();
         });

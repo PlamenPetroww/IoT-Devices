@@ -45,8 +45,9 @@ FirebaseAuth auth;
 FirebaseConfig config;
 // Reed to GND when "active": INPUT_PULLUP. For lower sleep current use an external 100kÔÇô1M pull-up to 3V3.
 const int sensorPin = 4;
-// Typical 2-wire reed: magnet near closes the switch → pin pulled LOW to GND → CLOSED.
-#define SENSOR_CLOSED_WHEN_LOW 1
+// Rev A PCB + reed mount: magnet near (door/window closed) → GPIO4 HIGH → CLOSED.
+// Set to 1 if your reed pulls LOW when closed instead.
+#define SENSOR_CLOSED_WHEN_LOW 0
 // Battery: classic ESP32 = GPIO 34. ESP32-C3 = GPIO 0 (D0) if the battery is wired there.
 #if CONFIG_IDF_TARGET_ESP32C3
 #define BATTERY_ADC_PIN 0

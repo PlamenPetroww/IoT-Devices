@@ -725,6 +725,7 @@ function saveNativeTokenForUser(userKey, tokenStr, deviceId, callback) {
           const all = tokSnap.val() || {};
           Object.keys(all).forEach((key) => {
             if (key === "native_android") return;
+            if (all[key] && all[key].platform === "ios") return;
             firebaseDb
               .ref("users/" + userKey + "/pushTokens/" + key)
               .remove()

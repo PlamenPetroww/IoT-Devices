@@ -238,8 +238,10 @@
     var all = snap.val() || {};
     Object.keys(all).forEach(function (k) {
       if (k === "native_android") return;
+      if (String(k).indexOf("native_ios_") === 0) return;
       var row = all[k];
       if (!row || !row.token) return;
+      if (row.platform === "ios") return;
       if (row.platform !== "android" || row.token === token) {
         ref.child(k).remove().catch(function () {});
       }
@@ -302,7 +304,9 @@
     var val = snap.val() || {};
     Object.keys(val).forEach(function (k) {
       if (k === "native_android") return;
+      if (String(k).indexOf("native_ios_") === 0) return;
       var row = val[k];
+      if (row && row.platform === "ios") return;
       if (row && row.token) {
         state.db.ref(state.userPath + "/pushTokens/" + k).remove().catch(function () {});
       }
@@ -571,6 +575,8 @@
       var row = val[k];
       if (!row || !row.token) return;
       if (k === "native_android" || k === deviceKey) return;
+      if (String(k).indexOf("native_ios_") === 0) return;
+      if (row.platform === "ios") return;
       if (row.token === token) {
         ref.child(k).remove().catch(function () {});
         return;

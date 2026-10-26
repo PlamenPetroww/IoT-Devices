@@ -34,3 +34,9 @@ ios/App/App.xcodeproj/xcuserdata/
 ios/App/DerivedData/
 *.xcarchive
 *.ipa
+
+# Arduino compile leftovers; keep only the hosted OTA image
+firmware/*.elf
+firmware/*.map
+firmware/*.merged.bin
+firmware/AuraSensor_UID.ino.*

@@ -1010,6 +1010,8 @@ body.dashboard-overlay-open {
     font-size: 0.85rem;
     padding: 4px 10px;
     border-radius: 999px;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .device-item .status.open {
@@ -1273,16 +1275,16 @@ body.dashboard-overlay-open {
 }
 
 .history-item {
-    padding: 14px 16px;
+    padding: 12px 14px;
     margin-bottom: 10px;
     background: rgba(15, 23, 42, 0.4);
     border: 1px solid rgba(148, 163, 184, 0.15);
     border-radius: 14px;
     font-size: 0.9rem;
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     transition: border-color 0.2s, background 0.2s;
 }
 
@@ -1315,6 +1317,11 @@ body.dashboard-overlay-open {
 .history-item .history-name {
     font-weight: 600;
     color: #e5e7eb;
+    min-width: 0;
+    flex: 0 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .history-item .sensor-icon {
@@ -1330,6 +1337,8 @@ body.dashboard-overlay-open {
     border-radius: 999px;
     font-size: 0.8rem;
     font-weight: 600;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .history-item.open .history-status {
@@ -1346,6 +1355,8 @@ body.dashboard-overlay-open {
     margin-left: auto;
     font-size: 0.8rem;
     color: #9ca3af;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .history-empty {

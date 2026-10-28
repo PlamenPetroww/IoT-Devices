@@ -991,11 +991,7 @@
             const entry = entries[i];
             const key = historyDeviceKey(entry);
             const prev = lastKeptByDevice[key];
-            if (
-              prev &&
-              prev.status === entry.status &&
-              Math.abs((entry.timestamp || 0) - (prev.timestamp || 0)) < 20000
-            ) {
+            if (prev && prev.status === entry.status) {
               continue;
             }
             out.push(entry);

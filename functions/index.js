@@ -318,6 +318,19 @@ async function claimDispatchedHistory(userKey, historyId) {
     return !!result.committed;
 }
 
+async function rejectDuplicateSameStatus(userKey, deviceKey, status, historyId, eventCreatedAt) {
+    const key = safeEventTagKey(deviceKey);
+    const ref = rtdb.ref(`users/${userKey}/settings/lastHistoryStatus/${key}`);
+    const now = Number(eventCreatedAt) || Date.now();
+    const st = String(status || "").toLowerCase();
+    const result = await ref.transaction((current) => {
+        const prevStatus = String((current && current.status) || "").toLowerCase();
+        if (prevStatus === st) return;
+        return { status: st, at: now, historyId: historyId || "" };
+    });
+    return !result.committed;
+}
+
 function parseHistoryTimestamp(entry) {
     const ts = entry && entry.timestamp;
     if (typeof ts === "number" && Number.isFinite(ts) && ts > 0) return ts;
@@ -664,6 +677,18 @@ export const onSensorHistoryAlarm = onValueCreated(
         const eventTag = "cf-" + safeEventTagKey(historyId || deviceKey + "-" + status + "-" + eventCreatedAt);
 
         const safeDeviceId = String(deviceId || deviceName || "sensor").replace(/[.$#[\]/]/g, "_");
+        const isDuplicate = await rejectDuplicateSameStatus(
+            userKey,
+            safeDeviceId || deviceKey,
+            status,
+            historyId,
+            eventCreatedAt
+        );
+        if (isDuplicate) {
+            console.log("[sensor-alarm] skip same status", userKey, deviceName, status, historyId);
+            await rtdb.ref(`users/${userKey}/history/${historyId}`).remove();
+            return;
+        }
         const [enabledSnap, removedSnap, deviceSnap, langSnap] = await Promise.all([
             rtdb.ref(`users/${userKey}/systemEnabled`).get(),
             rtdb.ref(`users/${userKey}/removedDevices/${safeDeviceId}`).get(),

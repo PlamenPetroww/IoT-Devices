@@ -981,17 +981,21 @@
               renderDevicesFromSnap(lastDevicesSnap);
             }
           });
+        function historyDeviceKey(entry) {
+          return String(entry.deviceId || entry.deviceName || "").trim().toLowerCase();
+        }
         function dedupeHistoryEntries(entries) {
           const out = [];
           for (let i = 0; i < entries.length; i++) {
             const entry = entries[i];
             const prev = out[out.length - 1];
-            if (
-              prev &&
-              prev.deviceName === entry.deviceName &&
-              prev.status === entry.status &&
-              Math.abs((entry.timestamp || 0) - (prev.timestamp || 0)) < 20000
-            ) {
+            const sameDevice =
+              prev && historyDeviceKey(prev) === historyDeviceKey(entry);
+            const dt = Math.abs((entry.timestamp || 0) - (prev && prev.timestamp ? prev.timestamp : 0));
+            if (sameDevice && prev.status === entry.status && dt < 20000) {
+              continue;
+            }
+            if (sameDevice && prev.status !== entry.status && dt < 25000) {
               continue;
             }
             out.push(entry);

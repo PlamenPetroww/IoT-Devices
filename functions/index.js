@@ -39,8 +39,6 @@ const RTDB_INSTANCE = "cleverhaus-petrov-default-rtdb";
 const EMAIL_FALLBACK_DELAY_SECONDS = 60;
 const ALARM_DEDUPE_MS = 12000;
 const ALARM_PUSH_COALESCE_MS = 8000;
-// GPIO-wake then stale pin: firmware writes the real edge, then the opposite ~8–25s later.
-const PHANTOM_OPPOSITE_MS = 25000;
 const RENDER_HEALTH_URL =
     process.env.RENDER_HEALTH_URL || "https://cleverhaus.onrender.com/api/health";
 
@@ -318,32 +316,6 @@ async function claimDispatchedHistory(userKey, historyId) {
     const ref = rtdb.ref(`users/${userKey}/settings/dispatchedHistory/${historyId}`);
     const result = await ref.transaction((current) => (current ? undefined : Date.now()));
     return !!result.committed;
-}
-
-async function rejectPhantomOppositeEdge(userKey, deviceKey, status, historyId, eventCreatedAt) {
-    const key = safeEventTagKey(deviceKey);
-    const ref = rtdb.ref(`users/${userKey}/settings/lastHistoryEdge/${key}`);
-    const now = Number(eventCreatedAt) || Date.now();
-    const st = String(status || "").toLowerCase();
-    const result = await ref.transaction((current) => {
-        const prev = current || {};
-        const prevStatus = String(prev.status || "").toLowerCase();
-        const prevAt = Number(prev.at) || 0;
-        if (
-            (prevStatus === "open" || prevStatus === "closed") &&
-            prevStatus !== st &&
-            Math.abs(now - prevAt) < PHANTOM_OPPOSITE_MS
-        ) {
-            return;
-        }
-        return { status: st, at: now, historyId: historyId || "" };
-    });
-    if (result.committed) return { phantom: false };
-    const prev = result.snapshot ? result.snapshot.val() : null;
-    return {
-        phantom: true,
-        prevStatus: String((prev && prev.status) || "").toLowerCase(),
-    };
 }
 
 function parseHistoryTimestamp(entry) {
@@ -692,23 +664,6 @@ export const onSensorHistoryAlarm = onValueCreated(
         const eventTag = "cf-" + safeEventTagKey(historyId || deviceKey + "-" + status + "-" + eventCreatedAt);
 
         const safeDeviceId = String(deviceId || deviceName || "sensor").replace(/[.$#[\]/]/g, "_");
-        const bounce = await rejectPhantomOppositeEdge(
-            userKey,
-            safeDeviceId || deviceKey,
-            status,
-            historyId,
-            eventCreatedAt
-        );
-        if (bounce.phantom) {
-            console.log("[sensor-alarm] drop phantom opposite", userKey, deviceName, status, historyId);
-            await rtdb.ref(`users/${userKey}/history/${historyId}`).remove();
-            if (bounce.prevStatus === "open" || bounce.prevStatus === "closed") {
-                await rtdb.ref(`users/${userKey}/devices/${safeDeviceId}`).update({
-                    status: bounce.prevStatus === "closed",
-                });
-            }
-            return;
-        }
         const [enabledSnap, removedSnap, deviceSnap, langSnap] = await Promise.all([
             rtdb.ref(`users/${userKey}/systemEnabled`).get(),
             rtdb.ref(`users/${userKey}/removedDevices/${safeDeviceId}`).get(),

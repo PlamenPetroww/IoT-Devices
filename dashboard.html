@@ -540,7 +540,6 @@
             renderRemovedDevices();
             return;
           }
-          const histStatus = latestHistoryStatusMap();
           const devices = Object.entries(data)
             .filter(function (pair) {
               return !removedIds.has(pair[0]);
@@ -550,15 +549,11 @@
               var d = pair[1];
               var name = (d && (d.displayName || d.deviceName)) || id;
               var fromDevice = (d && d.status) === true ? "closed" : "open";
-              var fromHistory =
-                histStatus["id:" + String(id).toLowerCase()] ||
-                histStatus["name:" + String(name).toLowerCase()] ||
-                "";
               return {
                 id: id,
                 name: name,
                 displayIcon: d && d.displayIcon ? String(d.displayIcon) : null,
-                status: fromHistory || fromDevice,
+                status: fromDevice,
                 lastSeen: d && d.lastSeen,
                 battery:
                   d && typeof d.battery === "number"
@@ -991,16 +986,6 @@
         function historyDeviceKey(entry) {
           return String(entry.deviceId || entry.deviceName || "").trim().toLowerCase();
         }
-        function latestHistoryStatusMap() {
-          const map = {};
-          historyData.forEach(function (entry) {
-            const id = String(entry.deviceId || "").trim().toLowerCase();
-            const name = String(entry.deviceName || "").trim().toLowerCase();
-            if (id) map["id:" + id] = entry.status;
-            if (name) map["name:" + name] = entry.status;
-          });
-          return map;
-        }
         function dedupeHistoryEntries(entries) {
           const lastKeptByDevice = {};
           const out = [];
@@ -1011,7 +996,7 @@
             if (
               prev &&
               prev.status === entry.status &&
-              Math.abs((entry.timestamp || 0) - (prev.timestamp || 0)) < 20000
+              Math.abs((entry.timestamp || 0) - (prev.timestamp || 0)) < 45000
             ) {
               continue;
             }

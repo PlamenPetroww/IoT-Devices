@@ -37,7 +37,7 @@ function getResendFromEmail() {
 
 const RTDB_INSTANCE = "cleverhaus-petrov-default-rtdb";
 const EMAIL_FALLBACK_DELAY_SECONDS = 60;
-const ALARM_DEDUPE_MS = 12000;
+const ALARM_DEDUPE_MS = 30000;
 const ALARM_PUSH_COALESCE_MS = 8000;
 const RENDER_HEALTH_URL =
     process.env.RENDER_HEALTH_URL || "https://cleverhaus.onrender.com/api/health";
@@ -316,19 +316,6 @@ async function claimDispatchedHistory(userKey, historyId) {
     const ref = rtdb.ref(`users/${userKey}/settings/dispatchedHistory/${historyId}`);
     const result = await ref.transaction((current) => (current ? undefined : Date.now()));
     return !!result.committed;
-}
-
-async function rejectDuplicateSameStatus(userKey, deviceKey, status, historyId, eventCreatedAt) {
-    const key = safeEventTagKey(deviceKey);
-    const ref = rtdb.ref(`users/${userKey}/settings/lastHistoryStatus/${key}`);
-    const now = Number(eventCreatedAt) || Date.now();
-    const st = String(status || "").toLowerCase();
-    const result = await ref.transaction((current) => {
-        const prevStatus = String((current && current.status) || "").toLowerCase();
-        if (prevStatus === st) return;
-        return { status: st, at: now, historyId: historyId || "" };
-    });
-    return !result.committed;
 }
 
 function parseHistoryTimestamp(entry) {
@@ -677,18 +664,6 @@ export const onSensorHistoryAlarm = onValueCreated(
         const eventTag = "cf-" + safeEventTagKey(historyId || deviceKey + "-" + status + "-" + eventCreatedAt);
 
         const safeDeviceId = String(deviceId || deviceName || "sensor").replace(/[.$#[\]/]/g, "_");
-        const isDuplicate = await rejectDuplicateSameStatus(
-            userKey,
-            safeDeviceId || deviceKey,
-            status,
-            historyId,
-            eventCreatedAt
-        );
-        if (isDuplicate) {
-            console.log("[sensor-alarm] skip same status", userKey, deviceName, status, historyId);
-            await rtdb.ref(`users/${userKey}/history/${historyId}`).remove();
-            return;
-        }
         const [enabledSnap, removedSnap, deviceSnap, langSnap] = await Promise.all([
             rtdb.ref(`users/${userKey}/systemEnabled`).get(),
             rtdb.ref(`users/${userKey}/removedDevices/${safeDeviceId}`).get(),
@@ -719,6 +694,12 @@ export const onSensorHistoryAlarm = onValueCreated(
         const historyOk = await claimDispatchedHistory(userKey, historyId);
         if (!historyOk) {
             console.log("[sensor-alarm] history already dispatched", userKey, historyId);
+            return;
+        }
+
+        const gateOk = await claimAlarmGate(userKey, safeDeviceId || deviceKey, status, historyId);
+        if (!gateOk) {
+            console.log("[sensor-alarm] skip duplicate status push", userKey, deviceName, status);
             return;
         }
 

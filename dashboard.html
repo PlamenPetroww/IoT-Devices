@@ -996,7 +996,7 @@
             if (
               prev &&
               prev.status === entry.status &&
-              Math.abs((entry.timestamp || 0) - (prev.timestamp || 0)) < 45000
+              Math.abs((entry.timestamp || 0) - (prev.timestamp || 0)) < 90000
             ) {
               continue;
             }

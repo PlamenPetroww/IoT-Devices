@@ -958,7 +958,7 @@
         }
         historyRef
           .orderByChild("timestamp")
-          .limitToLast(20)
+          .limitToLast(80)
           .on("value", (snap) => {
             const val = snap.val();
             if (!val || typeof val !== "object") {
@@ -1015,20 +1015,31 @@
           }
           return out;
         }
-        function historyWithoutCurrentMagnet(entries) {
+        function previousStatusByDevice(entries) {
           const live = liveMagnetStatusMap();
-          return entries.filter(function (entry) {
-            const liveSt =
-              live[String(entry.deviceId || "").trim().toLowerCase()] ||
-              live[String(entry.deviceName || "").trim().toLowerCase()];
-            if (!liveSt) return true;
-            return entry.status !== liveSt;
+          const last = {};
+          entries.forEach(function (entry) {
+            const id = String(entry.deviceId || "").trim().toLowerCase();
+            const name = String(entry.deviceName || "").trim().toLowerCase();
+            const liveSt = live[id] || live[name];
+            if (liveSt && entry.status === liveSt) return;
+            const key = historyDeviceKey(entry);
+            if (!last[key] || (entry.timestamp || 0) >= (last[key].timestamp || 0)) {
+              last[key] = entry;
+            }
           });
+          return Object.keys(last)
+            .map(function (key) {
+              return last[key];
+            })
+            .sort(function (a, b) {
+              return (a.timestamp || 0) - (b.timestamp || 0);
+            });
         }
         function renderHistory() {
           const listEl = document.getElementById("historyList");
           const limit = historyLimit;
-          const slice = historyWithoutCurrentMagnet(historyData).slice(-limit).reverse();
+          const slice = previousStatusByDevice(historyData).slice(-limit).reverse();
           if (slice.length === 0) {
             listEl.innerHTML =
               '<li class="history-empty">' + escapeHtml(authT("dashboard.historyEmpty")) + "</li>";

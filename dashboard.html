@@ -734,6 +734,7 @@
           (snap) => {
           lastDevicesSnap = snap;
           renderDevicesFromSnap(snap);
+          renderHistory();
         },
         (err) => {
           console.error("[dashboard] devices read failed:", err);
@@ -973,7 +974,7 @@
                   fromServerApi: entry.fromServerApi === true,
                 }))
                 .filter(function (entry) {
-                  return !entry.fromServerApi && entry.status === "open";
+                  return !entry.fromServerApi;
                 })
                 .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
               historyData = dedupeHistoryEntries(historyData);
@@ -986,6 +987,19 @@
         function historyDeviceKey(entry) {
           return String(entry.deviceId || entry.deviceName || "").trim().toLowerCase();
         }
+        function liveMagnetStatusMap() {
+          const map = {};
+          const data = lastDevicesSnap && lastDevicesSnap.val();
+          if (!data || typeof data !== "object") return map;
+          Object.keys(data).forEach(function (id) {
+            const d = data[id] || {};
+            const st = d.status === true ? "closed" : "open";
+            map[String(id).trim().toLowerCase()] = st;
+            const name = String(d.displayName || d.deviceName || "").trim().toLowerCase();
+            if (name) map[name] = st;
+          });
+          return map;
+        }
         function dedupeHistoryEntries(entries) {
           const lastKeptByDevice = {};
           const out = [];
@@ -993,11 +1007,7 @@
             const entry = entries[i];
             const key = historyDeviceKey(entry);
             const prev = lastKeptByDevice[key];
-            if (
-              prev &&
-              prev.status === entry.status &&
-              Math.abs((entry.timestamp || 0) - (prev.timestamp || 0)) < 90000
-            ) {
+            if (prev && prev.status === entry.status) {
               continue;
             }
             out.push(entry);
@@ -1005,10 +1015,20 @@
           }
           return out;
         }
+        function historyWithoutCurrentMagnet(entries) {
+          const live = liveMagnetStatusMap();
+          return entries.filter(function (entry) {
+            const liveSt =
+              live[String(entry.deviceId || "").trim().toLowerCase()] ||
+              live[String(entry.deviceName || "").trim().toLowerCase()];
+            if (!liveSt) return true;
+            return entry.status !== liveSt;
+          });
+        }
         function renderHistory() {
           const listEl = document.getElementById("historyList");
           const limit = historyLimit;
-          const slice = historyData.slice(-limit).reverse();
+          const slice = historyWithoutCurrentMagnet(historyData).slice(-limit).reverse();
           if (slice.length === 0) {
             listEl.innerHTML =
               '<li class="history-empty">' + escapeHtml(authT("dashboard.historyEmpty")) + "</li>";

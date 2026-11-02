@@ -1007,7 +1007,11 @@
             const entry = entries[i];
             const key = historyDeviceKey(entry);
             const prev = lastKeptByDevice[key];
-            if (prev && prev.status === entry.status) {
+            if (
+              prev &&
+              prev.status === entry.status &&
+              Math.abs((entry.timestamp || 0) - (prev.timestamp || 0)) < 90000
+            ) {
               continue;
             }
             out.push(entry);
@@ -1026,7 +1030,11 @@
             const id = String(entry.deviceId || "").trim().toLowerCase();
             const name = String(entry.deviceName || "").trim().toLowerCase();
             const liveSt = live[id] || live[name];
-            if (liveSt && index === lastIndex[key] && entry.status === liveSt) {
+            if (
+              liveSt === "closed" &&
+              index === lastIndex[key] &&
+              entry.status === "closed"
+            ) {
               return false;
             }
             return true;

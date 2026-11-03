@@ -771,6 +771,7 @@ body.dashboard-overlay-open {
     margin-top: 12px;
     padding: 12px 14px;
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
@@ -781,6 +782,8 @@ body.dashboard-overlay-open {
 .siren-controls > div:first-child {
     display: grid;
     gap: 3px;
+    flex: 1 1 9rem;
+    min-width: 9rem;
 }
 
 .siren-controls strong {
@@ -807,8 +810,16 @@ body.dashboard-overlay-open {
 
 .siren-actions {
     display: flex;
+    flex: 1 1 16rem;
     justify-content: flex-end;
     gap: 8px;
+    min-width: 0;
+}
+
+.siren-actions .mode-btn {
+    min-width: 0;
+    white-space: normal;
+    text-align: center;
 }
 
 .siren-actions .mode-btn:disabled {
@@ -1097,6 +1108,23 @@ body.dashboard-overlay-open {
 
     .device-menu-dropdown {
         max-width: min(11.5rem, calc(100vw - 24px));
+    }
+
+    .siren-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .siren-controls > div:first-child {
+        flex: none;
+        min-width: 0;
+    }
+
+    .siren-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        flex: none;
+        width: 100%;
     }
 }
 

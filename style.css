@@ -1851,7 +1851,7 @@ main {
 
 .app-preview-grid {
     margin: 32px auto 0;
-    max-width: 820px;
+    max-width: 900px;
     display: flex;
     flex-direction: column;
     gap: 28px;
@@ -1860,13 +1860,13 @@ main {
 .app-shot {
     margin: 0;
     display: grid;
-    grid-template-columns: 220px minmax(0, 1fr);
+    grid-template-columns: 280px minmax(0, 1fr);
     align-items: center;
     column-gap: 36px;
 }
 
 .app-shot:nth-child(even) {
-    grid-template-columns: minmax(0, 1fr) 220px;
+    grid-template-columns: minmax(0, 1fr) 280px;
 }
 
 .app-shot:nth-child(even) img {
@@ -1875,7 +1875,7 @@ main {
 
 .app-shot img {
     display: block;
-    width: 220px;
+    width: 280px;
     max-width: 100%;
     height: auto;
     aspect-ratio: 4 / 5;
@@ -1921,7 +1921,7 @@ main {
     }
 
     .app-shot img {
-        width: min(220px, 68vw);
+        width: min(280px, 72vw);
     }
 
     .app-shot figcaption,

@@ -51,8 +51,8 @@ const translations = {
         hero: {
             eyebrow: "When nobody's home...",
             headlineLead: "No monthly fees. No hubs.",
-            title: "Wireless window & door sensors — instant phone alerts and optional local siren",
-            subtitle: "Most break-ins happen through windows and the front door. Our WiFi sensors are easy to install — push alerts on your phone when something opens, plus an optional mains-powered siren director for loud on-site sound and light.",
+            title: "Wireless window & door sensors — instant phone alerts and a siren",
+            subtitle: "Most break-ins happen through windows and the front door. Our WiFi sensors are easy to install — push alerts on your phone when something opens, plus a mains-powered siren for loud on-site sound and light.",
             noExtras: "Sensors and app only — no hub, no extra smart devices required.",
             cta: "Get started with Aura",
             ctaNote: "See how the system works and how you can install it at home"
@@ -96,23 +96,23 @@ const translations = {
             appPushTitle: "A push that names the door",
             appPushText: "When something opens, the phone shows which sensor it was. You do not have to open the app to know.",
             appPushAlt: "iPhone notification: Front Door was opened",
-            sirenTitle: "Local siren director (optional)",
+            sirenTitle: "Siren",
             sirenDesc: "Mains-powered Wi‑Fi unit with wired sound and strobe. Works on the same Aura account as your sensors — not mounted on a sensor. You can add more than one unit in different rooms.",
             emailFallbackNote: "As an additional option: if the notification does not reach your phone, Aura sends a backup email to your account after 1 minute.",
             wifiNote: "To use our sensors, you need a stable WiFi connection at home – the sensors connect to it and send data to the app.",
-            noExtrasNote: "No hub or base station — sensors, home WiFi (2.4 GHz), the free app, and an optional local siren kit if you want on-site sound and light."
+            noExtrasNote: "No hub or base station — sensors, home WiFi (2.4 GHz), the free app, and a siren for on-site sound and light."
         },
         advantages: {
             title: "Our advantages",
             subtitle: "What we offer and why choose Aura.",
             noHub: "<strong>No hub or base station.</strong> Each sensor connects directly to your home WiFi.",
             noEcosystem: "<strong>No Smart Home ecosystems.</strong> No Alexa, Google Home or other central hardware required.",
-            standalone: "<strong>Sensors first.</strong> Optional local siren add-on — no smart-home hub or extra gadgets required.",
+            standalone: "<strong>Sensors first.</strong> Siren — no smart-home hub or extra gadgets required.",
             ownCloud: "<strong>Own cloud</strong> – not a shared platform.",
             pushNotifications: "<strong>Instant push alerts</strong> on open.",
             personalAccount: "<strong>Personal account.</strong> Your data stays yours.",
             longBattery: "<strong>Months on battery, USB-C recharge.</strong> Long runtime on a charge — top up anytime with a standard USB-C cable.",
-            localSiren: "<strong>Up to 102 dB on-site alarm.</strong> Optional siren director with wired horn and strobe — loud at home, not only on your phone."
+            localSiren: "<strong>Up to 102 dB on-site alarm.</strong> Siren with wired horn and strobe — loud at home, not only on your phone."
         },
         pricing: {
             title: "Choose your security pack",
@@ -132,7 +132,7 @@ const translations = {
             requestQuote: "Request order",
             deviceNote: "* Each account can be used on up to 3 devices at the same time (e.g. phone, tablet and laptop).",
             sirenSectionTitle: "Local siren & home packs",
-            sirenSectionSubtitle: "Phone alerts plus optional on-site sound and light. In checkout, choose a kit and add up to 3 siren units (extra units discounted).",
+            sirenSectionSubtitle: "Phone alerts plus on-site sound and light. In checkout, choose a kit and add up to 3 siren units (extra units discounted).",
             sirenName: "Add-on",
             sirenTitle: "Siren director kit",
             sirenDesc: "Mains-powered controller + wired horn/strobe. Enable or stop from the app.",
@@ -170,7 +170,7 @@ const translations = {
             q7: "What phone settings are needed for reliable alerts?",
             a7: "For reliable alerts, allow notifications for the Aura app, set battery usage to unrestricted or disable battery optimization for Aura, allow background activity and keep mobile data or WiFi enabled. If Android does not confirm that an alert was shown within 60 seconds, Aura can send a backup email to the account email address.",
             q8: "Do I need a hub or other extra devices?",
-            a8: "No hub. Each sensor uses your home WiFi (2.4 GHz). An optional local siren director (add-on) uses the same Aura account — it is not built into a sensor and does not replace phone notifications.",
+            a8: "No hub. Each sensor uses your home WiFi (2.4 GHz). A siren uses the same Aura account — it is not built into a sensor and does not replace phone notifications.",
             q9: "Can I use two or more sirens in different rooms?",
             a9: "Yes. A local siren works on the same Aura account as your sensors and needs at least one sensor on that account. If you buy several siren units, they are all linked to those sensors — when any door or window opens, every siren on the account can alarm (useful e.g. upstairs and downstairs).",
             q10: "If I buy a sensor pack with one siren and later buy another siren alone, can it alarm only for one sensor?",
@@ -178,7 +178,7 @@ const translations = {
             q11: "Do all sensors and sirens have to be on the same WiFi network?",
             a11: "No. Each device connects to WiFi (2.4 GHz) on its own and talks to Aura over the internet. Sensors and sirens on your account can use different networks — for example some at home and others at the office — as long as each network has internet and every device is set up on the same Aura account. Then they share one alarm: when any sensor opens, your phone and every siren on that account can react.",
             q12: "How is Aura different from DIY alarm kits with a siren box?",
-            a12: "Many wireless kits use a mains-powered base unit with a built-in siren: door sensors run on replaceable batteries and send alerts to that box over radio — you need the base on each site. Aura sensors connect directly to your Wi‑Fi (2.4 GHz), recharge via USB‑C, and notify your phone with no hub. Add an optional Wi‑Fi siren director for on-site sound and light — still no central alarm station and no monthly app subscription."
+            a12: "Many wireless kits use a mains-powered base unit with a built-in siren: door sensors run on replaceable batteries and send alerts to that box over radio — you need the base on each site. Aura sensors connect directly to your Wi‑Fi (2.4 GHz), recharge via USB‑C, and notify your phone with no hub. Add a Wi‑Fi siren for on-site sound and light — still no central alarm station and no monthly app subscription."
         },
         stats: {
             title: "Dozens of households trust us",
@@ -240,7 +240,7 @@ const translations = {
         },
         buyPanel: {
             title: "Direct order",
-            productDesc: "Choose sensors only, an optional local siren kit, or bundled home packs. No hub — same Aura app for everything.",
+            productDesc: "Choose sensors only, a siren, or bundled home packs. No hub — same Aura app for everything.",
             priceLabel: "Selected product",
             priceValue: "59.00 €",
             shippingNote: "Price does not include shipping – delivery costs are covered by the buyer.",
@@ -639,8 +639,8 @@ const translations = {
         hero: {
             eyebrow: "Wenn niemand zu Hause ist...",
             headlineLead: "Keine Monatsgebühren. Keine Hubs.",
-            title: "Drahtlose Fenster- & Türsensoren — Handy-Meldungen und optionale lokale Sirene",
-            subtitle: "Die meisten Einbrüche passieren über Fenster und Haustür. Unsere WLAN-Sensoren sind einfach zu montieren — Push-Meldungen bei jeder Öffnung, optional mit netzbetriebener Sirene für lauten Alarm und Blitzlicht vor Ort.",
+            title: "Drahtlose Fenster- & Türsensoren — Handy-Meldungen und Sirene",
+            subtitle: "Die meisten Einbrüche passieren über Fenster und Haustür. Unsere WLAN-Sensoren sind einfach zu montieren — Push-Meldungen bei jeder Öffnung, mit netzbetriebener Sirene für lauten Alarm und Blitzlicht vor Ort.",
             noExtras: "Nur Sensoren und App — kein Hub, keine zusätzlichen Smart-Geräte.",
             cta: "Mit Aura starten",
             ctaNote: "Erfahren Sie, wie das System funktioniert und wie Sie es bei sich einbauen können"
@@ -684,23 +684,23 @@ const translations = {
             appPushTitle: "Ein Push, der die Tür nennt",
             appPushText: "Wenn sich etwas öffnet, zeigt das Handy welcher Sensor es war. Die App müssen Sie dafür nicht öffnen.",
             appPushAlt: "iPhone-Mitteilung: Die Haustür wurde geöffnet",
-            sirenTitle: "Lokale Sirene (optional)",
+            sirenTitle: "Sirene",
             sirenDesc: "WLAN-Dirigent mit Netzteil und angeschlossener Ton-/Blitz-Sirene. Gleiches Aura-Konto wie die Sensoren — nicht am Sensor montiert. Mehrere Geräte in verschiedenen Räumen möglich.",
             emailFallbackNote: "Als zusätzliche Option: Wenn die Benachrichtigung Ihr Handy nicht erreicht, sendet Aura nach 1 Minute eine Backup-E-Mail an Ihr Konto.",
             wifiNote: "Für die Nutzung unserer Sensoren ist eine stabile WLAN-Verbindung zu Hause nötig – die Sensoren verbinden sich damit und senden die Daten an die App.",
-            noExtrasNote: "Kein Hub — Sensoren, Heim-WLAN (2,4 GHz), kostenlose App und optional ein lokales Sirenen-Kit für Ton und Licht vor Ort."
+            noExtrasNote: "Kein Hub — Sensoren, Heim-WLAN (2,4 GHz), kostenlose App und eine Sirene für Ton und Licht vor Ort."
         },
         advantages: {
             title: "Unsere Vorteile",
             subtitle: "Was wir bieten und warum Aura wählen.",
             noHub: "<strong>Kein Hub, keine Basisstation.</strong> Jeder Sensor verbindet sich direkt mit Ihrem WLAN.",
             noEcosystem: "<strong>Keine Smart-Home-Ökosysteme.</strong> Kein Alexa, Google Home oder andere Zentralgeräte nötig.",
-            standalone: "<strong>Sensoren im Mittelpunkt.</strong> Optionale lokale Sirene — kein Smart-Home-Hub nötig.",
+            standalone: "<strong>Sensoren im Mittelpunkt.</strong> Sirene — kein Smart-Home-Hub nötig.",
             ownCloud: "<strong>Eigene Cloud</strong> – keine geteilte Plattform.",
             pushNotifications: "<strong>Sofortige Push-Meldungen</strong> bei Öffnung.",
             personalAccount: "<strong>Persönliches Konto.</strong> Ihre Daten bleiben Ihre.",
             longBattery: "<strong>Monatelang Akku, USB-C-Aufladung.</strong> Lange Laufzeit — jederzeit mit einem normalen USB-C-Kabel nachladen.",
-            localSiren: "<strong>Bis ca. 102 dB Alarm vor Ort.</strong> Optionale Sirene mit Horn und Blitz — hörbar zu Hause, nicht nur auf dem Handy."
+            localSiren: "<strong>Bis ca. 102 dB Alarm vor Ort.</strong> Sirene mit Horn und Blitz — hörbar zu Hause, nicht nur auf dem Handy."
         },
         pricing: {
             title: "Wählen Sie Ihr Sicherheitspaket",
@@ -720,7 +720,7 @@ const translations = {
             requestQuote: "Anfrage senden",
             deviceNote: "* Ein Konto kann gleichzeitig auf bis zu 3 Geräten genutzt werden (z. B. Handy, Tablet und Laptop).",
             sirenSectionTitle: "Lokale Sirene & Komplettpakete",
-            sirenSectionSubtitle: "Handy-Meldungen plus optional Ton und Licht vor Ort. Beim Bestellen Kit wählen und bis zu 3 Sirenen (Rabatt auf weitere Einheiten).",
+            sirenSectionSubtitle: "Handy-Meldungen plus Ton und Licht vor Ort. Beim Bestellen Kit wählen und bis zu 3 Sirenen (Rabatt auf weitere Einheiten).",
             sirenName: "Zubehör",
             sirenTitle: "Sirenen-Dirigent Kit",
             sirenDesc: "Netzbetriebene Steuerung + Sirene/Blitz. Ein- und Ausschalten in der App.",
@@ -758,7 +758,7 @@ const translations = {
             q7: "Welche Handy-Einstellungen sind für zuverlässige Alarme nötig?",
             a7: "Für zuverlässige Alarme erlauben Sie Benachrichtigungen für die Aura-App, stellen Sie die Akkunutzung auf „Nicht eingeschränkt“ oder deaktivieren Sie die Akku-Optimierung für Aura, erlauben Sie Hintergrundaktivität und lassen Sie mobile Daten oder WLAN eingeschaltet. Wenn Android nicht innerhalb von 60 Sekunden bestätigt, dass der Alarm angezeigt wurde, kann Aura eine Backup-E-Mail an die E-Mail-Adresse des Kontos senden.",
             q8: "Brauche ich einen Hub oder andere Zusatzgeräte?",
-            a8: "Kein Hub. Jeder Sensor nutzt Ihr Heim-WLAN (2,4 GHz). Optional: lokaler Sirenen-Dirigent (Zubehör) mit demselben Aura-Konto — nicht im Sensor eingebaut, ersetzt keine Handy-Meldungen.",
+            a8: "Kein Hub. Jeder Sensor nutzt Ihr Heim-WLAN (2,4 GHz). Eine Sirene nutzt dasselbe Aura-Konto — nicht im Sensor eingebaut, ersetzt keine Handy-Meldungen.",
             q9: "Kann ich zwei oder mehr Sirenen in verschiedenen Räumen nutzen?",
             a9: "Ja. Eine lokale Sirene läuft mit demselben Aura-Konto wie Ihre Sensoren und setzt mindestens einen Sensor auf diesem Konto voraus. Kaufen Sie mehrere Sirenen, sind alle mit denselben Sensoren verknüpft — öffnet sich eine Tür oder ein Fenster, können alle Sirenen des Kontos alarmieren (z. B. Erd- und Obergeschoss).",
             q10: "Ich kaufe ein Sensorpaket mit einer Sirene und später eine Sirene allein — alarmiert sie nur für einen Sensor?",
@@ -766,7 +766,7 @@ const translations = {
             q11: "Müssen alle Sensoren und Sirenen im gleichen WLAN sein?",
             a11: "Nein. Jedes Gerät verbindet sich selbst mit WLAN (2,4 GHz) und kommuniziert über das Internet mit Aura. Sensoren und Sirenen auf Ihrem Konto können unterschiedliche Netze nutzen — z. B. teils zu Hause, teils im Büro — solange jedes Netz Internet hat und alle Geräte auf demselben Aura-Konto eingerichtet sind. Dann teilen sie einen gemeinsamen Alarm: Öffnet sich ein Sensor, können Handy und alle Sirenen dieses Kontos reagieren.",
             q12: "Worin unterscheidet sich Aura von DIY-Alarmsets mit Sirenen-Box?",
-            a12: "Viele Funk-Sets haben eine netzbetriebene Basis mit eingebauter Sirene: Türsensoren laufen mit Wechselbatterien und melden per Funk an diese Box — pro Standort brauchen Sie die Zentrale. Aura-Sensoren verbinden sich direkt mit WLAN (2,4 GHz), laden per USB‑C und melden ohne Hub ans Handy. Optional eine WLAN-Sirene für Ton und Licht vor Ort — weiterhin keine Alarm-Zentrale und kein monatliches App-Abo."
+            a12: "Viele Funk-Sets haben eine netzbetriebene Basis mit eingebauter Sirene: Türsensoren laufen mit Wechselbatterien und melden per Funk an diese Box — pro Standort brauchen Sie die Zentrale. Aura-Sensoren verbinden sich direkt mit WLAN (2,4 GHz), laden per USB‑C und melden ohne Hub ans Handy. Eine WLAN-Sirene für Ton und Licht vor Ort — weiterhin keine Alarm-Zentrale und kein monatliches App-Abo."
         },
         stats: {
             title: "Dutzende Haushalte vertrauen uns",
@@ -828,7 +828,7 @@ const translations = {
         },
         buyPanel: {
             title: "Direktbestellung",
-            productDesc: "Nur Sensoren, optionales Sirenen-Kit oder Komplettpakete — ohne Hub, alles in derselben Aura-App.",
+            productDesc: "Nur Sensoren, Sirene oder Komplettpakete — ohne Hub, alles in derselben Aura-App.",
             priceLabel: "Gewähltes Produkt",
             priceValue: "59.00 €",
             shippingNote: "Der Preis enthält keine Lieferung – die Versandkosten trägt der Käufer.",

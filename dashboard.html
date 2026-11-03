@@ -987,19 +987,6 @@
         function historyDeviceKey(entry) {
           return String(entry.deviceId || entry.deviceName || "").trim().toLowerCase();
         }
-        function liveMagnetStatusMap() {
-          const map = {};
-          const data = lastDevicesSnap && lastDevicesSnap.val();
-          if (!data || typeof data !== "object") return map;
-          Object.keys(data).forEach(function (id) {
-            const d = data[id] || {};
-            const st = d.status === true ? "closed" : "open";
-            map[String(id).trim().toLowerCase()] = st;
-            const name = String(d.displayName || d.deviceName || "").trim().toLowerCase();
-            if (name) map[name] = st;
-          });
-          return map;
-        }
         function dedupeHistoryEntries(entries) {
           const lastKeptByDevice = {};
           const out = [];
@@ -1007,11 +994,7 @@
             const entry = entries[i];
             const key = historyDeviceKey(entry);
             const prev = lastKeptByDevice[key];
-            if (
-              prev &&
-              prev.status === entry.status &&
-              Math.abs((entry.timestamp || 0) - (prev.timestamp || 0)) < 90000
-            ) {
+            if (prev && prev.status === entry.status) {
               continue;
             }
             out.push(entry);
@@ -1020,25 +1003,7 @@
           return out;
         }
         function historyForList(entries) {
-          const live = liveMagnetStatusMap();
-          const lastIndex = {};
-          entries.forEach(function (entry, index) {
-            lastIndex[historyDeviceKey(entry)] = index;
-          });
-          return entries.filter(function (entry, index) {
-            const key = historyDeviceKey(entry);
-            const id = String(entry.deviceId || "").trim().toLowerCase();
-            const name = String(entry.deviceName || "").trim().toLowerCase();
-            const liveSt = live[id] || live[name];
-            if (
-              liveSt === "closed" &&
-              index === lastIndex[key] &&
-              entry.status === "closed"
-            ) {
-              return false;
-            }
-            return true;
-          });
+          return entries;
         }
         function renderHistory() {
           const listEl = document.getElementById("historyList");

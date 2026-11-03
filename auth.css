@@ -1295,16 +1295,20 @@ body.dashboard-overlay-open {
 }
 
 .history-list {
+    --history-row: 50px;
+    --history-gap: 10px;
     list-style: none;
     margin: 0;
     padding: 0;
-    max-height: 420px;
+    max-height: calc(7 * var(--history-row) + 6 * var(--history-gap));
     overflow-y: auto;
 }
 
 .history-item {
+    box-sizing: border-box;
+    height: var(--history-row, 50px);
     padding: 12px 14px;
-    margin-bottom: 10px;
+    margin-bottom: var(--history-gap, 10px);
     background: rgba(15, 23, 42, 0.4);
     border: 1px solid rgba(148, 163, 184, 0.15);
     border-radius: 14px;

@@ -105,11 +105,9 @@ const translations = {
         advantages: {
             title: "Our advantages",
             subtitle: "What we offer and why choose Aura.",
-            noHub: "<strong>No hub or base station.</strong> Each sensor connects directly to your home WiFi.",
             noEcosystem: "<strong>No Smart Home ecosystems.</strong> No Alexa, Google Home or other central hardware required.",
             standalone: "<strong>Sensors first.</strong> Siren — no smart-home hub or extra gadgets required.",
             ownCloud: "<strong>Own cloud</strong> – not a shared platform.",
-            pushNotifications: "<strong>Instant push alerts</strong> on open.",
             personalAccount: "<strong>Personal account.</strong> Your data stays yours.",
             longBattery: "<strong>Months on battery, USB-C recharge.</strong> Long runtime on a charge — top up anytime with a standard USB-C cable.",
             localSiren: "<strong>Up to 102 dB on-site alarm.</strong> Siren with wired horn and strobe — loud at home, not only on your phone."
@@ -694,11 +692,9 @@ const translations = {
         advantages: {
             title: "Unsere Vorteile",
             subtitle: "Was wir bieten und warum Aura wählen.",
-            noHub: "<strong>Kein Hub, keine Basisstation.</strong> Jeder Sensor verbindet sich direkt mit Ihrem WLAN.",
             noEcosystem: "<strong>Keine Smart-Home-Ökosysteme.</strong> Kein Alexa, Google Home oder andere Zentralgeräte nötig.",
             standalone: "<strong>Sensoren im Mittelpunkt.</strong> Sirene — kein Smart-Home-Hub nötig.",
             ownCloud: "<strong>Eigene Cloud</strong> – keine geteilte Plattform.",
-            pushNotifications: "<strong>Sofortige Push-Meldungen</strong> bei Öffnung.",
             personalAccount: "<strong>Persönliches Konto.</strong> Ihre Daten bleiben Ihre.",
             longBattery: "<strong>Monatelang Akku, USB-C-Aufladung.</strong> Lange Laufzeit — jederzeit mit einem normalen USB-C-Kabel nachladen.",
             localSiren: "<strong>Bis ca. 102 dB Alarm vor Ort.</strong> Sirene mit Horn und Blitz — hörbar zu Hause, nicht nur auf dem Handy."

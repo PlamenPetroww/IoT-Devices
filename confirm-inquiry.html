@@ -29,7 +29,7 @@
     </style>
   </head>
   <body>
-    <p class="loading" id="msg">Обработка на потвърждението...</p>
+    <p class="loading" id="msg">Confirming...</p>
     <script src="inquiry-config.js"></script>
     <script>
       (function () {
@@ -38,14 +38,14 @@
         var msg = document.getElementById("msg");
         if (!token) {
           msg.className = "error";
-          msg.textContent = "Липсва код за потвърждение.";
+          msg.textContent = "Missing confirmation code.";
           return;
         }
         var base = window.INQUIRY_FUNCTIONS_BASE_URL || "";
         if (!base) {
           msg.className = "error";
           msg.textContent =
-            "Не е зададен адрес за потвърждение. Свържете се с администратора.";
+            "Confirmation address is not set. Please contact the administrator.";
           return;
         }
         var confirmUrl =
@@ -64,7 +64,7 @@
           .catch(function () {
             msg.className = "error";
             msg.textContent =
-              "Възникна грешка при потвърждението. Опитайте отново или свържете се с нас.";
+              "Confirmation failed. Try again or contact us.";
           });
       })();
     </script>

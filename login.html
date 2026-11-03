@@ -18,11 +18,11 @@
   <body class="auth-page" data-i18n-page="login">
     <div class="auth-box">
       <h1>Aura HomeSystems</h1>
-      <p class="subtitle" data-i18n="auth.loginSubtitle">Вход в таблото</p>
+      <p class="subtitle" data-i18n="auth.loginSubtitle">Sign in to the dashboard</p>
       <form id="loginForm" class="auth-form">
         <div id="loginError" class="auth-error"></div>
         <div id="loginSuccess" class="auth-success"></div>
-        <label for="email" data-i18n="auth.email">Имейл</label>
+        <label for="email" data-i18n="auth.email">Email</label>
         <input
           type="email"
           id="email"
@@ -32,13 +32,13 @@
           placeholder="you@example.com"
         />
         <div class="auth-field-row">
-          <label for="password" data-i18n="auth.password">Парола</label>
+          <label for="password" data-i18n="auth.password">Password</label>
           <a href="#" class="auth-forgot-link" id="forgotPasswordLink" data-i18n="auth.forgotPassword"
-            >Забравена парола?</a
+            >Forgot password?</a
           >
         </div>
         <p class="auth-hint" data-i18n="auth.forgotPasswordHint">
-          Въведете имейла си в полето по-горе, после натиснете „Забравена парола?“.
+          Enter your email above, then tap “Forgot password?”.
         </p>
         <input
           type="password"
@@ -48,17 +48,17 @@
           autocomplete="current-password"
           placeholder="••••••••"
         />
-        <button type="submit" id="submitBtn" data-i18n="auth.submitLogin">Вход</button>
+        <button type="submit" id="submitBtn" data-i18n="auth.submitLogin">Sign in</button>
       </form>
       <p class="auth-links">
-        <span data-i18n="auth.noAccount">Нямате профил?</span>
-        <a href="register.html" data-i18n="nav.register">Регистрация</a><br />
-        <a href="index.html" data-i18n="auth.backToSite">← Обратно към сайта</a>
+        <span data-i18n="auth.noAccount">Don't have an account?</span>
+        <a href="register.html" data-i18n="nav.register">Register</a><br />
+        <a href="index.html" data-i18n="auth.backToSite">← Back to website</a>
       </p>
       <p class="auth-footer">
-        <a href="delete-account.html" data-i18n="auth.deleteAccount">Изтриване на акаунт</a> ·
-        <a href="impressum.html" data-i18n="footer.impressum">Импресум</a> ·
-        <a href="privacy.html" data-i18n="footer.privacy">Политика за поверителност</a>
+        <a href="delete-account.html" data-i18n="auth.deleteAccount">Delete account</a> ·
+        <a href="impressum.html" data-i18n="footer.impressum">Impressum</a> ·
+        <a href="privacy.html" data-i18n="footer.privacy">Privacy Policy</a>
       </p>
     </div>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>

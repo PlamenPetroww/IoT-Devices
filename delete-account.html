@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       name="description"
-      content="Постоянно изтриване на вашия Aura HomeSystems акаунт и свързаните данни."
+      content="Permanently delete your Aura HomeSystems account and related data."
     />
     <link rel="icon" type="image/png" href="favicon.png" />
     <link rel="manifest" href="/manifest.json" />
@@ -22,33 +22,30 @@
   <body class="auth-page" data-i18n-page="delete">
     <div class="auth-box delete-account-box">
       <h1>Aura HomeSystems</h1>
-      <p class="subtitle" data-i18n="deleteAccount.subtitle">Изтриване на акаунт</p>
+      <p class="subtitle" data-i18n="deleteAccount.subtitle">Delete account</p>
 
       <div id="stateLoggedOut" class="delete-account-state" style="display: none">
         <p class="delete-account-info" data-i18n="deleteAccount.loggedOutInfo">
-          За да изтриете акаунта си, влезте с имейл и парола. След това ще
-          потвърдите изтриването на тази страница.
+          To delete your account, sign in with email and password. Then confirm deletion on this page.
         </p>
         <p class="auth-links">
-          <a href="login.html?next=delete-account.html" data-i18n="deleteAccount.login">Вход</a>
+          <a href="login.html?next=delete-account.html" data-i18n="deleteAccount.login">Sign in</a>
           ·
-          <a href="register.html" data-i18n="deleteAccount.register">Регистрация</a>
+          <a href="register.html" data-i18n="deleteAccount.register">Register</a>
         </p>
       </div>
 
       <div id="stateLoggedIn" class="delete-account-state" style="display: none">
         <div class="delete-account-warning" role="alert" data-i18n-html="deleteAccount.warningHtml">
-          <strong>Внимание:</strong> това действие е <strong>необратимо</strong>.
-          Ще бъдат изтрити акаунтът ви, данните в таблото (сензори, история, push
-          токени) и няма да можете да ги възстановите.
+          <strong>Warning:</strong> this action is <strong>irreversible</strong>. Your account, dashboard data (sensors, history, push tokens) will be deleted and cannot be restored.
         </div>
         <p class="delete-account-email">
-          <span data-i18n="deleteAccount.loggedInAs">Влезли сте като:</span>
+          <span data-i18n="deleteAccount.loggedInAs">Signed in as:</span>
           <strong id="deleteEmail"></strong>
         </p>
         <form id="deleteForm" class="auth-form" autocomplete="off">
           <div id="deleteError" class="auth-error"></div>
-          <label for="confirmPassword" data-i18n="deleteAccount.passwordLabel">Парола (за потвърждение)</label>
+          <label for="confirmPassword" data-i18n="deleteAccount.passwordLabel">Password (confirmation)</label>
           <input
             type="password"
             id="confirmPassword"
@@ -60,18 +57,18 @@
             placeholder="••••••••"
           />
           <button type="submit" id="deleteSubmitBtn" class="btn-delete-account" data-i18n="deleteAccount.submit">
-            Постоянно изтриване на акаунта
+            Permanently delete account
           </button>
         </form>
       </div>
 
       <p class="auth-links">
-        <a href="index.html" data-i18n="deleteAccount.backHome">← Към началната страница</a>
+        <a href="index.html" data-i18n="deleteAccount.backHome">← Back to homepage</a>
       </p>
       <p class="auth-footer">
-        <a href="privacy.html" data-i18n="footer.privacy">Политика за поверителност</a>
+        <a href="privacy.html" data-i18n="footer.privacy">Privacy Policy</a>
         ·
-        <a href="impressum.html" data-i18n="footer.impressum">Импресум</a>
+        <a href="impressum.html" data-i18n="footer.impressum">Impressum</a>
       </p>
     </div>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>

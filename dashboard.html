@@ -25,7 +25,7 @@
         <a
           href="dashboard.html"
           class="dashboard-brand-link"
-          aria-label="Табло Aura HomeSystems"
+          aria-label="Aura HomeSystems dashboard"
           data-i18n-aria="dashboard.brandAria"
         >
           <h1>Aura <span class="brand-accent">Home</span>Systems</h1>
@@ -40,7 +40,7 @@
             aria-expanded="false"
             aria-haspopup="true"
             aria-controls="headerMenuDropdown"
-            aria-label="Меню акаунт"
+            aria-label="Account menu"
             data-i18n-aria="dashboard.menuAria"
           >
             <span aria-hidden="true">⋯</span>
@@ -77,7 +77,7 @@
               class="header-menu-item header-menu-item--danger"
               role="menuitem"
               data-i18n="dashboard.deleteAccount"
-              >Изтриване на акаунт</a
+              >Delete account</a
             >
             <a
               href="login.html"
@@ -85,7 +85,7 @@
               class="header-menu-item"
               role="menuitem"
               data-i18n="dashboard.logout"
-              >Изход</a
+              >Sign out</a
             >
             <span
               id="appVersionMenu"
@@ -100,7 +100,7 @@
     <main class="dashboard-layout" id="dashboardMain">
       <section class="dashboard-top">
         <div class="devices-card" id="devicesCard">
-          <h2 data-i18n="dashboard.sensorsTitle">Вашите сензори</h2>
+          <h2 data-i18n="dashboard.sensorsTitle">Your sensors</h2>
           <div
             id="duplicateNamesWarning"
             class="duplicate-names-warning"
@@ -108,12 +108,12 @@
             role="alert"
           ></div>
           <div id="devicesList">
-            <p class="devices-empty" data-i18n="dashboard.loading">Зареждане...</p>
+            <p class="devices-empty" data-i18n="dashboard.loading">Loading...</p>
           </div>
           <div id="removedDevicesSection" class="removed-devices-section" hidden>
-            <h3 data-i18n="dashboard.removedTitle">Премахнати сензори</h3>
+            <h3 data-i18n="dashboard.removedTitle">Removed sensors</h3>
             <p class="removed-devices-desc" data-i18n="dashboard.removedDesc">
-              Не се показват в списъка и не изпращат известия. Можете да ги възстановите по всяко време.
+              Hidden from the list and no alerts. You can restore them anytime.
             </p>
             <div id="removedDevicesList"></div>
           </div>
@@ -122,12 +122,12 @@
       <div class="dashboard-bottom">
         <aside class="dashboard-history">
           <div class="history-card">
-            <h2 data-i18n="dashboard.historyTitle">История</h2>
+            <h2 data-i18n="dashboard.historyTitle">History</h2>
             <p class="history-desc" data-i18n="dashboard.historyDesc">
-              Последни промени отворено/затворено по сензорите.
+              Recent open/close events per sensor.
             </p>
             <div class="history-controls">
-              <span data-i18n="dashboard.historyShow">Покажи:</span>
+              <span data-i18n="dashboard.historyShow">Show:</span>
               <button
                 type="button"
                 class="history-limit-btn active"
@@ -143,39 +143,38 @@
               </button>
             </div>
             <ul id="historyList" class="history-list">
-              <li class="history-empty" data-i18n="dashboard.historyEmpty">Няма записи в историята.</li>
+              <li class="history-empty" data-i18n="dashboard.historyEmpty">No history entries yet.</li>
             </ul>
           </div>
         </aside>
         <aside class="dashboard-mode">
           <div class="mode-card">
-            <h2 data-i18n="dashboard.modeTitle">Режим на системата</h2>
+            <h2 data-i18n="dashboard.modeTitle">System mode</h2>
             <p data-i18n="dashboard.modeDesc">
-              Когато системата е „Навън“, сензорите се следят и получавате
-              известия. В режим „Аз съм у дома“ системата е изключена.
+              When the system is “Away”, sensors are monitored and you receive alerts. In “Home” mode the system is off.
             </p>
             <div class="mode-buttons">
               <button type="button" id="modeHome" class="mode-btn active" data-i18n="dashboard.modeHome">
-                🏠 У дома
+                🏠 Home
               </button>
               <button type="button" id="modeAway" class="mode-btn danger" data-i18n="dashboard.modeAway">
-                🛡️ Навън
+                🛡️ Away
               </button>
             </div>
             <div id="sensorStatusMsg" class="sensor-status-msg home">
-              🏠 Сензорите са изключени (режим „Аз съм у дома“).
+              🏠 Sensors are off (Home mode).
             </div>
             <div id="sirenControls" class="siren-controls">
               <div>
-                <strong data-i18n="dashboard.sirenTitle">Сирена</strong>
-                <span id="sirenStatus" data-i18n="dashboard.sirenUnavailable">Не е свързана</span>
+                <strong data-i18n="dashboard.sirenTitle">Siren</strong>
+                <span id="sirenStatus" data-i18n="dashboard.sirenUnavailable">Not connected</span>
               </div>
               <div class="siren-actions">
                 <button type="button" id="sirenEnable" class="mode-btn siren-toggle" data-i18n="dashboard.sirenEnable" disabled>
-                  Включи сирената
+                  Enable siren
                 </button>
                 <button type="button" id="sirenStop" class="mode-btn danger siren-toggle" data-i18n="dashboard.sirenStop" disabled>
-                  Спри сирената
+                  Stop siren
                 </button>
               </div>
             </div>
@@ -184,12 +183,12 @@
       </div>
     </main>
     <footer class="dashboard-footer">
-      <a href="index.html" class="back-home" data-i18n="auth.backToSite">← Обратно към сайта</a>
-      <span class="footer-sep">·</span> <a href="impressum.html" data-i18n="footer.impressum">Импресум</a>
+      <a href="index.html" class="back-home" data-i18n="auth.backToSite">← Back to website</a>
+      <span class="footer-sep">·</span> <a href="impressum.html" data-i18n="footer.impressum">Impressum</a>
       <span class="footer-sep">·</span>
-      <a href="privacy.html" data-i18n="footer.privacy">Политика за поверителност</a>
+      <a href="privacy.html" data-i18n="footer.privacy">Privacy Policy</a>
       <span class="footer-sep">·</span>
-      <a href="delete-account.html" data-i18n="dashboard.deleteAccount">Изтриване на акаунт</a>
+      <a href="delete-account.html" data-i18n="dashboard.deleteAccount">Delete account</a>
       <span id="appVersionLine" class="app-version-line" hidden></span>
     </footer>
     <div
@@ -205,18 +204,17 @@
         aria-labelledby="pushOnboardingTitle"
         aria-describedby="pushOnboardingDesc"
       >
-        <h3 id="pushOnboardingTitle" data-i18n="dashboard.pushOnboardingTitle">Известия при отваряне</h3>
+        <h3 id="pushOnboardingTitle" data-i18n="dashboard.pushOnboardingTitle">Open alerts</h3>
         <p id="pushOnboardingDesc" data-i18n="dashboard.pushOnboardingDesc">
-          Искате ли да получавате сигнал на телефона, когато врата или прозорец
-          се отвори?
+          Would you like a phone alert when a door or window opens?
         </p>
         <p id="pushDialogHint" class="push-dialog-hint" hidden></p>
         <div class="push-dialog-actions push-dialog-actions--row">
           <button type="button" id="pushOverlayYes" class="push-dialog-btn yes" data-i18n="dashboard.pushYes">
-            Да
+            Yes
           </button>
           <button type="button" id="pushOverlayNo" class="push-dialog-btn no" data-i18n="dashboard.pushNo">
-            Не
+            No
           </button>
         </div>
       </div>
@@ -227,21 +225,20 @@
         aria-labelledby="pushAwayTitle"
         hidden
       >
-        <h3 id="pushAwayTitle" data-i18n="dashboard.pushAwayTitle">Известия в режим „Навън“</h3>
+        <h3 id="pushAwayTitle" data-i18n="dashboard.pushAwayTitle">Alerts in Away mode</h3>
         <p data-i18n="dashboard.pushAwayDesc">
-          За сигнал на телефона при отваряне включете известията. Можете и само
-          да активирате следенето без push.
+          Enable notifications for phone alerts on open. You can also enable monitoring without push.
         </p>
         <p id="pushAwayHint" class="push-dialog-hint" hidden></p>
         <div class="push-dialog-actions">
           <button type="button" id="pushAwayEnable" class="push-dialog-btn yes" data-i18n="dashboard.pushAwayEnable">
-            Да, включи известия
+            Yes, enable notifications
           </button>
           <button type="button" id="pushAwaySkip" class="push-dialog-btn secondary" data-i18n="dashboard.pushAwaySkip">
-            Само „Навън“ без push
+            Away only, no push
           </button>
           <button type="button" id="pushAwayCancel" class="push-dialog-btn no" data-i18n="dashboard.pushAwayCancel">
-            Отказ
+            Cancel
           </button>
         </div>
       </div>

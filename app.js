@@ -339,7 +339,7 @@ function initContactForm() {
         const functionsBase = (typeof window !== "undefined" && window.INQUIRY_FUNCTIONS_BASE_URL) ? window.INQUIRY_FUNCTIONS_BASE_URL.trim() : "";
         const useVerifyFlow = !!functionsBase;
         if (!useVerifyFlow && FORMSPREE_FORM_ID === "YOUR_FORMSPREE_FORM_ID") {
-            statusEl.textContent = "Настройте FORMSPREE_FORM_ID в app.js или INQUIRY_FUNCTIONS_BASE_URL в inquiry-config.js.";
+            statusEl.textContent = "Set FORMSPREE_FORM_ID in app.js or INQUIRY_FUNCTIONS_BASE_URL in inquiry-config.js.";
             statusEl.className = "form-status form-status-error";
             return;
         }
@@ -892,7 +892,7 @@ function initBuyPanel() {
             banner.style.cssText =
                 "position:fixed;bottom:0;left:0;right:0;background:#f59e0b;color:#111;text-align:center;padding:8px 12px;font-size:14px;z-index:9999;";
             banner.textContent =
-                "Тестови цени (0.01 €) – само за проверка на плащането с карта";
+                "Test prices (0.01 €) – only for checking card payment";
             document.body.appendChild(banner);
         }
     }
@@ -1202,7 +1202,7 @@ function initBuyPanel() {
         const useVerifyFlow = !!functionsBase;
         if (!useVerifyFlow && FORMSPREE_FORM_ID === "YOUR_FORMSPREE_FORM_ID") {
             if (buyStatus) {
-                buyStatus.textContent = "Настройте FORMSPREE_FORM_ID в app.js.";
+                buyStatus.textContent = "Set FORMSPREE_FORM_ID in app.js.";
                 buyStatus.className = "form-status form-status-error";
             }
             return false;
@@ -1458,7 +1458,7 @@ function initBuyPanel() {
                 let errMsg = (err && err.message) || tBuy("buyPanel.cardPayInitError") || "";
                 if (errMsg === "Invalid amount or currency" && pricingCfg.testMode) {
                     errMsg =
-                        "Сървърът още не е с тестовите цени. Изчакай 2–3 мин след deploy на Render и презареди страницата.";
+                        "The server is not on test prices yet. Wait 2–3 minutes after the Render deploy and reload the page.";
                 }
                 buyStatus.textContent = errMsg;
                 buyStatus.className = "form-status form-status-error";

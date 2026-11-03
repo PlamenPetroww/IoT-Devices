@@ -1036,7 +1036,17 @@
                 iconLookup.byId[entry.deviceId] ||
                 iconLookup.byName[entry.deviceName] ||
                 getIconForSensor(entry.deviceName || entry.deviceId);
-              return `<li class="history-item ${entry.status} ${htint}"><span class="sensor-icon" aria-hidden="true">${icon}</span><span class="history-name">${escapeHtml(entry.deviceName)}</span> <span class="history-status">${label}</span> <time class="history-time">${timeStr}</time></li>`;
+              const liveDevice =
+                lastDevicesSnap &&
+                lastDevicesSnap.val() &&
+                entry.deviceId &&
+                lastDevicesSnap.val()[entry.deviceId];
+              const historyName =
+                (liveDevice &&
+                  String(liveDevice.displayName || liveDevice.deviceName || "").trim()) ||
+                entry.deviceName ||
+                entry.deviceId;
+              return `<li class="history-item ${entry.status} ${htint}"><span class="sensor-icon" aria-hidden="true">${icon}</span><span class="history-name">${escapeHtml(historyName)}</span> <span class="history-status">${label}</span> <time class="history-time">${timeStr}</time></li>`;
             })
             .join("");
         }

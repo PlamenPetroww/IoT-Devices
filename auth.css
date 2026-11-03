@@ -560,8 +560,8 @@
 
 .mode-card {
     padding: 24px 26px;
-    background: linear-gradient(160deg, rgba(15, 23, 42, 0.97) 0%, rgba(2, 6, 23, 0.98) 100%);
-    border: 1px solid rgba(148, 163, 184, 0.2);
+    background: linear-gradient(160deg, #243044 0%, #1a2436 100%);
+    border: 1px solid rgba(148, 163, 184, 0.32);
     border-radius: 18px;
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.03) inset;
     width: 100%;
@@ -829,8 +829,8 @@ body.dashboard-overlay-open {
 
 .devices-card {
     padding: 28px 28px 32px;
-    background: linear-gradient(160deg, rgba(15, 23, 42, 0.97) 0%, rgba(2, 6, 23, 0.98) 100%);
-    border: 1px solid rgba(148, 163, 184, 0.2);
+    background: linear-gradient(160deg, #243044 0%, #1a2436 100%);
+    border: 1px solid rgba(148, 163, 184, 0.32);
     border-radius: 18px;
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.03) inset;
     width: 100%;
@@ -1257,8 +1257,8 @@ body.dashboard-overlay-open {
 /* История – последни промени отворено/затворено */
 .history-card {
     padding: 24px 26px;
-    background: linear-gradient(160deg, rgba(15, 23, 42, 0.97) 0%, rgba(2, 6, 23, 0.98) 100%);
-    border: 1px solid rgba(148, 163, 184, 0.2);
+    background: linear-gradient(160deg, #243044 0%, #1a2436 100%);
+    border: 1px solid rgba(148, 163, 184, 0.32);
     border-radius: 18px;
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.03) inset;
     width: 100%;

@@ -1684,12 +1684,12 @@ main {
 
 .product-note {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
     justify-content: center;
-    gap: 12px;
+    gap: 16px;
     padding: 22px 28px 18px;
-    text-align: center;
+    text-align: left;
 }
 
 .product-note + .product-note {
@@ -1722,7 +1722,7 @@ main {
     line-height: 1.65;
     font-weight: 400;
     color: var(--text-muted);
-    text-align: center;
+    text-align: left;
 }
 
 @media (max-width: 520px) {

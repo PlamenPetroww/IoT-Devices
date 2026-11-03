@@ -1869,11 +1869,10 @@ main {
     display: block;
     width: 100%;
     height: auto;
-    max-height: 560px;
-    object-fit: contain;
-    object-position: top center;
+    aspect-ratio: 4 / 5;
+    object-fit: cover;
     border-radius: 18px;
-    background: #020617;
+    background: #0e1524;
 }
 
 .app-shot figcaption {

@@ -994,6 +994,7 @@ function forwardToFormspree(body, callback) {
     message: body.message || "",
     phone: body.phone || "",
     sensorsTotal: body.sensorsTotal,
+    sirensTotal: body.sirensTotal,
     orderType: body.orderType,
     quantity: body.quantity,
     paymentMethod: body.paymentMethod,

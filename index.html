@@ -693,6 +693,40 @@
                 </div>
               </label>
               <label class="form-label">
+                <span class="form-label-text" data-i18n="form.sirensTotal"
+                  >Sirens – total quantity (optional)</span
+                >
+                <div class="quantity-stepper">
+                  <button
+                    type="button"
+                    class="quantity-btn"
+                    id="formSirensTotalMinus"
+                    data-i18n-aria-label="buyPanel.quantityDecrease"
+                    aria-label="Decrease"
+                  >
+                    −
+                  </button>
+                  <input
+                    type="number"
+                    name="sirensTotal"
+                    id="formSirensTotalInput"
+                    class="form-input quantity-input form-input-number"
+                    min="0"
+                    max="99"
+                    value="0"
+                  />
+                  <button
+                    type="button"
+                    class="quantity-btn"
+                    id="formSirensTotalPlus"
+                    data-i18n-aria-label="buyPanel.quantityIncrease"
+                    aria-label="Increase"
+                  >
+                    +
+                  </button>
+                </div>
+              </label>
+              <label class="form-label">
                 <span class="form-label-text" data-i18n="form.phone"
                   >Phone</span
                 >

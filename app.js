@@ -334,6 +334,22 @@ function initContactForm() {
         });
     }
 
+    const sirensInput = document.getElementById("formSirensTotalInput");
+    const sirensMinus = document.getElementById("formSirensTotalMinus");
+    const sirensPlus = document.getElementById("formSirensTotalPlus");
+    if (sirensInput && sirensMinus && sirensPlus) {
+        sirensMinus.addEventListener("click", () => {
+            let v = parseInt(sirensInput.value, 10);
+            if (!Number.isFinite(v)) v = 0;
+            sirensInput.value = Math.max(0, v - 1);
+        });
+        sirensPlus.addEventListener("click", () => {
+            let v = parseInt(sirensInput.value, 10);
+            if (!Number.isFinite(v)) v = 0;
+            sirensInput.value = Math.min(99, v + 1);
+        });
+    }
+
     form.addEventListener("submit", async (e) => {
         e.preventDefault();
         const functionsBase = (typeof window !== "undefined" && window.INQUIRY_FUNCTIONS_BASE_URL) ? window.INQUIRY_FUNCTIONS_BASE_URL.trim() : "";
@@ -366,11 +382,12 @@ function initContactForm() {
                 const message = form.querySelector('textarea[name="message"]').value.trim();
                 const phone = (form.querySelector('input[name="phone"]') && form.querySelector('input[name="phone"]').value) || "";
                 const sensorsTotal = (form.querySelector('input[name="sensorsTotal"]') && form.querySelector('input[name="sensorsTotal"]').value) || "0";
+                const sirensTotal = (form.querySelector('input[name="sirensTotal"]') && form.querySelector('input[name="sirensTotal"]').value) || "0";
                 const baseUrl = window.location.origin + (window.location.pathname || "").replace(/[^/]+$/, "").replace(/\/$/, "");
                 const res = await fetch(functionsBase.replace(/\/$/, "") + "/submitInquiry", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ email, subject, message, phone, sensorsTotal, baseUrl })
+                    body: JSON.stringify({ email, subject, message, phone, sensorsTotal, sirensTotal, baseUrl })
                 });
                 const data = await res.json().catch(() => ({}));
                 if (res.ok && data.success) {

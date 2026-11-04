@@ -1000,7 +1000,17 @@
           return out;
         }
         function historyForList(entries) {
-          return entries;
+          const newestByDevice = {};
+          entries.forEach(function (entry) {
+            const key = historyDeviceKey(entry);
+            const prev = newestByDevice[key];
+            if (!prev || (entry.timestamp || 0) >= (prev.timestamp || 0)) {
+              newestByDevice[key] = entry;
+            }
+          });
+          return entries.filter(function (entry) {
+            return newestByDevice[historyDeviceKey(entry)] !== entry;
+          });
         }
         function renderHistory() {
           const listEl = document.getElementById("historyList");

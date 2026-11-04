@@ -390,6 +390,22 @@
         const historyRef = db.ref(userPath + "/history");
         let lastDevicesSnap = null;
         let lastRemovedSnap = null;
+        let lastSettingsSnap = null;
+        function deviceSetting(id) {
+          var all = lastSettingsSnap && lastSettingsSnap.val();
+          if (!all || !id) return {};
+          return all[id] || {};
+        }
+        function shownDeviceName(id, device) {
+          var saved = String(deviceSetting(id).displayName || "").trim();
+          if (saved) return saved;
+          var d = device || {};
+          return String(d.displayName || d.deviceName || id || "").trim();
+        }
+        function shownDeviceIcon(id, device) {
+          var d = device || {};
+          return deviceSetting(id).displayIcon || d.displayIcon || null;
+        }
         var SENSOR_EMOJI_OPTIONS = [
           "🚪", "🪟", "🚗", "🏠",
           "🛏️", "🛋️", "🍳", "🛁",
@@ -446,8 +462,8 @@
           Object.entries(data).forEach(function (pair) {
             var id = pair[0];
             var d = pair[1] || {};
-            var name = String(d.displayName || d.deviceName || id).trim();
-            var icon = resolveSensorIcon(name, d.displayIcon);
+            var name = shownDeviceName(id, d);
+            var icon = resolveSensorIcon(name, shownDeviceIcon(id, d));
             byId[id] = icon;
             if (name) byName[name] = icon;
           });
@@ -544,12 +560,12 @@
             .map(function (pair) {
               var id = pair[0];
               var d = pair[1];
-              var name = (d && (d.displayName || d.deviceName)) || id;
+              var name = shownDeviceName(id, d);
               var fromDevice = (d && d.status) === true ? "closed" : "open";
               return {
                 id: id,
                 name: name,
-                displayIcon: d && d.displayIcon ? String(d.displayIcon) : null,
+                displayIcon: shownDeviceIcon(id, d),
                 status: fromDevice,
                 lastSeen: d && d.lastSeen,
                 battery:
@@ -737,6 +753,19 @@
           console.error("[dashboard] devices read failed:", err);
           showDevicesError(authT("dashboard.devicesError"));
         });
+        db.ref(userPath + "/deviceSettings").on(
+          "value",
+          function (snap) {
+            lastSettingsSnap = snap;
+            if (lastDevicesSnap) {
+              renderDevicesFromSnap(lastDevicesSnap);
+              renderHistory();
+            }
+          },
+          function (err) {
+            console.error("[dashboard] deviceSettings read failed:", err);
+          }
+        );
         db.ref(userPath + "/removedDevices").on(
           "value",
           function (snap) {
@@ -815,17 +844,23 @@
                 emoji &&
                 SENSOR_EMOJI_OPTIONS.indexOf(emoji) !== -1
               ) {
-                db.ref(userPath + "/devices/" + deviceId).update({
-                  displayIcon: emoji,
-                });
+                db.ref().update((function () {
+                  var iconUpdates = {};
+                  iconUpdates[userPath + "/deviceSettings/" + deviceId + "/displayIcon"] = emoji;
+                  iconUpdates[userPath + "/devices/" + deviceId + "/displayIcon"] = emoji;
+                  return iconUpdates;
+                })());
               }
               closeAllDeviceMenus();
               return;
             }
             if (action === "clear-icon") {
-              db.ref(userPath + "/devices/" + deviceId).update({
-                displayIcon: null,
-              });
+              db.ref().update((function () {
+                var iconUpdates = {};
+                iconUpdates[userPath + "/deviceSettings/" + deviceId + "/displayIcon"] = null;
+                iconUpdates[userPath + "/devices/" + deviceId + "/displayIcon"] = null;
+                return iconUpdates;
+              })());
               closeAllDeviceMenus();
               return;
             }
@@ -842,9 +877,12 @@
                 return;
               }
               if (nextName === deviceName) return;
-              db.ref(userPath + "/devices/" + deviceId).update({
-                displayName: nextName,
-              });
+              db.ref().update((function () {
+                var nameUpdates = {};
+                nameUpdates[userPath + "/deviceSettings/" + deviceId + "/displayName"] = nextName;
+                nameUpdates[userPath + "/devices/" + deviceId + "/displayName"] = nextName;
+                return nameUpdates;
+              })());
               return;
             }
             if (action === "remove") {
@@ -1048,11 +1086,7 @@
                 lastDevicesSnap.val() &&
                 entry.deviceId &&
                 lastDevicesSnap.val()[entry.deviceId];
-              const historyName =
-                (liveDevice &&
-                  String(liveDevice.displayName || liveDevice.deviceName || "").trim()) ||
-                entry.deviceName ||
-                entry.deviceId;
+              const historyName = shownDeviceName(entry.deviceId, liveDevice);
               return `<li class="history-item ${entry.status} ${htint}"><span class="sensor-icon" aria-hidden="true">${icon}</span><span class="history-name">${escapeHtml(historyName)}</span> <span class="history-status">${label}</span> <time class="history-time">${timeStr}</time></li>`;
             })
             .join("");

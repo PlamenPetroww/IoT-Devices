@@ -318,38 +318,6 @@ function initContactForm() {
     const submitBtn = document.getElementById("formSubmitBtn");
     if (!form || !statusEl) return;
 
-    const sensorsInput = document.getElementById("formSensorsTotalInput");
-    const sensorsMinus = document.getElementById("formSensorsTotalMinus");
-    const sensorsPlus = document.getElementById("formSensorsTotalPlus");
-    if (sensorsInput && sensorsMinus && sensorsPlus) {
-        sensorsMinus.addEventListener("click", () => {
-            let v = parseInt(sensorsInput.value, 10);
-            if (!Number.isFinite(v)) v = 0;
-            sensorsInput.value = Math.max(0, v - 1);
-        });
-        sensorsPlus.addEventListener("click", () => {
-            let v = parseInt(sensorsInput.value, 10);
-            if (!Number.isFinite(v)) v = 0;
-            sensorsInput.value = Math.min(99, v + 1);
-        });
-    }
-
-    const sirensInput = document.getElementById("formSirensTotalInput");
-    const sirensMinus = document.getElementById("formSirensTotalMinus");
-    const sirensPlus = document.getElementById("formSirensTotalPlus");
-    if (sirensInput && sirensMinus && sirensPlus) {
-        sirensMinus.addEventListener("click", () => {
-            let v = parseInt(sirensInput.value, 10);
-            if (!Number.isFinite(v)) v = 0;
-            sirensInput.value = Math.max(0, v - 1);
-        });
-        sirensPlus.addEventListener("click", () => {
-            let v = parseInt(sirensInput.value, 10);
-            if (!Number.isFinite(v)) v = 0;
-            sirensInput.value = Math.min(99, v + 1);
-        });
-    }
-
     form.addEventListener("submit", async (e) => {
         e.preventDefault();
         const functionsBase = (typeof window !== "undefined" && window.INQUIRY_FUNCTIONS_BASE_URL) ? window.INQUIRY_FUNCTIONS_BASE_URL.trim() : "";
@@ -381,13 +349,11 @@ function initContactForm() {
                 const subject = form.querySelector('input[name="_subject"]').value.trim();
                 const message = form.querySelector('textarea[name="message"]').value.trim();
                 const phone = (form.querySelector('input[name="phone"]') && form.querySelector('input[name="phone"]').value) || "";
-                const sensorsTotal = (form.querySelector('input[name="sensorsTotal"]') && form.querySelector('input[name="sensorsTotal"]').value) || "0";
-                const sirensTotal = (form.querySelector('input[name="sirensTotal"]') && form.querySelector('input[name="sirensTotal"]').value) || "0";
                 const baseUrl = window.location.origin + (window.location.pathname || "").replace(/[^/]+$/, "").replace(/\/$/, "");
                 const res = await fetch(functionsBase.replace(/\/$/, "") + "/submitInquiry", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ email, subject, message, phone, sensorsTotal, sirensTotal, baseUrl })
+                    body: JSON.stringify({ email, subject, message, phone, baseUrl })
                 });
                 const data = await res.json().catch(() => ({}));
                 if (res.ok && data.success) {

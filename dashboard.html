@@ -113,7 +113,7 @@
           <div id="removedDevicesSection" class="removed-devices-section" hidden>
             <h3 data-i18n="dashboard.removedTitle">Removed sensors</h3>
             <p class="removed-devices-desc" data-i18n="dashboard.removedDesc">
-              Hidden from the list and no alerts. You can restore them anytime.
+              Hidden from the list and no alerts. Restore them anytime, or delete them for good.
             </p>
             <div id="removedDevicesList"></div>
           </div>
@@ -527,6 +527,7 @@
                 '<span class="removed-device-name">' +
                 escapeHtml(name) +
                 "</span>" +
+                '<span class="removed-device-actions">' +
                 '<button type="button" class="device-action device-action-restore" data-device-action="restore" data-device-id="' +
                 escapeHtml(id) +
                 '" data-device-name="' +
@@ -534,6 +535,14 @@
                 '">' +
                 escapeHtml(authT("dashboard.restoreSensor")) +
                 "</button>" +
+                '<button type="button" class="device-action device-action-forget" data-device-action="delete-forever" data-device-id="' +
+                escapeHtml(id) +
+                '" data-device-name="' +
+                escapeHtml(name) +
+                '">' +
+                escapeHtml(authT("dashboard.deleteSensorForever")) +
+                "</button>" +
+                "</span>" +
                 "</div>"
               );
             })
@@ -908,6 +917,21 @@
                 };
                 db.ref().update(updates);
               });
+              return;
+            }
+            if (action === "delete-forever") {
+              if (
+                !window.confirm(
+                  authT("dashboard.deleteSensorForeverConfirm", { name: deviceName })
+                )
+              ) {
+                return;
+              }
+              var forgetUpdates = {};
+              forgetUpdates[userPath + "/removedDevices/" + deviceId] = null;
+              forgetUpdates[userPath + "/devices/" + deviceId] = null;
+              forgetUpdates[userPath + "/deviceSettings/" + deviceId] = null;
+              db.ref().update(forgetUpdates);
               return;
             }
             if (action === "restore") {

@@ -1247,6 +1247,24 @@ body.dashboard-overlay-open {
 .removed-device-name {
     font-size: 0.88rem;
     color: #cbd5e1;
+    min-width: 0;
+}
+
+.removed-device-actions {
+    display: flex;
+    flex-shrink: 0;
+    gap: 8px;
+}
+
+.device-action-forget {
+    color: #fca5a5;
+    border-color: rgba(248, 113, 113, 0.4);
+}
+
+.device-action-forget:hover {
+    color: #fecaca;
+    border-color: rgba(248, 113, 113, 0.7);
+    background: rgba(248, 113, 113, 0.12);
 }
 
 .devices-empty {

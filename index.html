@@ -1367,10 +1367,22 @@
               </div>
             </div>
             <div class="buy-panel-pay-footer" id="buyPanelPayFooter">
-            <p class="buy-pay-due" id="buyPayDue">
-              <span class="buy-pay-due-label" id="buyPayDueLabel" data-i18n="buyPanel.amountDue">Amount to pay</span>
-              <strong class="buy-pay-due-amount" id="buyPayDueAmount">0.01 €</strong>
-            </p>
+            <div class="buy-pay-breakdown" id="buyPayDue">
+              <div class="buy-pay-breakdown-row">
+                <div class="buy-pay-breakdown-item">
+                  <span class="buy-pay-due-label" id="buyPayProductLabel">1 sensor</span>
+                  <strong class="buy-pay-due-amount" id="buyPayProductAmount">59.00 €</strong>
+                </div>
+                <div class="buy-pay-breakdown-item">
+                  <span class="buy-pay-due-label" id="buyPayDeliveryLabel" data-i18n="buyPanel.summaryDelivery">Delivery</span>
+                  <strong class="buy-pay-due-amount" id="buyPayDeliveryAmount">0.00 €</strong>
+                </div>
+              </div>
+              <div class="buy-pay-breakdown-total">
+                <span class="buy-pay-due-label" id="buyPayDueLabel" data-i18n="buyPanel.summaryTotal">Total</span>
+                <strong class="buy-pay-due-amount buy-pay-due-amount-total" id="buyPayDueAmount">59.00 €</strong>
+              </div>
+            </div>
             <button
               type="submit"
               class="cta-primary-link cta-submit"

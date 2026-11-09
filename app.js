@@ -1671,10 +1671,18 @@ function initBuyPanel() {
         const deliveryEur = getDeliveryAmountEur ? getDeliveryAmountEur() : 0;
         const totalWithDelivery = Math.round((total + deliveryEur) * 100) / 100;
         if (summaryTotal) summaryTotal.textContent = formatPriceCents(totalWithDelivery);
+        const payProductLabel = document.getElementById("buyPayProductLabel");
+        const payProductAmount = document.getElementById("buyPayProductAmount");
+        const payDeliveryLabel = document.getElementById("buyPayDeliveryLabel");
+        const payDeliveryAmount = document.getElementById("buyPayDeliveryAmount");
         const payDueAmount = document.getElementById("buyPayDueAmount");
         const payDueLabel = document.getElementById("buyPayDueLabel");
+        if (payProductLabel) payProductLabel.textContent = getOrderDescription();
+        if (payProductAmount) payProductAmount.textContent = formatPriceCents(total);
+        if (payDeliveryLabel) payDeliveryLabel.textContent = t("buyPanel.summaryDelivery") || "Delivery";
+        if (payDeliveryAmount) payDeliveryAmount.textContent = formatPriceCents(deliveryEur);
         if (payDueAmount) payDueAmount.textContent = formatPriceCents(totalWithDelivery);
-        if (payDueLabel) payDueLabel.textContent = t("buyPanel.amountDue") || "Amount to pay";
+        if (payDueLabel) payDueLabel.textContent = t("buyPanel.summaryTotal") || "Total";
         if (paymentSelect && (paymentSelect.value === "revolut" || paymentSelect.value === "card")) {
             scheduleOnlinePayRefresh();
         }

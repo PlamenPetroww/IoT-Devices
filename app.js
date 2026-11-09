@@ -1115,33 +1115,44 @@ function initBuyPanel() {
         scheduleOnlinePayRefresh();
     }
 
+    function abortAfter(ms) {
+        if (typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function") {
+            return AbortSignal.timeout(ms);
+        }
+        const controller = new AbortController();
+        setTimeout(function () { controller.abort(); }, ms);
+        return controller.signal;
+    }
+
     async function fetchRevolutConfig() {
         const base = (typeof window !== "undefined" && window.INQUIRY_FUNCTIONS_BASE_URL)
             ? window.INQUIRY_FUNCTIONS_BASE_URL.trim().replace(/\/$/, "")
             : "";
         if (!base) return null;
         if (revolutConfigCache && revolutConfigCache.publicKey) return revolutConfigCache;
-        let last = null;
-        for (let attempt = 0; attempt < 3; attempt++) {
+        const started = Date.now();
+        let sawEmptyKey = false;
+        let attempt = 0;
+        while (Date.now() - started < 50000) {
             try {
-                const res = await fetch(base + "/api/revolut-config", { cache: "no-store" });
+                const res = await fetch(base + "/api/revolut-config", {
+                    cache: "no-store",
+                    signal: abortAfter(20000),
+                });
                 const json = await res.json().catch(() => ({}));
                 if (json && json.publicKey) {
                     revolutConfigCache = json;
                     return json;
                 }
-                last = json;
-            } catch (e) {
-                last = null;
-            }
-            if (attempt < 2) {
-                await new Promise(function (resolve) {
-                    setTimeout(resolve, 700 * (attempt + 1));
-                });
-            }
+                if (res.ok) sawEmptyKey = true;
+            } catch (e) {}
+            attempt += 1;
+            const wait = Math.min(4000, 1200 * attempt);
+            if (Date.now() - started + wait >= 50000) break;
+            await new Promise(function (resolve) { setTimeout(resolve, wait); });
         }
         revolutConfigCache = undefined;
-        return last;
+        return sawEmptyKey ? { configured: false } : null;
     }
 
     function getCheckoutZoneId() {
@@ -1359,12 +1370,29 @@ function initBuyPanel() {
 
         if (cardholderField) cardholderField.style.display = "flex";
 
+        if (buyStatus) {
+            buyStatus.textContent = tBuy("buyPanel.cardPayLoading") || "";
+            buyStatus.className = "form-status";
+        }
+
         const cfg = await fetchRevolutConfig();
+        if (!panel.classList.contains("visible") || !paymentSelect || paymentSelect.value !== "card") return;
         if (!cfg || !cfg.publicKey) {
             teardownOnlinePay();
+            const notConfigured = cfg && cfg.configured === false;
             if (buyStatus) {
-                buyStatus.textContent = tBuy("buyPanel.cardPayUnavailable") || "";
-                buyStatus.className = "form-status form-status-error";
+                buyStatus.textContent = notConfigured
+                    ? (tBuy("buyPanel.cardPayUnavailable") || "")
+                    : (tBuy("buyPanel.cardPayLoading") || "");
+                buyStatus.className = notConfigured ? "form-status form-status-error" : "form-status";
+            }
+            if (!notConfigured) {
+                if (onlinePayMountTimer) clearTimeout(onlinePayMountTimer);
+                onlinePayMountTimer = setTimeout(function () {
+                    if (panel.classList.contains("visible") && paymentSelect && paymentSelect.value === "card") {
+                        doRefreshCardFieldMount();
+                    }
+                }, 3000);
             }
             return;
         }
@@ -1657,6 +1685,7 @@ function initBuyPanel() {
         window.setTimeout(settleBuyPanel, 320);
     }
     function closePanel() {
+        if (onlinePayMountTimer) clearTimeout(onlinePayMountTimer);
         teardownOnlinePay();
         panel.classList.remove("is-settled");
         overlay.classList.remove("visible");

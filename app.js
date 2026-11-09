@@ -1599,25 +1599,42 @@ function initBuyPanel() {
         scheduleOnlinePayRefresh();
     }
 
+    let panelScrollY = 0;
+    function lockPageScroll() {
+        panelScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+        document.body.classList.add("buy-panel-open");
+        document.body.style.top = "-" + panelScrollY + "px";
+    }
+    function unlockPageScroll() {
+        document.body.classList.remove("buy-panel-open");
+        document.body.style.top = "";
+        window.scrollTo(0, panelScrollY);
+    }
+    function settleBuyPanel() {
+        if (panel.classList.contains("visible")) panel.classList.add("is-settled");
+    }
     function openPanel() {
         revolutConfigCache = undefined;
+        panel.classList.remove("is-settled");
         overlay.classList.add("visible");
         panel.classList.add("visible");
         overlay.setAttribute("aria-hidden", "false");
         panel.setAttribute("aria-hidden", "false");
-        document.body.style.overflow = "hidden";
+        lockPageScroll();
         updateSummary();
         syncZoneFromDeliveryCountry();
         updateDeliveryEstimate();
         updatePaymentFields();
+        window.setTimeout(settleBuyPanel, 320);
     }
     function closePanel() {
         teardownOnlinePay();
+        panel.classList.remove("is-settled");
         overlay.classList.remove("visible");
         panel.classList.remove("visible");
         overlay.setAttribute("aria-hidden", "true");
         panel.setAttribute("aria-hidden", "true");
-        document.body.style.overflow = "";
+        unlockPageScroll();
     }
 
     openBtn.addEventListener("click", openPanel);

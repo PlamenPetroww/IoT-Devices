@@ -1881,6 +1881,9 @@ main {
     width: 280px;
     max-width: 100%;
     height: auto;
+    aspect-ratio: 1000 / 1106;
+    object-fit: cover;
+    object-position: center;
     border-radius: 16px;
     background: #0e1524;
     justify-self: center;
@@ -2650,12 +2653,13 @@ main {
     width: 100%;
     max-width: 640px;
     height: 100vh;
+    height: 100dvh;
     background: var(--bg-card);
     border-left: 1px solid var(--border-subtle);
     z-index: 1001;
     transform: translateX(100%);
     transition: transform 0.3s ease;
-    overflow-y: auto;
+    overflow: hidden;
     box-shadow: -8px 0 32px rgba(0, 0, 0, 0.3);
 }
 
@@ -2663,9 +2667,27 @@ main {
     transform: translateX(0);
 }
 
+.buy-panel.is-settled {
+    transform: none;
+}
+
 .buy-panel-inner {
-    padding: 40px 32px 40px;
+    height: 100%;
+    padding: 40px 32px calc(28px + env(safe-area-inset-bottom, 0px));
     position: relative;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+}
+
+body.buy-panel-open {
+    position: fixed;
+    left: 0;
+    right: 0;
+    width: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
 }
 
 .buy-panel-close {
@@ -2991,11 +3013,12 @@ main {
 
 .buy-card-pay-mount {
     width: 100%;
-    min-height: 44px;
+    min-height: 156px;
     margin: 0;
     padding: 0;
     background: transparent;
     border: none;
+    overflow: visible;
 }
 
 .buy-card-pay-mount .aura-rc-card-field {
@@ -3025,9 +3048,11 @@ main {
 }
 
 .buy-card-pay-mount iframe {
+    display: block !important;
     width: 100% !important;
     max-width: 100% !important;
-    min-height: 22px !important;
+    height: 148px !important;
+    min-height: 148px !important;
     border: 0 !important;
 }
 

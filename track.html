@@ -17,17 +17,25 @@
       form, .card { display: flex; flex-direction: column; gap: 12px; background: #0f172a; border: 1px solid rgba(148,163,184,.35); border-radius: 16px; padding: 18px; }
       label { display: flex; flex-direction: column; gap: 6px; font-size: 0.95rem; }
       input { min-height: 48px; border-radius: 12px; border: 1px solid rgba(148,163,184,.45); background: #f1f5f9; color: #0f172a; padding: 0 14px; font-size: 1rem; }
-      button, .go { min-height: 48px; border: 0; border-radius: 12px; background: #22c55e; color: #022c22; font-weight: 700; font-size: 1rem; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
+      button { min-height: 48px; border: 0; border-radius: 12px; background: #22c55e; color: #022c22; font-weight: 700; font-size: 1rem; cursor: pointer; }
+      [hidden] { display: none !important; }
       .muted { color: #cbd5e1; }
-      .status { font-weight: 700; color: #4ade80; }
       .error { color: #fecaca; }
+      ol.steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+      ol.steps li { border-left: 3px solid #334155; padding: 0 0 2px 12px; }
+      ol.steps li.done { border-color: #86efac; }
+      ol.steps li.current { border-color: #22c55e; }
+      ol.steps li.waiting { opacity: 0.72; }
+      ol.steps h2 { margin: 0 0 4px; font-size: 1rem; }
+      ol.steps p { margin: 0; }
+      .track-link { margin-top: 8px; display: inline-flex; align-items: center; min-height: 40px; padding: 0 14px; border-radius: 10px; background: #22c55e; color: #022c22; font-weight: 700; text-decoration: none; }
     </style>
   </head>
   <body>
     <main>
       <a href="index.html">Aura HomeSystems</a>
       <h1>Track an order</h1>
-      <p class="muted">Use the order number and the email from the order. Before the parcel leaves, this page shows when it should arrive. After it is handed to the courier, the same page opens the courier tracking.</p>
+      <p class="muted">Use the order number and the email from the order. The list shows where the order is: being prepared, then in the courier warehouse, then delivered.</p>
       <form id="trackForm">
         <label>Order number
           <input id="orderInput" name="order" autocomplete="off" required placeholder="AHS-7K2M" />
@@ -41,10 +49,8 @@
       <section id="trackResult" class="card" hidden>
         <p id="trackOrder"></p>
         <p id="trackProduct"></p>
-        <p>Status: <span id="trackStatus" class="status"></span></p>
-        <p id="trackEta"></p>
-        <p id="trackHint" class="muted"></p>
-        <a id="trackLink" class="go" hidden target="_blank" rel="noopener noreferrer">See where the parcel is</a>
+        <ol id="trackSteps" class="steps"></ol>
+        <p id="trackEta" class="muted"></p>
       </section>
     </main>
     <script>
@@ -74,21 +80,33 @@
             if (data.country) {
               try { country = new Intl.DisplayNames(["en"], { type: "region" }).of(data.country) || data.country; } catch (e) { country = data.country; }
             }
-            document.getElementById("trackStatus").textContent = data.status === "shipped" ? "On the way" : "Being prepared";
             var eta = document.getElementById("trackEta");
             eta.textContent = data.etaFrom && data.etaTo
               ? "Expected arrival" + (country ? " in " + country : "") + ": " + data.etaFrom + " – " + data.etaTo + "."
               : "";
-            var hint = document.getElementById("trackHint");
-            var link = document.getElementById("trackLink");
-            if (data.status === "shipped" && data.trackingUrl) {
-              hint.textContent = (data.carrierLabel || "The courier") + (data.trackingNumber ? " · " + data.trackingNumber : "") + ". The courier page shows where the parcel is.";
-              link.href = data.trackingUrl;
-              link.hidden = false;
-            } else {
-              hint.textContent = "The courier tracking appears here after the parcel leaves us.";
-              link.hidden = true;
-            }
+            var steps = Array.isArray(data.steps) ? data.steps : [];
+            var list = document.getElementById("trackSteps");
+            list.innerHTML = "";
+            steps.forEach(function (step) {
+              var item = document.createElement("li");
+              item.className = step.state || "waiting";
+              var title = document.createElement("h2");
+              title.textContent = step.title || "";
+              var detail = document.createElement("p");
+              detail.textContent = step.detail || "";
+              item.appendChild(title);
+              item.appendChild(detail);
+              if (step.trackingUrl) {
+                var link = document.createElement("a");
+                link.className = "track-link";
+                link.href = step.trackingUrl;
+                link.target = "_blank";
+                link.rel = "noopener noreferrer";
+                link.textContent = "Open " + (data.carrierLabel || "courier") + " tracking";
+                item.appendChild(link);
+              }
+              list.appendChild(item);
+            });
             resultEl.hidden = false;
           })
           .catch(function () {

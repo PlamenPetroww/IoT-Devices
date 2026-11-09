@@ -27,7 +27,7 @@
     <main>
       <a href="index.html">Aura HomeSystems</a>
       <h1>Add parcel tracking</h1>
-      <p class="muted">Open this page from the link in the order email. Paste the number from Speedy, Bulgarian Post, Econt, DHL or UPS. The customer then sees it on their tracking page and gets an email.</p>
+      <p class="muted">Open this page from the link in the order email. Paste the Speedy, post or DHL number when the parcel leaves. That moves the status to the transport warehouse. When the customer has it, use the second button.</p>
       <form id="shipForm">
         <label>Order
           <input id="orderInput" name="order" required />
@@ -45,7 +45,8 @@
         <label>Tracking number or link
           <input id="numberInput" name="trackingNumber" required autocomplete="off" />
         </label>
-        <button type="submit">Save and email the customer</button>
+        <button type="submit">Save tracking number</button>
+        <button type="button" id="deliveredBtn">The customer has received the parcel</button>
         <p id="shipMessage" hidden></p>
       </form>
     </main>
@@ -55,6 +56,37 @@
       var token = params.get("token") || "";
       document.getElementById("orderInput").value = order;
       var message = document.getElementById("shipMessage");
+      document.getElementById("deliveredBtn").addEventListener("click", function () {
+        message.hidden = true;
+        if (!token) {
+          message.textContent = "Open the link from the order email. It contains the private key for this order.";
+          message.className = "error";
+          message.hidden = false;
+          return;
+        }
+        var base = (window.INQUIRY_FUNCTIONS_BASE_URL || "").replace(/\/$/, "");
+        fetch(base + "/api/order-ship", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "delivered",
+            orderId: document.getElementById("orderInput").value.trim(),
+            token: token
+          })
+        }).then(function (res) { return res.json().then(function (data) { return { ok: res.ok, data: data }; }); })
+          .then(function (result) {
+            message.className = result.ok ? "ok" : "error";
+            message.textContent = result.ok
+              ? "Status is now: Delivered."
+              : ((result.data && result.data.error) || "Could not save it.");
+            message.hidden = false;
+          })
+          .catch(function () {
+            message.className = "error";
+            message.textContent = "The server did not answer. Deploy cleverhaus on Render first.";
+            message.hidden = false;
+          });
+      });
       document.getElementById("shipForm").addEventListener("submit", function (event) {
         event.preventDefault();
         message.hidden = true;
@@ -78,7 +110,7 @@
           .then(function (result) {
             message.className = result.ok ? "ok" : "error";
             message.textContent = result.ok
-              ? "Saved. The customer can now see the courier tracking."
+              ? "Status is now: In the transport warehouse."
               : ((result.data && result.data.error) || "Could not save it.");
             message.hidden = false;
           })

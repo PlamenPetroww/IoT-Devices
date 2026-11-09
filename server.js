@@ -380,15 +380,20 @@ function buildDirectOrderCustomerEmailHtml(data) {
   const site = "Aura HomeSystems";
   const orderId = data.orderId ? escapeHtmlEmail(String(data.orderId)) : "";
   const trackUrl = data.trackUrl ? escapeHtmlEmail(String(data.trackUrl)) : "";
+  const receivedAt = data.receivedAt ? escapeHtmlEmail(String(data.receivedAt)) : "";
   const trackBlock = orderId
     ? "<p>Your order number is <strong>" +
       orderId +
       "</strong>.</p>" +
+      "<p><strong>1. Being prepared.</strong> We received the order" +
+      (receivedAt ? " on " + receivedAt : "") +
+      ".</p>" +
+      "<p><strong>2. In the transport warehouse.</strong> This appears after the parcel is handed to the courier.</p>" +
+      "<p><strong>3. Delivered.</strong> This appears when you have the parcel.</p>" +
       (trackUrl
         ? "<p><a href=\"" +
           trackUrl +
-          "\" style=\"display:inline-block;padding:12px 20px;background:#22c55e;color:#022c22;text-decoration:none;border-radius:8px;font-weight:600\">Follow this order</a></p>" +
-          "<p>The page shows when the parcel should arrive. When it leaves us, the same page shows the courier tracking, so you can see where it is.</p>"
+          "\" style=\"display:inline-block;padding:12px 20px;background:#22c55e;color:#022c22;text-decoration:none;border-radius:8px;font-weight:600\">See order status</a></p>"
         : "")
     : "";
   return (
@@ -418,16 +423,37 @@ function buildOrderShippedEmailHtml(orderId, carrierLabel, trackingNumber, track
     "<p>Hello,</p>" +
     "<p>Your Aura HomeSystems order <strong>" +
     safeId +
-    "</strong> has been handed to " +
+    "</strong> is now <strong>in the transport warehouse</strong>. It was handed to " +
     safeCarrier +
     ".</p>" +
     (safeNumber ? "<p>Tracking number: <strong>" + safeNumber + "</strong></p>" : "") +
     (safeUrl
       ? "<p><a href=\"" +
         safeUrl +
-        "\" style=\"display:inline-block;padding:12px 20px;background:#22c55e;color:#022c22;text-decoration:none;border-radius:8px;font-weight:600\">See where the parcel is</a></p>"
+        "\" style=\"display:inline-block;padding:12px 20px;background:#22c55e;color:#022c22;text-decoration:none;border-radius:8px;font-weight:600\">Open " +
+        safeCarrier +
+        " tracking</a></p>"
       : "") +
-    "<p>The courier page is where the parcel location updates.</p>" +
+    "<p>The courier page shows the movement after that. Our page changes to Delivered when you have the parcel.</p>" +
+    "<p>Best regards,<br><strong>Aura HomeSystems</strong></p></body></html>"
+  );
+}
+
+function buildOrderDeliveredEmailHtml(orderId, trackUrl) {
+  const safeId = escapeHtmlEmail(orderId);
+  const safeUrl = escapeHtmlEmail(trackUrl || "");
+  return (
+    "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"></head>" +
+    "<body style=\"font-family:system-ui,sans-serif;line-height:1.55;color:#1a1a1a;max-width:560px\">" +
+    "<p>Hello,</p>" +
+    "<p>Your Aura HomeSystems order <strong>" +
+    safeId +
+    "</strong> is now <strong>delivered</strong>.</p>" +
+    (safeUrl
+      ? "<p><a href=\"" +
+        safeUrl +
+        "\" style=\"display:inline-block;padding:12px 20px;background:#22c55e;color:#022c22;text-decoration:none;border-radius:8px;font-weight:600\">See order status</a></p>"
+      : "") +
     "<p>Best regards,<br><strong>Aura HomeSystems</strong></p></body></html>"
   );
 }
@@ -1258,6 +1284,7 @@ function createShopOrder(parsed) {
             id,
             token,
             trackUrl: "https://aurahomesystems.eu/track.html?order=" + encodeURIComponent(id),
+            receivedAt: formatSofiaDateTime(record.createdAt),
           });
         });
       }).catch((err) => {
@@ -1267,6 +1294,68 @@ function createShopOrder(parsed) {
     };
     reserve(1);
   });
+}
+
+function formatSofiaDateTime(ms) {
+  const date = new Date(ms);
+  if (!ms || Number.isNaN(date.getTime())) return "";
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Sofia",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(date);
+  const pick = (type) => {
+    const part = parts.find((item) => item.type === type);
+    return part ? part.value : "";
+  };
+  return pick("day") + "." + pick("month") + "." + pick("year") + ", " + pick("hour") + ":" + pick("minute");
+}
+
+function shopStatus(row) {
+  if (row && row.status === "delivered") return "delivered";
+  if (row && row.status === "shipped") return "shipped";
+  return "preparing";
+}
+
+function shopSteps(row) {
+  const status = shopStatus(row);
+  const carrier = ORDER_CARRIERS[row.carrier] || "the courier";
+  const receivedAt = formatSofiaDateTime(row.createdAt);
+  const shippedAt = formatSofiaDateTime(row.shippedAt);
+  const deliveredAt = formatSofiaDateTime(row.deliveredAt);
+  const handedOver = status !== "preparing";
+  return [
+    {
+      id: "preparing",
+      title: "Being prepared",
+      detail: "We received the order" + (receivedAt ? " on " + receivedAt : "") + ". The parcel is being prepared.",
+      at: receivedAt,
+      state: status === "preparing" ? "current" : "done",
+    },
+    {
+      id: "warehouse",
+      title: "In the transport warehouse",
+      detail: handedOver
+        ? "Handed to " + carrier + (shippedAt ? " on " + shippedAt : "") + (row.trackingNumber ? ". Tracking number " + row.trackingNumber : "") + "."
+        : "This step appears after the parcel is handed to the courier.",
+      at: shippedAt,
+      state: status === "shipped" ? "current" : handedOver ? "done" : "waiting",
+      trackingUrl: handedOver ? row.trackingUrl || "" : "",
+    },
+    {
+      id: "delivered",
+      title: "Delivered",
+      detail: status === "delivered"
+        ? "The customer has the parcel" + (deliveredAt ? " since " + deliveredAt : "") + "."
+        : "This step appears when the customer has the parcel.",
+      at: deliveredAt,
+      state: status === "delivered" ? "current" : "waiting",
+    },
+  ];
 }
 
 function readShopOrder(id) {
@@ -1279,7 +1368,7 @@ function publicShopOrder(id, row) {
   return {
     found: true,
     orderId: id,
-    status: row.status === "shipped" ? "shipped" : "preparing",
+    status: shopStatus(row),
     product: row.product || "",
     country: row.country || "",
     etaFrom: window ? window.from : "",
@@ -1288,7 +1377,10 @@ function publicShopOrder(id, row) {
     carrierLabel: ORDER_CARRIERS[row.carrier] || "",
     trackingNumber: row.trackingNumber || "",
     trackingUrl: row.trackingUrl || "",
-    shippedAt: row.shippedAt || 0,
+    receivedAt: formatSofiaDateTime(row.createdAt),
+    shippedAt: formatSofiaDateTime(row.shippedAt),
+    deliveredAt: formatSofiaDateTime(row.deliveredAt),
+    steps: shopSteps(row),
   };
 }
 
@@ -1670,12 +1762,13 @@ const server = http.createServer((req, res) => {
         res.end(JSON.stringify({ error: "Invalid JSON" }));
         return;
       }
+      const action = String(parsed.action || "ship").trim() === "delivered" ? "delivered" : "ship";
       const orderId = String(parsed.orderId || "").trim().toUpperCase();
       const token = String(parsed.token || "").trim();
       const carrier = String(parsed.carrier || "").trim();
       const trackingNumber = String(parsed.trackingNumber || "").trim();
-      const trackingUrl = trackingUrlForCarrier(carrier, trackingNumber);
-      if (!shopOrderIdOk(orderId) || !ORDER_CARRIERS[carrier] || !trackingUrl || !firebaseDb) {
+      const trackingUrl = action === "ship" ? trackingUrlForCarrier(carrier, trackingNumber) : "";
+      if (!shopOrderIdOk(orderId) || !firebaseDb || (action === "ship" && (!ORDER_CARRIERS[carrier] || !trackingUrl))) {
         res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
         res.end(JSON.stringify({ error: "Check the order link, courier and tracking number." }));
         return;
@@ -1691,6 +1784,24 @@ const server = http.createServer((req, res) => {
           res.end(JSON.stringify({ error: "This shipping link is not valid." }));
           return;
         }
+        const apiKey = process.env.RESEND_API_KEY;
+        const to = String(row.email || "").trim();
+        const from = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
+        if (action === "delivered") {
+          const deliveredAt = Date.now();
+          return ref.update({ status: "delivered", deliveredAt }).then(() => {
+            if (apiKey && to) {
+              sendResendEmail(apiKey, {
+                from,
+                to: [to],
+                subject: "Your order " + orderId + " is delivered – Aura HomeSystems",
+                html: buildOrderDeliveredEmailHtml(orderId, "https://aurahomesystems.eu/track.html?order=" + encodeURIComponent(orderId)),
+              });
+            }
+            res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+            res.end(JSON.stringify({ success: true, orderId, status: "delivered" }));
+          });
+        }
         const shippedAt = Date.now();
         return ref.update({
           status: "shipped",
@@ -1699,18 +1810,16 @@ const server = http.createServer((req, res) => {
           trackingUrl,
           shippedAt,
         }).then(() => {
-          const apiKey = process.env.RESEND_API_KEY;
-          const to = String(row.email || "").trim();
           if (apiKey && to) {
             sendResendEmail(apiKey, {
-              from: process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev",
+              from,
               to: [to],
-              subject: "Your order " + orderId + " is on the way – Aura HomeSystems",
+              subject: "Your order " + orderId + " is in the transport warehouse – Aura HomeSystems",
               html: buildOrderShippedEmailHtml(orderId, ORDER_CARRIERS[carrier], carrier === "link" ? "" : trackingNumber, trackingUrl),
             });
           }
           res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-          res.end(JSON.stringify({ success: true, orderId }));
+          res.end(JSON.stringify({ success: true, orderId, status: "shipped" }));
         });
       }).catch((saveErr) => {
         console.error("[shop-order] ship update failed:", saveErr.message || saveErr);
@@ -1733,6 +1842,7 @@ const server = http.createServer((req, res) => {
         if (order) {
           parsed.orderId = order.id;
           parsed.trackUrl = order.trackUrl;
+          parsed.receivedAt = order.receivedAt;
           const shipLink =
             "https://aurahomesystems.eu/ship.html?order=" +
             encodeURIComponent(order.id) +

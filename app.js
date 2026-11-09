@@ -944,10 +944,10 @@ function initBuyPanel() {
             return;
         }
 
-        if (s.invalid && !s.completed) {
+        if (s.invalid) {
             cardValidationHintEl.hidden = false;
             cardValidationHintEl.className = "buy-panel-play-note buy-card-validation-hint";
-            cardValidationHintEl.textContent = tBuy("buyPanel.cardValidationHint") || "";
+            cardValidationHintEl.textContent = tBuy("buyPanel.cardNumberRejected") || "";
             return;
         }
 
@@ -1826,12 +1826,15 @@ function initBuyPanel() {
                 !cardStatus.invalid
             );
             if (!name || !cardReady) {
+                const rejected = !!(cardStatus && cardStatus.invalid);
                 if (cardValidationHintEl) {
                     cardValidationHintEl.hidden = false;
                     cardValidationHintEl.className = "buy-panel-play-note buy-card-validation-hint";
                     cardValidationHintEl.textContent = !name
                         ? (tBuy("buyPanel.cardholderMissingHint") || "Enter the cardholder name.")
-                        : (tBuy("buyPanel.cardValidationHint") || "Complete all card fields (number, expiry, CVV).");
+                        : rejected
+                            ? (tBuy("buyPanel.cardNumberRejected") || "This card number was not accepted.")
+                            : (tBuy("buyPanel.cardValidationHint") || "Complete all card fields (number, expiry, CVV).");
                 }
                 if (!name && cardholderInput) cardholderInput.focus();
                 return;

@@ -1029,8 +1029,6 @@ function initBuyPanel() {
                     backgroundColor: "transparent",
                     caretColor: "#0f172a",
                     border: "none",
-                    borderRadius: "0",
-                    padding: "10px 12px",
                     fontSize: "14px",
                     fontFamily: fieldFont,
                     fontWeight: "500",

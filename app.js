@@ -890,8 +890,17 @@ function initBuyPanel() {
             const testOpen = /(?:^|[?&])cardtest=1(?:&|$)/.test(window.location.search);
             if (!testOpen) {
                 banner.style.cssText =
-                    "position:fixed;inset:0;background:#0f172a;color:#e5e7eb;display:flex;align-items:center;justify-content:center;text-align:center;padding:32px 20px;font-size:20px;line-height:1.45;z-index:10000;";
-                banner.textContent = "The site is paused for a short card-payment test.";
+                    "position:fixed;inset:0;background:#0f172a;color:#e5e7eb;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;text-align:center;padding:32px 20px;font-size:20px;line-height:1.45;z-index:10000;";
+                const text = document.createElement("p");
+                text.style.margin = "0";
+                text.textContent = "The site is paused for a short card-payment test.";
+                const link = document.createElement("a");
+                link.href = window.location.pathname + "?cardtest=1";
+                link.textContent = "Open the 0.01 € card test";
+                link.style.cssText =
+                    "display:inline-block;background:#22c55e;color:#052e16;font-weight:700;text-decoration:none;padding:14px 22px;border-radius:999px;font-size:18px;";
+                banner.appendChild(text);
+                banner.appendChild(link);
             } else {
                 banner.style.cssText =
                     "position:fixed;bottom:0;left:0;right:0;background:#f59e0b;color:#111;text-align:center;padding:8px 12px;font-size:14px;z-index:9999;";

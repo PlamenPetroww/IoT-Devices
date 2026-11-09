@@ -1150,23 +1150,6 @@ function initBuyPanel() {
         if (cardholderField) cardholderField.style.display = "flex";
     }
 
-    function isBuyFormReadyForCardMount() {
-        if (!buyForm) return false;
-        const country = deliveryCountrySelect && deliveryCountrySelect.value.trim();
-        const nameEl = buyForm.querySelector('[name="deliveryName"]');
-        const cityEl = buyForm.querySelector('[name="deliveryCity"]');
-        const streetEl = buyForm.querySelector('[name="deliveryStreet"]');
-        const phoneEl = buyForm.querySelector('[name="phone"]');
-        const emailEl = buyForm.querySelector('[name="_replyto"]');
-        if (!country) return false;
-        if (!nameEl || !nameEl.value.trim()) return false;
-        if (!cityEl || !cityEl.value.trim()) return false;
-        if (!streetEl || !streetEl.value.trim()) return false;
-        if (!phoneEl || !phoneEl.value.trim()) return false;
-        if (!emailEl || !emailEl.value.trim() || !emailEl.checkValidity()) return false;
-        return true;
-    }
-
     function tryScheduleCardMountWhenReady() {
         if (!paymentSelect || paymentSelect.value !== "card") return;
         scheduleOnlinePayRefresh();
@@ -1466,7 +1449,22 @@ function initBuyPanel() {
         if (!paymentSelect || paymentSelect.value !== "card" || !cardMount) return;
 
         const zoneId = getCheckoutZoneId();
-        if (!zoneId) return;
+        if (!zoneId) {
+            if (cardFieldInstance) {
+                try {
+                    cardFieldInstance.destroy();
+                } catch (_) {}
+                cardFieldInstance = null;
+            }
+            cardPayModeActive = false;
+            if (buyCardShell) buyCardShell.hidden = true;
+            if (cardMount) cardMount.innerHTML = "";
+            if (buyStatus) {
+                buyStatus.textContent = tBuy("buyPanel.payFillFormFirst") || "";
+                buyStatus.className = "form-status";
+            }
+            return;
+        }
 
         if (cardholderField) cardholderField.style.display = "flex";
 
@@ -1489,28 +1487,6 @@ function initBuyPanel() {
                     doRefreshCardFieldMount();
                 }
             }, 3000);
-            return;
-        }
-
-        if (!isBuyFormReadyForCardMount()) {
-            if (cardFieldInstance) {
-                try {
-                    cardFieldInstance.destroy();
-                } catch (_) {}
-                cardFieldInstance = null;
-            }
-            cardPayModeActive = false;
-            if (buyCardShell) buyCardShell.hidden = true;
-            if (cardMount) {
-                cardMount.innerHTML = "";
-            }
-            if (cardValidationHintEl) cardValidationHintEl.hidden = true;
-            if (buyStatus) {
-                buyStatus.textContent = tBuy("buyPanel.payFillFormFirst") || "";
-                buyStatus.className = "form-status";
-            }
-            resetSubmitButtonLabel();
-            updateOrderButtonState();
             return;
         }
 
@@ -1584,10 +1560,8 @@ function initBuyPanel() {
                 );
                 updateOrderButtonState();
             }
-            if (buyPayFooter) {
-                requestAnimationFrame(function () {
-                    buyPayFooter.scrollIntoView({ behavior: "smooth", block: "nearest" });
-                });
+            if (buyCardShell && buyCardShell.scrollIntoView) {
+                buyCardShell.scrollIntoView({ behavior: "smooth", block: "nearest" });
             }
         } catch (err) {
             cardPayModeActive = false;

@@ -3076,6 +3076,14 @@ body.buy-panel-open {
     color: #e5e7eb;
 }
 
+#buyPanelStatus:empty {
+    display: none;
+}
+
+.buy-panel-payment #buyPanelStatus {
+    margin: 0;
+}
+
 .buy-card-entry[hidden] {
     display: none !important;
 }

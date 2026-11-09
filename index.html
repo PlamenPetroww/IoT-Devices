@@ -1233,6 +1233,7 @@
                   <span class="form-label-text" data-i18n="buyPanel.cardholderName">Cardholder name</span>
                   <input type="text" name="cardholderName" id="buyCardholderName" class="form-input" autocomplete="cc-name" maxlength="80" data-i18n-placeholder="buyPanel.cardholderPlaceholder" placeholder="First Last (as on card)" />
                 </label>
+                <p id="buyPanelStatus" class="form-status" aria-live="polite"></p>
                 <label class="form-label buy-card-entry" id="buyCardShell" hidden>
                   <span class="form-label-text" data-i18n="buyPanel.cardDetailsLabel">Card number, expiry (MM/YY) and CVV</span>
                   <div id="buyCardPayMount" class="buy-card-pay-mount"></div>
@@ -1243,7 +1244,6 @@
               </div>
             </div>
             <div class="buy-panel-pay-footer" id="buyPanelPayFooter">
-              <p id="buyPanelStatus" class="form-status" aria-live="polite"></p>
               <div class="buy-pay-breakdown" id="buyPayDue">
                 <div class="buy-pay-breakdown-row">
                   <div class="buy-pay-breakdown-item">

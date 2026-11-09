@@ -1253,7 +1253,10 @@ const server = http.createServer((req, res) => {
 
   if (requestPath === "/api/revolut-config" && req.method === "GET") {
     setCors(res, req);
-    res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+    res.writeHead(200, {
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-store",
+    });
     res.end(
       JSON.stringify({
         publicKey: getRevolutPublicKey(),

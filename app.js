@@ -1124,35 +1124,41 @@ function initBuyPanel() {
         return controller.signal;
     }
 
+    function embeddedRevolutConfig() {
+        const key = (typeof window !== "undefined" && window.REVOLUT_PUBLIC_KEY)
+            ? String(window.REVOLUT_PUBLIC_KEY).trim()
+            : "";
+        if (!key) return null;
+        const mode = String((window.REVOLUT_CHECKOUT_MODE || "prod")).toLowerCase() === "sandbox"
+            ? "sandbox"
+            : "prod";
+        return { publicKey: key, mode: mode };
+    }
+
     async function fetchRevolutConfig() {
+        if (revolutConfigCache && revolutConfigCache.publicKey) return revolutConfigCache;
         const base = (typeof window !== "undefined" && window.INQUIRY_FUNCTIONS_BASE_URL)
             ? window.INQUIRY_FUNCTIONS_BASE_URL.trim().replace(/\/$/, "")
             : "";
-        if (!base) return null;
-        if (revolutConfigCache && revolutConfigCache.publicKey) return revolutConfigCache;
-        const started = Date.now();
-        let sawEmptyKey = false;
-        let attempt = 0;
-        while (Date.now() - started < 50000) {
+        const embedded = embeddedRevolutConfig();
+        if (base) {
             try {
-                const res = await fetch(base + "/api/revolut-config", {
+                const res = await fetch(base + "/api/revolut-config?t=" + Date.now(), {
                     cache: "no-store",
-                    signal: abortAfter(20000),
+                    signal: abortAfter(8000),
                 });
-                const json = await res.json().catch(() => ({}));
-                if (json && json.publicKey) {
+                const json = await res.json().catch(() => null);
+                if (json && typeof json.publicKey === "string" && json.publicKey.trim()) {
                     revolutConfigCache = json;
                     return json;
                 }
-                if (res.ok) sawEmptyKey = true;
             } catch (e) {}
-            attempt += 1;
-            const wait = Math.min(4000, 1200 * attempt);
-            if (Date.now() - started + wait >= 50000) break;
-            await new Promise(function (resolve) { setTimeout(resolve, wait); });
         }
-        revolutConfigCache = undefined;
-        return sawEmptyKey ? { configured: false } : null;
+        if (embedded) {
+            revolutConfigCache = embedded;
+            return embedded;
+        }
+        return null;
     }
 
     function getCheckoutZoneId() {
@@ -1181,24 +1187,42 @@ function initBuyPanel() {
         const z = getCheckoutZoneId();
         const shipMethod = (shippingMethodSelect && shippingMethodSelect.value) || "standard";
         const amountMinor = Math.round(getBuyOrderTotalEur() * 100);
-        const res = await fetch(base + "/api/revolut-order", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                amountMinor: amountMinor,
-                currency: "EUR",
-                quantity: sel.pack,
-                orderMode: sel.mode,
-                sensorPack: sel.pack,
-                sirenCount: sel.sirenCount,
-                shippingZone: z,
-                shippingMethod: shipMethod,
-                description: "Aura HomeSystems — " + getOrderDescription(),
-            }),
+        const payload = JSON.stringify({
+            amountMinor: amountMinor,
+            currency: "EUR",
+            quantity: sel.pack,
+            orderMode: sel.mode,
+            sensorPack: sel.pack,
+            sirenCount: sel.sirenCount,
+            shippingZone: z,
+            shippingMethod: shipMethod,
+            description: "Aura HomeSystems — " + getOrderDescription(),
         });
-        const order = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(order.error || "Order failed");
-        return order.revolutPublicOrderId;
+        const started = Date.now();
+        let lastError = null;
+        while (Date.now() - started < 40000) {
+            try {
+                const res = await fetch(base + "/api/revolut-order", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: payload,
+                    signal: abortAfter(20000),
+                });
+                const order = await res.json().catch(() => ({}));
+                if (res.ok && order.revolutPublicOrderId) return order.revolutPublicOrderId;
+                const msg = (order && order.error) || "Order failed";
+                if (res.status >= 400 && res.status < 500) throw new Error(msg);
+                lastError = new Error(msg);
+            } catch (e) {
+                if (e && /Amount does not match|Invalid amount|Revolut is not configured/.test(String(e.message || ""))) {
+                    throw e;
+                }
+                lastError = e;
+            }
+            if (Date.now() - started >= 40000) break;
+            await new Promise(function (resolve) { setTimeout(resolve, 2000); });
+        }
+        throw lastError || new Error("Order failed");
     }
 
     async function loadRevolutCheckoutModule() {
@@ -1379,21 +1403,16 @@ function initBuyPanel() {
         if (!panel.classList.contains("visible") || !paymentSelect || paymentSelect.value !== "card") return;
         if (!cfg || !cfg.publicKey) {
             teardownOnlinePay();
-            const notConfigured = cfg && cfg.configured === false;
             if (buyStatus) {
-                buyStatus.textContent = notConfigured
-                    ? (tBuy("buyPanel.cardPayUnavailable") || "")
-                    : (tBuy("buyPanel.cardPayLoading") || "");
-                buyStatus.className = notConfigured ? "form-status form-status-error" : "form-status";
+                buyStatus.textContent = tBuy("buyPanel.cardPayLoading") || "";
+                buyStatus.className = "form-status";
             }
-            if (!notConfigured) {
-                if (onlinePayMountTimer) clearTimeout(onlinePayMountTimer);
-                onlinePayMountTimer = setTimeout(function () {
-                    if (panel.classList.contains("visible") && paymentSelect && paymentSelect.value === "card") {
-                        doRefreshCardFieldMount();
-                    }
-                }, 3000);
-            }
+            if (onlinePayMountTimer) clearTimeout(onlinePayMountTimer);
+            onlinePayMountTimer = setTimeout(function () {
+                if (panel.classList.contains("visible") && paymentSelect && paymentSelect.value === "card") {
+                    doRefreshCardFieldMount();
+                }
+            }, 3000);
             return;
         }
 
@@ -1435,7 +1454,7 @@ function initBuyPanel() {
         if (buyCardShell) buyCardShell.hidden = false;
 
         if (buyStatus) {
-            buyStatus.textContent = "";
+            buyStatus.textContent = tBuy("buyPanel.cardPayLoading") || "";
             buyStatus.className = "form-status";
         }
 
@@ -1469,6 +1488,10 @@ function initBuyPanel() {
             if (buyCardShell) buyCardShell.hidden = false;
             cardPayModeActive = true;
             lastCardMountKey = mountKey;
+            if (buyStatus) {
+                buyStatus.textContent = "";
+                buyStatus.className = "form-status";
+            }
             if (buySubmitBtn) {
                 buySubmitBtn.hidden = false;
                 buySubmitBtn.classList.remove("is-busy");

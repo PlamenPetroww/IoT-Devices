@@ -8,4 +8,6 @@
   window.INQUIRY_FUNCTIONS_BASE_URL = isLocal
     ? "http://localhost:3000"
     : "https://cleverhaus.onrender.com";
+  window.REVOLUT_PUBLIC_KEY = "pk_84O19nZQQ7CQYiHNxRiOmgCZnl4byCmTiTjzdpD9pY280E2k";
+  window.REVOLUT_CHECKOUT_MODE = "prod";
 })();

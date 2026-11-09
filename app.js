@@ -416,20 +416,8 @@ function initBuyPanel() {
 
     let shippingZones = [];
     let playCountryCodes = [];
-    const EU_SHIPPING_CODES = new Set([
-        "AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "FR", "DE", "GR", "HU", "IE", "IT",
-        "LV", "LT", "LU", "MT", "NL", "PL", "PT", "RO", "SK", "SI", "ES", "SE"
-    ]);
-
-    function getShippingZoneFromCountryCode(code) {
-        if (!code) return "";
-        const c = String(code).toUpperCase();
-        if (c === "BG") return "BG";
-        if (EU_SHIPPING_CODES.has(c)) return "EU";
-        if (c === "GB" || c === "CH" || c === "NO") return "UK_CH_NO";
-        if (c === "US" || c === "CA") return "US_CA";
-        return "WORLD";
-    }
+    let parcelSensorGrams = 250;
+    let parcelSirenGrams = 900;
 
     function populateDeliveryCountryOptions() {
         const sel = document.getElementById("buyDeliveryCountry");
@@ -498,6 +486,8 @@ function initBuyPanel() {
     ])
         .then(([shipData, playData]) => {
             shippingZones = shipData.zones || [];
+            parcelSensorGrams = Number(shipData.parcel && shipData.parcel.sensorGrams) || 250;
+            parcelSirenGrams = Number(shipData.parcel && shipData.parcel.sirenGrams) || 900;
             playCountryCodes = playData.codes || [];
             populateDeliveryCountryOptions();
             syncZoneFromDeliveryCountry();
@@ -505,21 +495,49 @@ function initBuyPanel() {
         })
         .catch(() => {});
 
-    function hasExpress(zone) {
-        return zone && typeof zone.expressPriceMax === "number";
+    function getShippingZoneFromCountryCode(code) {
+        if (!code) return "";
+        const c = String(code).toUpperCase();
+        const match = shippingZones.find(
+            (z) => Array.isArray(z.countries) && z.countries.indexOf(c) !== -1
+        );
+        return match ? match.id : "REMOTE";
     }
 
-    function getShippingForZone(zoneId, method) {
+    function parcelGramsForSelection(sel) {
+        const pack = sel && sel.pack > 0 ? sel.pack : 1;
+        const sirens = sel && sel.mode === "kit" ? Math.min(Math.max(sel.sirenCount || 1, 1), 3) : 0;
+        return pack * parcelSensorGrams + sirens * parcelSirenGrams;
+    }
+
+    function hasExpress(zone) {
+        if (!zone) return false;
+        if (Array.isArray(zone.weightPrices) && zone.weightPrices.some((b) => typeof b.express === "number")) {
+            return true;
+        }
+        return typeof zone.expressPriceMax === "number";
+    }
+
+    function bandPriceForZone(zone, grams, method) {
+        const bands = zone && Array.isArray(zone.weightPrices) ? zone.weightPrices : null;
+        if (bands && bands.length) {
+            const band = bands.find((b) => grams <= b.maxGrams) || bands[bands.length - 1];
+            const useExpress = method === "express" && typeof band.express === "number";
+            return useExpress ? band.express : band.price;
+        }
+        const useExpress = method === "express" && typeof zone.expressPriceMax === "number";
+        return useExpress ? zone.expressPriceMax : zone.priceMax;
+    }
+
+    function getShippingForZone(zoneId, method, grams) {
         const zone = shippingZones.find((z) => z.id === zoneId);
         if (!zone) return null;
-        const useExpress = method === "express" && hasExpress(zone);
-        const priceMax = useExpress ? zone.expressPriceMax : zone.priceMax;
-        const priceMin = useExpress ? (zone.expressPriceMin ?? zone.expressPriceMax) : zone.priceMin;
-        const shipDaysMin = useExpress ? (zone.expressShippingDaysMin || 0) : (zone.shippingDaysMin || 0);
-        const shipDaysMax = useExpress ? (zone.expressShippingDaysMax || 0) : (zone.shippingDaysMax || 0);
+        const price = bandPriceForZone(zone, grams, method);
+        const shipDaysMin = method === "express" && hasExpress(zone) ? (zone.expressShippingDaysMin || 0) : (zone.shippingDaysMin || 0);
+        const shipDaysMax = method === "express" && hasExpress(zone) ? (zone.expressShippingDaysMax || 0) : (zone.shippingDaysMax || 0);
         const totalDaysMin = (zone.processingDaysMin || 0) + shipDaysMin;
         const totalDaysMax = (zone.processingDaysMax || 0) + shipDaysMax;
-        return { zone: { ...zone, priceMin, priceMax, currency: zone.currency }, totalDaysMin, totalDaysMax };
+        return { zone: { ...zone, priceMin: price, priceMax: price, currency: zone.currency }, totalDaysMin, totalDaysMax };
     }
 
     function addWorkingDays(fromDate, workingDays) {
@@ -553,7 +571,8 @@ function initBuyPanel() {
             }
             const zone = shippingZones.find((z) => z.id === zoneId);
             if (shippingMethodWrap) shippingMethodWrap.style.display = hasExpress(zone) ? "flex" : "none";
-            const result = getShippingForZone(zoneId, method);
+            const grams = parcelGramsForSelection(getBuyOrderSelection());
+            const result = getShippingForZone(zoneId, method, grams);
             if (!result) {
                 deliveryPriceDaysEl.textContent = "";
                 updateSummary();
@@ -585,7 +604,8 @@ function initBuyPanel() {
         if (pricingCfg.testMode) return pricingCfg.testDeliveryEur;
         const zoneId = shippingZoneSelect && shippingZoneSelect.value ? shippingZoneSelect.value.trim() : "";
         const method = (shippingMethodSelect && shippingMethodSelect.value) || "standard";
-        const result = zoneId ? getShippingForZone(zoneId, method) : null;
+        const grams = parcelGramsForSelection(getBuyOrderSelection());
+        const result = zoneId ? getShippingForZone(zoneId, method, grams) : null;
         if (!result) return 0;
         const zone = result.zone;
         if (zone.currency === "EUR") return zone.priceMax;

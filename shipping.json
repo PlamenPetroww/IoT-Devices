@@ -1,21 +1,70 @@
 {
+  "note": "Tracked economy rate card by country and parcel weight. Not a live courier quote. One packed sensor is 250 g, one siren set (horn, director, adapter) is 900 g.",
+  "parcel": {
+    "sensorGrams": 250,
+    "sirenGrams": 900
+  },
   "zones": [
     {
       "id": "BG",
+      "countries": [
+        "BG"
+      ],
       "name": "Bulgaria",
-      "countries": ["BG"],
       "currency": "BGN",
-      "priceMin": 5,
+      "priceMin": 7,
       "priceMax": 7,
       "processingDaysMin": 7,
       "processingDaysMax": 8,
       "shippingDaysMin": 1,
-      "shippingDaysMax": 2
+      "shippingDaysMax": 2,
+      "weightPrices": [
+        {
+          "maxGrams": 1000,
+          "price": 7
+        },
+        {
+          "maxGrams": 2000,
+          "price": 9
+        },
+        {
+          "maxGrams": 4000,
+          "price": 12
+        }
+      ]
     },
     {
       "id": "EU",
+      "countries": [
+        "AT",
+        "BE",
+        "HR",
+        "CY",
+        "CZ",
+        "DK",
+        "EE",
+        "FI",
+        "FR",
+        "DE",
+        "GR",
+        "HU",
+        "IE",
+        "IT",
+        "LV",
+        "LT",
+        "LU",
+        "MT",
+        "NL",
+        "PL",
+        "PT",
+        "RO",
+        "SK",
+        "SI",
+        "ES",
+        "SE",
+        "AX"
+      ],
       "name": "European Union",
-      "countries": ["AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "FR", "DE", "GR", "HU", "IE", "IT", "LV", "LT", "LU", "MT", "NL", "PL", "PT", "RO", "SK", "SI", "ES", "SE"],
       "currency": "EUR",
       "priceMin": 10,
       "priceMax": 12,
@@ -26,12 +75,37 @@
       "expressPriceMin": 22,
       "expressPriceMax": 28,
       "expressShippingDaysMin": 3,
-      "expressShippingDaysMax": 7
+      "expressShippingDaysMax": 7,
+      "weightPrices": [
+        {
+          "maxGrams": 1000,
+          "price": 12,
+          "express": 28
+        },
+        {
+          "maxGrams": 2000,
+          "price": 16,
+          "express": 36
+        },
+        {
+          "maxGrams": 4000,
+          "price": 22,
+          "express": 48
+        }
+      ]
     },
     {
       "id": "UK_CH_NO",
+      "countries": [
+        "GB",
+        "CH",
+        "NO",
+        "GG",
+        "JE",
+        "IM",
+        "GI"
+      ],
       "name": "UK / Switzerland / Norway",
-      "countries": ["GB", "CH", "NO"],
       "currency": "EUR",
       "priceMin": 14,
       "priceMax": 16,
@@ -42,12 +116,87 @@
       "expressPriceMin": 26,
       "expressPriceMax": 32,
       "expressShippingDaysMin": 4,
-      "expressShippingDaysMax": 8
+      "expressShippingDaysMax": 8,
+      "weightPrices": [
+        {
+          "maxGrams": 1000,
+          "price": 16,
+          "express": 32
+        },
+        {
+          "maxGrams": 2000,
+          "price": 22,
+          "express": 42
+        },
+        {
+          "maxGrams": 4000,
+          "price": 30,
+          "express": 55
+        }
+      ]
+    },
+    {
+      "id": "EUROPE_OTHER",
+      "countries": [
+        "AD",
+        "AL",
+        "AM",
+        "AZ",
+        "BA",
+        "BY",
+        "FO",
+        "GE",
+        "IS",
+        "LI",
+        "MC",
+        "MD",
+        "ME",
+        "MK",
+        "RS",
+        "SM",
+        "TR",
+        "UA",
+        "VA"
+      ],
+      "name": "Other Europe",
+      "currency": "EUR",
+      "priceMin": 12,
+      "priceMax": 14,
+      "processingDaysMin": 7,
+      "processingDaysMax": 8,
+      "shippingDaysMin": 6,
+      "shippingDaysMax": 14,
+      "expressPriceMin": 22,
+      "expressPriceMax": 26,
+      "expressShippingDaysMin": 4,
+      "expressShippingDaysMax": 9,
+      "weightPrices": [
+        {
+          "maxGrams": 1000,
+          "price": 14,
+          "express": 26
+        },
+        {
+          "maxGrams": 2000,
+          "price": 19,
+          "express": 34
+        },
+        {
+          "maxGrams": 4000,
+          "price": 26,
+          "express": 44
+        }
+      ]
     },
     {
       "id": "US_CA",
+      "countries": [
+        "US",
+        "CA",
+        "PR",
+        "VI"
+      ],
       "name": "USA / Canada",
-      "countries": ["US", "CA"],
       "currency": "EUR",
       "priceMin": 18,
       "priceMax": 22,
@@ -58,23 +207,415 @@
       "expressPriceMin": 35,
       "expressPriceMax": 44,
       "expressShippingDaysMin": 5,
-      "expressShippingDaysMax": 10
+      "expressShippingDaysMax": 10,
+      "weightPrices": [
+        {
+          "maxGrams": 1000,
+          "price": 22,
+          "express": 44
+        },
+        {
+          "maxGrams": 2000,
+          "price": 30,
+          "express": 58
+        },
+        {
+          "maxGrams": 4000,
+          "price": 40,
+          "express": 74
+        }
+      ]
     },
     {
-      "id": "WORLD",
-      "name": "Rest of world",
-      "countries": [],
+      "id": "MENA",
+      "countries": [
+        "AE",
+        "BH",
+        "DZ",
+        "EG",
+        "IL",
+        "IQ",
+        "JO",
+        "KW",
+        "LB",
+        "LY",
+        "MA",
+        "OM",
+        "PS",
+        "QA",
+        "SA",
+        "TN",
+        "YE"
+      ],
+      "name": "Middle East and North Africa",
       "currency": "EUR",
-      "priceMin": 20,
-      "priceMax": 25,
+      "priceMin": 24,
+      "priceMax": 28,
+      "processingDaysMin": 7,
+      "processingDaysMax": 8,
+      "shippingDaysMin": 8,
+      "shippingDaysMax": 16,
+      "expressPriceMin": 40,
+      "expressPriceMax": 48,
+      "expressShippingDaysMin": 5,
+      "expressShippingDaysMax": 10,
+      "weightPrices": [
+        {
+          "maxGrams": 1000,
+          "price": 28,
+          "express": 48
+        },
+        {
+          "maxGrams": 2000,
+          "price": 36,
+          "express": 62
+        },
+        {
+          "maxGrams": 4000,
+          "price": 48,
+          "express": 78
+        }
+      ]
+    },
+    {
+      "id": "ASIA",
+      "countries": [
+        "AF",
+        "BD",
+        "BN",
+        "BT",
+        "HK",
+        "ID",
+        "IN",
+        "JP",
+        "KG",
+        "KH",
+        "KR",
+        "KZ",
+        "LA",
+        "LK",
+        "MM",
+        "MN",
+        "MO",
+        "MY",
+        "NP",
+        "PH",
+        "PK",
+        "SG",
+        "TH",
+        "TJ",
+        "TM",
+        "TW",
+        "UZ",
+        "VN"
+      ],
+      "name": "Asia",
+      "currency": "EUR",
+      "priceMin": 26,
+      "priceMax": 30,
       "processingDaysMin": 7,
       "processingDaysMax": 8,
       "shippingDaysMin": 10,
-      "shippingDaysMax": 25,
+      "shippingDaysMax": 20,
       "expressPriceMin": 42,
+      "expressPriceMax": 52,
+      "expressShippingDaysMin": 6,
+      "expressShippingDaysMax": 12,
+      "weightPrices": [
+        {
+          "maxGrams": 1000,
+          "price": 30,
+          "express": 52
+        },
+        {
+          "maxGrams": 2000,
+          "price": 40,
+          "express": 66
+        },
+        {
+          "maxGrams": 4000,
+          "price": 52,
+          "express": 84
+        }
+      ]
+    },
+    {
+      "id": "LATAM",
+      "countries": [
+        "AG",
+        "AR",
+        "BB",
+        "BS",
+        "BZ",
+        "BO",
+        "BR",
+        "CL",
+        "CO",
+        "CR",
+        "CU",
+        "DM",
+        "DO",
+        "EC",
+        "GD",
+        "GT",
+        "GY",
+        "HN",
+        "HT",
+        "JM",
+        "KN",
+        "LC",
+        "MX",
+        "NI",
+        "PA",
+        "PE",
+        "PY",
+        "SR",
+        "SV",
+        "TT",
+        "UY",
+        "VC",
+        "VE"
+      ],
+      "name": "Latin America",
+      "currency": "EUR",
+      "priceMin": 28,
+      "priceMax": 32,
+      "processingDaysMin": 7,
+      "processingDaysMax": 8,
+      "shippingDaysMin": 12,
+      "shippingDaysMax": 22,
+      "expressPriceMin": 45,
       "expressPriceMax": 55,
       "expressShippingDaysMin": 6,
-      "expressShippingDaysMax": 12
+      "expressShippingDaysMax": 12,
+      "weightPrices": [
+        {
+          "maxGrams": 1000,
+          "price": 32,
+          "express": 55
+        },
+        {
+          "maxGrams": 2000,
+          "price": 42,
+          "express": 70
+        },
+        {
+          "maxGrams": 4000,
+          "price": 56,
+          "express": 90
+        }
+      ]
+    },
+    {
+      "id": "OCEANIA",
+      "countries": [
+        "AU",
+        "NZ"
+      ],
+      "name": "Australia / New Zealand",
+      "currency": "EUR",
+      "priceMin": 28,
+      "priceMax": 34,
+      "processingDaysMin": 7,
+      "processingDaysMax": 8,
+      "shippingDaysMin": 12,
+      "shippingDaysMax": 22,
+      "expressPriceMin": 48,
+      "expressPriceMax": 58,
+      "expressShippingDaysMin": 6,
+      "expressShippingDaysMax": 12,
+      "weightPrices": [
+        {
+          "maxGrams": 1000,
+          "price": 34,
+          "express": 58
+        },
+        {
+          "maxGrams": 2000,
+          "price": 44,
+          "express": 74
+        },
+        {
+          "maxGrams": 4000,
+          "price": 58,
+          "express": 95
+        }
+      ]
+    },
+    {
+      "id": "AFRICA",
+      "countries": [
+        "AO",
+        "BF",
+        "BI",
+        "BJ",
+        "BW",
+        "CD",
+        "CF",
+        "CG",
+        "CI",
+        "CM",
+        "CV",
+        "DJ",
+        "EH",
+        "ER",
+        "ET",
+        "GA",
+        "GH",
+        "GM",
+        "GN",
+        "GQ",
+        "GW",
+        "KE",
+        "KM",
+        "LR",
+        "LS",
+        "MG",
+        "ML",
+        "MR",
+        "MU",
+        "MW",
+        "MZ",
+        "NA",
+        "NE",
+        "NG",
+        "RW",
+        "SD",
+        "SL",
+        "SN",
+        "SO",
+        "SS",
+        "ST",
+        "SZ",
+        "TD",
+        "TG",
+        "TZ",
+        "UG",
+        "ZA",
+        "ZM",
+        "ZW"
+      ],
+      "name": "Sub-Saharan Africa",
+      "currency": "EUR",
+      "priceMin": 32,
+      "priceMax": 38,
+      "processingDaysMin": 7,
+      "processingDaysMax": 8,
+      "shippingDaysMin": 12,
+      "shippingDaysMax": 25,
+      "expressPriceMin": 52,
+      "expressPriceMax": 65,
+      "expressShippingDaysMin": 7,
+      "expressShippingDaysMax": 14,
+      "weightPrices": [
+        {
+          "maxGrams": 1000,
+          "price": 38,
+          "express": 65
+        },
+        {
+          "maxGrams": 2000,
+          "price": 50,
+          "express": 82
+        },
+        {
+          "maxGrams": 4000,
+          "price": 66,
+          "express": 105
+        }
+      ]
+    },
+    {
+      "id": "REMOTE",
+      "countries": [
+        "AI",
+        "AQ",
+        "AS",
+        "AW",
+        "BL",
+        "BM",
+        "BQ",
+        "BV",
+        "CC",
+        "CK",
+        "CW",
+        "CX",
+        "FJ",
+        "FK",
+        "FM",
+        "GF",
+        "GL",
+        "GP",
+        "GS",
+        "GU",
+        "HM",
+        "IO",
+        "KI",
+        "KY",
+        "MF",
+        "MH",
+        "MP",
+        "MQ",
+        "MS",
+        "MV",
+        "NC",
+        "NF",
+        "NR",
+        "NU",
+        "PF",
+        "PG",
+        "PM",
+        "PN",
+        "PW",
+        "RE",
+        "RU",
+        "SB",
+        "SC",
+        "SH",
+        "SJ",
+        "SX",
+        "TC",
+        "TF",
+        "TK",
+        "TL",
+        "TO",
+        "TV",
+        "UM",
+        "VG",
+        "VU",
+        "WF",
+        "WS",
+        "YT"
+      ],
+      "name": "Remote islands and territories",
+      "currency": "EUR",
+      "priceMin": 50,
+      "priceMax": 62,
+      "processingDaysMin": 7,
+      "processingDaysMax": 8,
+      "shippingDaysMin": 15,
+      "shippingDaysMax": 30,
+      "expressPriceMin": 80,
+      "expressPriceMax": 98,
+      "expressShippingDaysMin": 8,
+      "expressShippingDaysMax": 16,
+      "weightPrices": [
+        {
+          "maxGrams": 1000,
+          "price": 62,
+          "express": 98
+        },
+        {
+          "maxGrams": 2000,
+          "price": 78,
+          "express": 120
+        },
+        {
+          "maxGrams": 4000,
+          "price": 98,
+          "express": 150
+        }
+      ]
     }
   ]
 }

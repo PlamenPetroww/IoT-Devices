@@ -68,13 +68,18 @@ function getRevolutPublicKey() {
   return sanitizeRevolutKey(process.env.REVOLUT_API_PUBLIC_KEY);
 }
 
-function loadShippingZones() {
+function loadShippingConfig() {
   try {
     const raw = fs.readFileSync(path.join(__dirname, "shipping.json"), "utf8");
     const j = JSON.parse(raw);
-    return Array.isArray(j.zones) ? j.zones : [];
+    const parcel = j.parcel || {};
+    return {
+      zones: Array.isArray(j.zones) ? j.zones : [],
+      sensorGrams: Number(parcel.sensorGrams) || 250,
+      sirenGrams: Number(parcel.sirenGrams) || 900,
+    };
   } catch (e) {
-    return [];
+    return { zones: [], sensorGrams: 250, sirenGrams: 900 };
   }
 }
 
@@ -187,17 +192,47 @@ function getDirectOrderSubtotalEur(orderMode, sensorPack, sirenCount, quantity) 
 }
 
 function hasExpressZone(zone) {
-  return zone && typeof zone.expressPriceMax === "number";
+  if (!zone) return false;
+  if (Array.isArray(zone.weightPrices) && zone.weightPrices.some((b) => typeof b.express === "number")) {
+    return true;
+  }
+  return typeof zone.expressPriceMax === "number";
 }
 
-function getDeliveryEurForZone(zone, method) {
-  if (CHECKOUT_TEST_PRICES) return TEST_DELIVERY_EUR;
+function parcelGramsForOrder(orderMode, sensorPack, sirenCount, rules) {
+  const sensorGrams = rules && rules.sensorGrams ? rules.sensorGrams : 250;
+  const sirenGrams = rules && rules.sirenGrams ? rules.sirenGrams : 900;
+  const pack = parseInt(sensorPack, 10);
+  const n = Number.isFinite(pack) && pack > 0 ? pack : 1;
+  let sirens = 0;
+  if (String(orderMode || "") === "kit") {
+    const s = parseInt(sirenCount, 10);
+    sirens = Number.isFinite(s) && s > 0 ? Math.min(s, 3) : 1;
+  }
+  return n * sensorGrams + sirens * sirenGrams;
+}
+
+function rateAmountForZone(zone, grams, method) {
   if (!zone) return null;
-  const useExpress = method === "express" && hasExpressZone(zone);
-  const priceMax = useExpress ? zone.expressPriceMax : zone.priceMax;
-  if (zone.currency === "EUR") return priceMax;
-  if (zone.currency === "BGN") return priceMax / BGN_TO_EUR;
-  return priceMax;
+  const bands = Array.isArray(zone.weightPrices) ? zone.weightPrices : null;
+  let price;
+  if (bands && bands.length) {
+    const band = bands.find((b) => grams <= b.maxGrams) || bands[bands.length - 1];
+    const useExpress = method === "express" && typeof band.express === "number";
+    price = useExpress ? band.express : band.price;
+  } else {
+    const useExpress = method === "express" && typeof zone.expressPriceMax === "number";
+    price = useExpress ? zone.expressPriceMax : zone.priceMax;
+  }
+  if (typeof price !== "number") return null;
+  if (zone.currency === "EUR") return price;
+  if (zone.currency === "BGN") return price / BGN_TO_EUR;
+  return price;
+}
+
+function getDeliveryEurForZone(zone, method, grams) {
+  if (CHECKOUT_TEST_PRICES) return TEST_DELIVERY_EUR;
+  return rateAmountForZone(zone, grams || 0, method);
 }
 
 function computeExpectedAmountMinor(
@@ -207,14 +242,16 @@ function computeExpectedAmountMinor(
   quantity,
   shippingZone,
   shippingMethod,
-  zones
+  zones,
+  parcelRules
 ) {
   const total = getDirectOrderSubtotalEur(orderMode, sensorPack, sirenCount, quantity);
   if (total === null) return null;
   if (!shippingZone || !String(shippingZone).trim()) return null;
   const zone = zones.find((z) => z.id === shippingZone);
   if (!zone) return null;
-  const delivery = getDeliveryEurForZone(zone, shippingMethod || "standard");
+  const grams = parcelGramsForOrder(orderMode, sensorPack, sirenCount, parcelRules);
+  const delivery = getDeliveryEurForZone(zone, shippingMethod || "standard", grams);
   if (delivery === null) return null;
   const totalEur = Math.round((total + delivery) * 100) / 100;
   return Math.round(totalEur * 100);
@@ -1309,7 +1346,7 @@ const server = http.createServer((req, res) => {
         return;
       }
 
-      const zones = loadShippingZones();
+      const shippingConfig = loadShippingConfig();
       const expected = computeExpectedAmountMinor(
         orderMode,
         sensorPack,
@@ -1317,7 +1354,8 @@ const server = http.createServer((req, res) => {
         quantity,
         shippingZone,
         shippingMethod,
-        zones
+        shippingConfig.zones,
+        shippingConfig
       );
       if (expected === null || Math.abs(amountMinor - expected) > 1) {
         res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });

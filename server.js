@@ -406,9 +406,7 @@ function buildDirectOrderCustomerEmailHtml(data) {
     trackBlock +
     directOrderSummaryListHtmlEmail(data) +
     "<p>We will contact you if needed regarding payment and shipping.</p>" +
-    "<p>Best regards,<br><strong>" +
-    escapeHtmlEmail(site) +
-    "</strong></p></body></html>"
+    "<p>Поздрави от Aura HomeSystems</p></body></html>"
   );
 }
 
@@ -1107,6 +1105,7 @@ function buildShopOrderNoticeHtml(data) {
         "\" style=\"display:inline-block;padding:12px 20px;background:#22c55e;color:#022c22;text-decoration:none;border-radius:8px;font-weight:600\">Смени статуса на поръчката</a></p>" +
         "<p>От този линк слагаш номера на Speedy. Когато клиентът получи пратката, оттам я отбелязваш като доставена.</p>"
       : "") +
+    "<p>Поздрави от Aura HomeSystems</p>" +
     "</body></html>"
   );
 }

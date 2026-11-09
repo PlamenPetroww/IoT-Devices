@@ -1676,6 +1676,10 @@ function initBuyPanel() {
         const deliveryEur = getDeliveryAmountEur ? getDeliveryAmountEur() : 0;
         const totalWithDelivery = Math.round((total + deliveryEur) * 100) / 100;
         if (summaryTotal) summaryTotal.textContent = formatPriceCents(totalWithDelivery);
+        const payDueAmount = document.getElementById("buyPayDueAmount");
+        const payDueLabel = document.getElementById("buyPayDueLabel");
+        if (payDueAmount) payDueAmount.textContent = formatPriceCents(totalWithDelivery);
+        if (payDueLabel) payDueLabel.textContent = t("buyPanel.amountDue") || "Amount to pay";
         if (paymentSelect && (paymentSelect.value === "revolut" || paymentSelect.value === "card")) {
             scheduleOnlinePayRefresh();
         }

@@ -1,6 +1,6 @@
 (function (global) {
     // Keep in sync with pricing-config.json (backend reads the same file).
-    var TEST = true;
+    var TEST = false;
 
     global.AURA_PRICING = {
         testMode: TEST,

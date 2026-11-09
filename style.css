@@ -3381,7 +3381,7 @@ body.buy-panel-open {
     margin: 0;
     font-size: 15px;
     line-height: 1.5;
-    color: var(--text-muted);
+    color: #e5e7eb;
 }
 
 @keyframes success-pop {

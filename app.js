@@ -1299,7 +1299,11 @@ function initBuyPanel() {
 
         const lang = document.documentElement.lang || "en";
         const msgError = { en: "Failed. Try again.", de: "Fehlgeschlagen. Bitte erneut versuchen." };
-        const msgSuccessTitle = { en: "Order received!", de: "Bestellung angenommen!" };
+        const msgSuccessTitle = { en: "Order accepted", de: "Bestellung angenommen" };
+        const msgSuccessText = {
+            en: "Thank you. We have received your order.",
+            de: "Vielen Dank. Wir haben Ihre Bestellung erhalten.",
+        };
 
         syncBuyHiddenFields();
         const sel = getBuyOrderSelection();
@@ -1347,7 +1351,10 @@ function initBuyPanel() {
                     resetBuyDefaults();
                     teardownOnlinePay();
                     closePanel();
-                    showSuccessNotification(msgSuccessTitle[lang] || msgSuccessTitle.en);
+                    showSuccessNotification(
+                        msgSuccessTitle[lang] || msgSuccessTitle.en,
+                        msgSuccessText[lang] || msgSuccessText.en
+                    );
                     return true;
                 } else {
                     if (buyStatus) {
@@ -1374,7 +1381,10 @@ function initBuyPanel() {
                     resetBuyDefaults();
                     teardownOnlinePay();
                     closePanel();
-                    showSuccessNotification(msgSuccessTitle[lang] || msgSuccessTitle.en);
+                    showSuccessNotification(
+                        msgSuccessTitle[lang] || msgSuccessTitle.en,
+                        msgSuccessText[lang] || msgSuccessText.en
+                    );
                     return true;
                 } else {
                     if (buyStatus) {

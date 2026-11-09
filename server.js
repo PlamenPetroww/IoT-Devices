@@ -93,9 +93,9 @@ function loadPricingConfig() {
   try {
     const raw = fs.readFileSync(path.join(__dirname, "pricing-config.json"), "utf8");
     const j = JSON.parse(raw);
-    const envFlag = String(process.env.CHECKOUT_TEST_PRICES || "").trim();
-    const testMode =
-      envFlag === "1" ? true : envFlag === "0" ? false : !!j.testMode;
+    // Site prices come from this file. A leftover CHECKOUT_TEST_PRICES=1 on the host
+    // was rejecting real totals, so the card form never appeared.
+    const testMode = !!j.testMode;
     const rawBundles = j.bundles && typeof j.bundles === "object" ? j.bundles : {};
     const bundles = {};
     Object.keys(rawBundles).forEach((key) => {

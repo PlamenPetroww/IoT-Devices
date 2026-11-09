@@ -2633,9 +2633,6 @@ main {
 .buy-panel-overlay {
     position: fixed;
     inset: 0;
-    display: flex;
-    align-items: center;
-    padding: 0 7vw;
     background: #020617;
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
@@ -2646,12 +2643,24 @@ main {
 }
 
 .buy-panel-stage {
-    max-width: 420px;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: max(460px, calc(100vw - 1080px));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 0 32px;
+    box-sizing: border-box;
     pointer-events: none;
 }
 
 .buy-panel-stage-name {
     margin: 0 0 10px;
+    text-align: center;
     font-size: clamp(2rem, 3.4vw, 3.2rem);
     font-weight: 650;
     letter-spacing: -0.03em;
@@ -2661,6 +2670,7 @@ main {
 
 .buy-panel-stage-line {
     margin: 0;
+    text-align: center;
     color: #94a3b8;
     font-size: 1.05rem;
 }

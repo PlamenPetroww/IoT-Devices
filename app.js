@@ -1120,14 +1120,28 @@ function initBuyPanel() {
             ? window.INQUIRY_FUNCTIONS_BASE_URL.trim().replace(/\/$/, "")
             : "";
         if (!base) return null;
-        if (revolutConfigCache !== undefined) return revolutConfigCache;
-        try {
-            const res = await fetch(base + "/api/revolut-config");
-            revolutConfigCache = await res.json().catch(() => ({}));
-        } catch (e) {
-            revolutConfigCache = {};
+        if (revolutConfigCache && revolutConfigCache.publicKey) return revolutConfigCache;
+        let last = null;
+        for (let attempt = 0; attempt < 3; attempt++) {
+            try {
+                const res = await fetch(base + "/api/revolut-config", { cache: "no-store" });
+                const json = await res.json().catch(() => ({}));
+                if (json && json.publicKey) {
+                    revolutConfigCache = json;
+                    return json;
+                }
+                last = json;
+            } catch (e) {
+                last = null;
+            }
+            if (attempt < 2) {
+                await new Promise(function (resolve) {
+                    setTimeout(resolve, 700 * (attempt + 1));
+                });
+            }
         }
-        return revolutConfigCache;
+        revolutConfigCache = undefined;
+        return last;
     }
 
     function getCheckoutZoneId() {

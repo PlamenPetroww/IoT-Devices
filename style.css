@@ -1,6 +1,7 @@
 :root {
     --bg: #020617;
     --bg-elevated: #020617;
+    --bg-card: #0f172a;
     --accent: #22c55e;
     --accent-soft: rgba(34, 197, 94, 0.18);
     --accent-strong: #4ade80;
@@ -2136,7 +2137,7 @@ main {
 .buy-fieldset-hint {
     margin: 0 0 10px;
     font-size: 0.85rem;
-    color: var(--text-muted);
+    color: #e5e7eb;
     line-height: 1.45;
 }
 
@@ -2991,7 +2992,11 @@ body.buy-panel-open {
     margin: 0 0 10px;
     font-size: 13px;
     line-height: 1.45;
-    color: var(--text-muted, rgba(255, 255, 255, 0.72));
+    color: #e5e7eb;
+}
+
+.buy-card-entry[hidden] {
+    display: none !important;
 }
 
 .buy-revolut-pay-mount {

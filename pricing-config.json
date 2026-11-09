@@ -1,11 +1,11 @@
 {
-  "testMode": true,
-  "unitPriceEur": 0.01,
-  "bundles": { "1": 0.01, "3": 0.01, "5": 0.01 },
+  "testMode": false,
+  "unitPriceEur": 59,
+  "bundles": { "1": 59, "3": 159, "5": 249 },
   "kitRules": {
     "maxSirens": 3,
-    "sirenUnitEur": [0, 0, 0],
-    "bundleDiscountEur": { "1": 0, "3": 0, "5": 0 }
+    "sirenUnitEur": [94, 79, 69],
+    "bundleDiscountEur": { "1": 4, "3": 24, "5": 44 }
   },
-  "testDeliveryEur": 0
+  "testDeliveryEur": 0.01
 }

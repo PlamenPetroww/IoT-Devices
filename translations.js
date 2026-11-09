@@ -317,6 +317,8 @@ const translations = {
             shippingMethodExpress: "Express (faster, higher cost)",
             playStoreCountriesNote:
                 "Orders only to countries where Google Play is available and the app can be installed.",
+            deliveryNameLabel: "Name for delivery",
+            deliveryNamePlaceholder: "First and last name",
             deliveryCountryLabel: "Country for delivery",
             deliveryCityLabel: "City",
             deliveryCityPlaceholder: "e.g. Berlin",
@@ -909,6 +911,8 @@ const translations = {
             shippingMethodExpress: "Express (schneller, teurer)",
             playStoreCountriesNote:
                 "Bestellungen nur in Ländern, in denen Google Play verfügbar ist und die App installiert werden kann.",
+            deliveryNameLabel: "Name für die Lieferung",
+            deliveryNamePlaceholder: "Vor- und Nachname",
             deliveryCountryLabel: "Lieferland",
             deliveryCityLabel: "Stadt",
             deliveryCityPlaceholder: "z. B. Berlin",

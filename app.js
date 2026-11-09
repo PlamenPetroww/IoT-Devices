@@ -457,6 +457,7 @@ function initBuyPanel() {
     }
 
     function buildCombinedDeliveryAddress() {
+        const recipient = (buyForm.querySelector('[name="deliveryName"]') && buyForm.querySelector('[name="deliveryName"]').value) || "";
         const countryCode = (buyForm.querySelector('[name="deliveryCountry"]') && buyForm.querySelector('[name="deliveryCountry"]').value) || "";
         const city = (buyForm.querySelector('[name="deliveryCity"]') && buyForm.querySelector('[name="deliveryCity"]').value) || "";
         const postal = (buyForm.querySelector('[name="deliveryPostalCode"]') && buyForm.querySelector('[name="deliveryPostalCode"]').value) || "";
@@ -473,6 +474,7 @@ function initBuyPanel() {
             }
         }
         const parts = [];
+        if (String(recipient).trim()) parts.push(String(recipient).trim());
         if (countryName) parts.push(countryName);
         if (String(city).trim()) parts.push(String(city).trim());
         if (String(postal).trim()) parts.push(String(postal).trim());
@@ -1151,11 +1153,13 @@ function initBuyPanel() {
     function isBuyFormReadyForCardMount() {
         if (!buyForm) return false;
         const country = deliveryCountrySelect && deliveryCountrySelect.value.trim();
+        const nameEl = buyForm.querySelector('[name="deliveryName"]');
         const cityEl = buyForm.querySelector('[name="deliveryCity"]');
         const streetEl = buyForm.querySelector('[name="deliveryStreet"]');
         const phoneEl = buyForm.querySelector('[name="phone"]');
         const emailEl = buyForm.querySelector('[name="_replyto"]');
         if (!country) return false;
+        if (!nameEl || !nameEl.value.trim()) return false;
         if (!cityEl || !cityEl.value.trim()) return false;
         if (!streetEl || !streetEl.value.trim()) return false;
         if (!phoneEl || !phoneEl.value.trim()) return false;
@@ -1858,6 +1862,7 @@ function initBuyPanel() {
         cardholderInput,
         buyForm.querySelector('input[name="phone"]'),
         buyForm.querySelector('input[name="_replyto"]'),
+        buyForm.querySelector('input[name="deliveryName"]'),
         buyForm.querySelector('input[name="deliveryCity"]'),
         buyForm.querySelector('input[name="deliveryStreet"]'),
         buyForm.querySelector('input[name="deliveryPostalCode"]'),

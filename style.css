@@ -3012,8 +3012,10 @@ body.buy-panel-open {
 }
 
 .buy-card-entry {
-    max-width: 360px;
-    margin: 0 auto;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    align-self: stretch;
 }
 
 .buy-card-pay-mount {
@@ -3021,22 +3023,22 @@ body.buy-panel-open {
     min-height: 46px;
     margin: 0;
     padding: 0;
-    background: transparent;
-    border: none;
-    overflow: visible;
+    background: #f1f5f9;
+    border: 1px solid rgba(148, 163, 184, 0.45);
+    border-radius: 14px;
+    overflow: hidden;
 }
 
 .buy-card-pay-mount .aura-rc-card-field {
     display: block;
     width: 100%;
-    min-height: 46px;
+    min-height: 44px;
     padding: 0;
-    border-radius: 14px;
     border: none;
+    border-radius: 14px;
     background: #f1f5f9;
     box-sizing: border-box;
     overflow: hidden;
-    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .buy-card-pay-mount .aura-rc-card-field--focused {
@@ -3077,14 +3079,19 @@ body.buy-panel-open {
 }
 
 .buy-cardholder-field {
-    max-width: 360px;
-    margin: 0 auto;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    align-self: stretch;
 }
 
 .buy-cardholder-field .form-input {
+    width: 100%;
     background: #f1f5f9;
     color: #0f172a;
-    border-color: rgba(148, 163, 184, 0.45);
+    border: 1px solid rgba(148, 163, 184, 0.45);
+    border-radius: 14px;
+    min-height: 46px;
 }
 
 .buy-cardholder-field .form-input::placeholder {

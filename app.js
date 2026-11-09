@@ -1026,11 +1026,11 @@ function initBuyPanel() {
             styles: {
                 default: {
                     color: "#0f172a",
-                    backgroundColor: "#f1f5f9",
+                    backgroundColor: "transparent",
                     caretColor: "#0f172a",
-                    borderRadius: "14px",
-                    border: "1px solid rgba(148, 163, 184, 0.45)",
-                    padding: "10px 14px",
+                    border: "none",
+                    borderRadius: "0",
+                    padding: "10px 12px",
                     fontSize: "14px",
                     fontFamily: fieldFont,
                     fontWeight: "500",
@@ -1038,21 +1038,19 @@ function initBuyPanel() {
                 },
                 focused: {
                     color: "#0f172a",
-                    backgroundColor: "#f8fafc",
-                    borderColor: "rgba(34, 197, 94, 0.7)",
+                    backgroundColor: "transparent",
                 },
                 invalid: {
                     color: "#991b1b",
-                    backgroundColor: "#fef2f2",
-                    borderColor: "rgba(239, 68, 68, 0.85)",
+                    backgroundColor: "transparent",
                 },
                 autofilled: {
                     color: "#0f172a",
-                    backgroundColor: "#f1f5f9",
+                    backgroundColor: "transparent",
                 },
                 completed: {
                     color: "#0f172a",
-                    backgroundColor: "#f1f5f9",
+                    backgroundColor: "transparent",
                 },
             },
         };

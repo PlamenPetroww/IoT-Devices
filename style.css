@@ -2669,6 +2669,10 @@ main {
     .buy-panel-stage {
         display: none;
     }
+
+    .buy-panel {
+        width: 100%;
+    }
 }
 
 .buy-panel-overlay.visible {
@@ -2678,18 +2682,19 @@ main {
 
 .buy-panel {
     position: fixed;
-    inset: 0;
-    width: 100%;
+    top: 0;
+    right: 0;
+    width: min(1080px, calc(100vw - 460px));
     max-width: none;
     height: 100vh;
     height: 100dvh;
-    background: #020617;
-    border-left: 0;
+    background: var(--bg-card);
+    border-left: 1px solid var(--border-subtle);
     z-index: 1001;
     transform: translateX(100%);
     transition: transform 0.3s ease;
     overflow: hidden;
-    box-shadow: none;
+    box-shadow: -8px 0 32px rgba(0, 0, 0, 0.3);
 }
 
 .buy-panel.visible {
@@ -2702,7 +2707,7 @@ main {
 
 .buy-panel-inner {
     height: 100%;
-    padding: 56px 48px 0;
+    padding: 48px 20px 0;
     position: relative;
     display: flex;
     flex-direction: column;
@@ -2792,8 +2797,8 @@ body.buy-panel-open {
     flex: 1;
     min-height: 0;
     display: grid;
-    grid-template-columns: minmax(280px, 1fr) minmax(320px, 1fr);
-    gap: 36px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 20px;
     align-items: stretch;
     margin-bottom: 0;
     overflow: hidden;
@@ -2871,7 +2876,7 @@ body.buy-panel-open {
     min-width: 0;
     min-height: 0;
     overflow-y: auto;
-    padding: 0 8px 16px 32px;
+    padding: 0 4px 16px 16px;
     border-left: 1px solid rgba(148, 163, 184, 0.22);
 }
 
@@ -3315,7 +3320,7 @@ body.buy-panel-open {
     width: 100%;
     padding: 14px 0 calc(16px + env(safe-area-inset-bottom, 0px));
     margin-top: 0;
-    background: #020617;
+    background: var(--bg-card);
     border-top: 1px solid rgba(148, 163, 184, 0.22);
 }
 

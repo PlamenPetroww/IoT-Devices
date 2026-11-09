@@ -1009,7 +1009,6 @@ function initBuyPanel() {
     }
 
     function getRevolutCardFieldOptions() {
-        const fieldFont = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
         return {
             theme: "light",
             showLoadingIndicator: false,
@@ -1029,9 +1028,6 @@ function initBuyPanel() {
                     backgroundColor: "transparent",
                     caretColor: "#0f172a",
                     border: "none",
-                    fontSize: "14px",
-                    fontFamily: fieldFont,
-                    fontWeight: "500",
                     "::placeholder": { color: "#64748b" },
                 },
                 focused: {

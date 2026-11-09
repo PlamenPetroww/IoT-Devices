@@ -587,6 +587,18 @@
                 batteryStatus: (d && d.batteryStatus) || "",
               };
             });
+          function latestEventTime(dev) {
+            var idKey = String(dev.id || "").trim().toLowerCase();
+            var nameKey = String(dev.name || "").trim().toLowerCase();
+            var best = 0;
+            for (var i = 0; i < historyData.length; i++) {
+              var entry = historyData[i];
+              var key = historyDeviceKey(entry);
+              if (key !== idKey && key !== nameKey) continue;
+              if ((entry.timestamp || 0) > best) best = entry.timestamp;
+            }
+            return best > 1e12 ? best : dev.lastSeen;
+          }
           function formatLastSeen(ms) {
             if (ms == null || typeof ms !== "number") return "";
             if (ms > 1e12) {
@@ -689,12 +701,13 @@
               const tintClass =
                 "device-tint-" + getTintIndexForSensor(dev.name || dev.id);
               const icon = resolveSensorIcon(dev.name, dev.displayIcon);
+              var shownAt = latestEventTime(dev);
               const lastSeenHtml =
-                dev.lastSeen != null
+                shownAt != null
                   ? '<span class="device-last-seen" title="' +
                     escapeHtml(authT("dashboard.lastSeenTitle")) +
                     '">' +
-                    formatLastSeen(dev.lastSeen) +
+                    formatLastSeen(shownAt) +
                     "</span>"
                   : "";
               const menuHtml =

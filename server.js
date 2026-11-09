@@ -1231,7 +1231,7 @@ try {
 const ORDER_CARRIERS = {
   speedy: "Speedy",
   bgpost: "Bulgarian Post",
-  econt: "Econt",
+  econt: "Ekont",
   dhl: "DHL",
   ups: "UPS",
   link: "Courier",

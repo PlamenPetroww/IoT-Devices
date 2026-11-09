@@ -17,6 +17,7 @@
       form { display: flex; flex-direction: column; gap: 12px; background: #0f172a; border: 1px solid rgba(148,163,184,.35); border-radius: 16px; padding: 18px; }
       label { display: flex; flex-direction: column; gap: 6px; }
       input, select { min-height: 48px; border-radius: 12px; border: 1px solid rgba(148,163,184,.45); background: #f1f5f9; color: #0f172a; padding: 0 14px; font-size: 1rem; }
+      input[readonly] { background: #e2e8f0; color: #334155; }
       button { min-height: 48px; border: 0; border-radius: 12px; background: #22c55e; color: #022c22; font-weight: 700; font-size: 1rem; cursor: pointer; }
       .muted { color: #cbd5e1; }
       .error { color: #fecaca; }
@@ -27,16 +28,16 @@
     <main>
       <a href="index.html">Aura HomeSystems</a>
       <h1>Add parcel tracking</h1>
-      <p class="muted">Open this page from the link in the order email. Paste the Speedy, post or DHL number when the parcel leaves. That moves the status to the transport warehouse. When the customer has it, use the second button.</p>
+      <p class="muted">Open this page from the link in the order email. Paste the Speedy, Ekont, post or DHL number when the parcel leaves. That moves the status to the transport warehouse. When the customer has it, use the second button.</p>
       <form id="shipForm">
         <label>Order
-          <input id="orderInput" name="order" required />
+          <input id="orderInput" name="order" required readonly />
         </label>
         <label>Courier
           <select id="carrierInput" name="carrier" required>
             <option value="speedy">Speedy</option>
+            <option value="econt">Ekont</option>
             <option value="bgpost">Bulgarian Post</option>
-            <option value="econt">Econt</option>
             <option value="dhl">DHL</option>
             <option value="ups">UPS</option>
             <option value="link">Other — paste the full https link</option>
@@ -70,7 +71,7 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             action: "delivered",
-            orderId: document.getElementById("orderInput").value.trim(),
+            orderId: order,
             token: token
           })
         }).then(function (res) { return res.json().then(function (data) { return { ok: res.ok, data: data }; }); })
@@ -101,7 +102,7 @@
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            orderId: document.getElementById("orderInput").value.trim(),
+            orderId: order,
             token: token,
             carrier: document.getElementById("carrierInput").value,
             trackingNumber: document.getElementById("numberInput").value.trim()

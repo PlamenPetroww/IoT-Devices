@@ -904,13 +904,31 @@ function initBuyPanel() {
             } catch (_) {}
         }
 
-        if (pricingCfg.testMode && !document.getElementById("checkoutTestBanner")) {
+        const cardTestOpen = new URLSearchParams(window.location.search).get("cardtest") === "1";
+        if (pricingCfg.testMode && !cardTestOpen && !document.getElementById("checkoutTestGate")) {
+            const gate = document.createElement("div");
+            gate.id = "checkoutTestGate";
+            gate.style.cssText =
+                "position:fixed;inset:0;z-index:10050;background:#0b1220;color:#e5e7eb;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;";
+            gate.innerHTML =
+                "<div style=\"max-width:420px\"><p style=\"font-size:1.25rem;margin:0 0 8px\">The site is paused for a short card-payment test.</p><p style=\"margin:0 0 18px;color:#cbd5e1\">One sensor is 0.01 €. Delivery is 0.</p><button type=\"button\" id=\"checkoutTestOpen\" style=\"min-height:48px;padding:0 18px;border:0;border-radius:12px;background:#22c55e;color:#022c22;font-weight:700;font-size:1rem;cursor:pointer\">Open the 0.01 € test order</button></div>";
+            document.body.appendChild(gate);
+            const openBtn = document.getElementById("checkoutTestOpen");
+            if (openBtn) {
+                openBtn.addEventListener("click", () => {
+                    const url = new URL(window.location.href);
+                    url.searchParams.set("cardtest", "1");
+                    window.location.href = url.toString();
+                });
+            }
+        }
+        if (pricingCfg.testMode && cardTestOpen && !document.getElementById("checkoutTestBanner")) {
             const banner = document.createElement("div");
             banner.id = "checkoutTestBanner";
             banner.style.cssText =
                 "position:fixed;bottom:0;left:0;right:0;background:#f59e0b;color:#111;text-align:center;padding:8px 12px;font-size:14px;z-index:9999;";
             banner.textContent =
-                "Test prices (0.01 €) – only for checking card payment";
+                "Test prices: one sensor is 0.01 €, delivery is 0. Use your own email to receive the order message.";
             document.body.appendChild(banner);
         }
     }

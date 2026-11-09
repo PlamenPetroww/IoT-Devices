@@ -1,6 +1,6 @@
 (function (global) {
     // Keep in sync with pricing-config.json (backend reads the same file).
-    var TEST = false;
+    var TEST = true;
 
     global.AURA_PRICING = {
         testMode: TEST,
@@ -17,6 +17,6 @@
                   sirenUnitEur: [94, 79, 69],
                   bundleDiscountEur: { 1: 4, 3: 24, 5: 44 },
               },
-        testDeliveryEur: 0.01,
+        testDeliveryEur: 0,
     };
 })(window);

@@ -596,7 +596,22 @@ function initBuyPanel() {
     function updateOrderButtonState() {
         if (!buySubmitBtn || !shippingZoneSelect) return;
         const zoneId = shippingZoneSelect.value ? shippingZoneSelect.value.trim() : "";
-        if ((cardPayModeActive || revolutPayModeActive) && zoneId) {
+        const method = paymentSelect ? paymentSelect.value : "";
+        if (method === "card") {
+            const cardStatus = lastCardFieldStatus;
+            const cardReady = !!(
+                zoneId &&
+                cardPayModeActive &&
+                cardStatus &&
+                cardStatus.completed &&
+                !cardStatus.invalid &&
+                isCardholderFilled()
+            );
+            buySubmitBtn.disabled = !cardReady;
+            buySubmitBtn.setAttribute("aria-disabled", cardReady ? "false" : "true");
+            return;
+        }
+        if (revolutPayModeActive && zoneId) {
             buySubmitBtn.disabled = false;
             buySubmitBtn.setAttribute("aria-disabled", "false");
             return;
@@ -1398,6 +1413,7 @@ function initBuyPanel() {
                 onError: function (err) {
                     setBuyCheckoutLoading(false);
                     setSubmitButtonBusy(false);
+                    updateOrderButtonState();
                     if (buyStatus) {
                         buyStatus.textContent = (err && err.message) || tBuy("buyPanel.cardPayInitError") || "";
                         buyStatus.className = "form-status form-status-error";
@@ -1405,9 +1421,7 @@ function initBuyPanel() {
                 },
                 onStatusChange: function (status) {
                     updateCardCheckoutHint(status);
-                    if (!buySubmitBtn) return;
-                    buySubmitBtn.disabled = false;
-                    buySubmitBtn.setAttribute("aria-disabled", "false");
+                    updateOrderButtonState();
                 },
             }));
             if (buyCardShell) buyCardShell.hidden = false;
@@ -1415,8 +1429,6 @@ function initBuyPanel() {
             lastCardMountKey = mountKey;
             if (buySubmitBtn) {
                 buySubmitBtn.hidden = false;
-                buySubmitBtn.disabled = false;
-                buySubmitBtn.setAttribute("aria-disabled", "false");
                 buySubmitBtn.classList.remove("is-busy");
                 const spinner = buySubmitBtn.querySelector(".buy-submit-spinner");
                 if (spinner) spinner.hidden = true;
@@ -1425,6 +1437,7 @@ function initBuyPanel() {
                         tBuy("buyPanel.payWithCard") ||
                         "Pay with card"
                 );
+                updateOrderButtonState();
             }
             if (buyPayFooter) {
                 requestAnimationFrame(function () {
@@ -1587,9 +1600,10 @@ function initBuyPanel() {
         }
         if (method === "card") {
             showCardPaymentUi();
-            if (cardholderInput) cardholderInput.required = false;
+            if (cardholderInput) cardholderInput.required = true;
         } else if (cardholderField) {
             cardholderField.style.display = "none";
+            if (cardholderInput) cardholderInput.required = false;
         }
         if (method !== "card" && method !== "revolut") {
             if (cardholderInput) cardholderInput.required = false;
@@ -1597,6 +1611,7 @@ function initBuyPanel() {
             return;
         }
         scheduleOnlinePayRefresh();
+        updateOrderButtonState();
     }
 
     let panelScrollY = 0;
@@ -1700,6 +1715,7 @@ function initBuyPanel() {
     if (cardholderInput) {
         cardholderInput.addEventListener("input", function () {
             updateCardCheckoutHint(lastCardFieldStatus);
+            updateOrderButtonState();
         });
     }
 
@@ -1709,19 +1725,30 @@ function initBuyPanel() {
         if (paymentMethod === "revolut" && revolutPayModeActive) {
             return;
         }
-        if (paymentMethod === "card" && cardPayModeActive && cardFieldInstance) {
+        if (paymentMethod === "card") {
             if (!buyForm.checkValidity()) {
                 buyForm.reportValidity();
                 return;
             }
             const email = (buyForm.querySelector('input[name="_replyto"]') && buyForm.querySelector('input[name="_replyto"]').value.trim()) || "";
             const name = (cardholderInput && cardholderInput.value.trim()) || "";
-            if (!name) {
-                if (buyStatus) {
-                    buyStatus.textContent = tBuy("buyPanel.cardholderName") || "Cardholder name required";
-                    buyStatus.className = "form-status form-status-error";
+            const cardStatus = lastCardFieldStatus;
+            const cardReady = !!(
+                cardPayModeActive &&
+                cardFieldInstance &&
+                cardStatus &&
+                cardStatus.completed &&
+                !cardStatus.invalid
+            );
+            if (!name || !cardReady) {
+                if (cardValidationHintEl) {
+                    cardValidationHintEl.hidden = false;
+                    cardValidationHintEl.className = "buy-panel-play-note buy-card-validation-hint";
+                    cardValidationHintEl.textContent = !name
+                        ? (tBuy("buyPanel.cardholderMissingHint") || "Enter the cardholder name.")
+                        : (tBuy("buyPanel.cardValidationHint") || "Complete all card fields (number, expiry, CVV).");
                 }
-                if (cardholderInput) cardholderInput.focus();
+                if (!name && cardholderInput) cardholderInput.focus();
                 return;
             }
             const address = getRevolutAddressMeta();

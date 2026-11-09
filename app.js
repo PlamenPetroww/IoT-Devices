@@ -254,7 +254,7 @@ const CONTACT_EMAIL = "office@aurahomesystems.eu";
 // Ако е празно, формата изпраща директно към Formspree (без потвърждение).
 const FORMSPREE_FORM_ID = "xjgakygl";
 
-function showSuccessNotification(title, message) {
+function showSuccessNotification(title, message, durationMs) {
     const overlay = document.createElement("div");
     overlay.className = "success-notification-overlay";
     overlay.setAttribute("aria-live", "polite");
@@ -276,7 +276,7 @@ function showSuccessNotification(title, message) {
         overlay.classList.remove("success-notification-visible");
         overlay.addEventListener("transitionend", () => overlay.remove(), { once: true });
     };
-    setTimeout(remove, 4500);
+    setTimeout(remove, durationMs || 4500);
     overlay.addEventListener("click", remove);
 }
 
@@ -1309,6 +1309,17 @@ function initBuyPanel() {
             en: "Thank you. We have received your order.",
             de: "Vielen Dank. Wir haben Ihre Bestellung erhalten.",
         };
+        const finishAccepted = (data) => {
+            let text = msgSuccessText[lang] || msgSuccessText.en;
+            let duration = 4500;
+            if (data && data.orderId) {
+                duration = 12000;
+                text = lang === "de"
+                    ? "Vielen Dank. Bestellnummer " + data.orderId + ". Wir haben Ihnen einen Link zum Verfolgen der Lieferung geschickt."
+                    : "Thank you. Order " + data.orderId + ". We emailed you a link to follow the delivery.";
+            }
+            showSuccessNotification(msgSuccessTitle[lang] || msgSuccessTitle.en, text, duration);
+        };
 
         syncBuyHiddenFields();
         const sel = getBuyOrderSelection();
@@ -1344,9 +1355,13 @@ function initBuyPanel() {
                         orderMode: sel.mode,
                         sensorPack: sel.pack,
                         sirenCount: sel.sirenCount,
+                        productLabel,
                         paymentMethod,
                         revolutId,
                         deliveryAddress,
+                        deliveryCountry: (deliveryCountrySelect && deliveryCountrySelect.value) || "",
+                        shippingZone: zoneId,
+                        shippingMethod: (shippingMethodSelect && shippingMethodSelect.value) || "standard",
                         baseUrl
                     })
                 });
@@ -1356,10 +1371,7 @@ function initBuyPanel() {
                     resetBuyDefaults();
                     teardownOnlinePay();
                     closePanel();
-                    showSuccessNotification(
-                        msgSuccessTitle[lang] || msgSuccessTitle.en,
-                        msgSuccessText[lang] || msgSuccessText.en
-                    );
+                    finishAccepted(data);
                     return true;
                 } else {
                     if (buyStatus) {
@@ -1386,10 +1398,7 @@ function initBuyPanel() {
                     resetBuyDefaults();
                     teardownOnlinePay();
                     closePanel();
-                    showSuccessNotification(
-                        msgSuccessTitle[lang] || msgSuccessTitle.en,
-                        msgSuccessText[lang] || msgSuccessText.en
-                    );
+                    finishAccepted(data);
                     return true;
                 } else {
                     if (buyStatus) {

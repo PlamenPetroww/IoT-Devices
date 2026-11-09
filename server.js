@@ -378,6 +378,19 @@ function directOrderSummaryListHtmlEmail(data) {
 
 function buildDirectOrderCustomerEmailHtml(data) {
   const site = "Aura HomeSystems";
+  const orderId = data.orderId ? escapeHtmlEmail(String(data.orderId)) : "";
+  const trackUrl = data.trackUrl ? escapeHtmlEmail(String(data.trackUrl)) : "";
+  const trackBlock = orderId
+    ? "<p>Your order number is <strong>" +
+      orderId +
+      "</strong>.</p>" +
+      (trackUrl
+        ? "<p><a href=\"" +
+          trackUrl +
+          "\" style=\"display:inline-block;padding:12px 20px;background:#22c55e;color:#022c22;text-decoration:none;border-radius:8px;font-weight:600\">Follow this order</a></p>" +
+          "<p>The page shows when the parcel should arrive. When it leaves us, the same page shows the courier tracking, so you can see where it is.</p>"
+        : "")
+    : "";
   return (
     "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"></head>" +
     "<body style=\"font-family:system-ui,sans-serif;line-height:1.55;color:#1a1a1a;max-width:560px\">" +
@@ -385,11 +398,37 @@ function buildDirectOrderCustomerEmailHtml(data) {
     "<p>Thank you for your order at <strong>" +
     escapeHtmlEmail(site) +
     "</strong>. We received the following details:</p>" +
+    trackBlock +
     directOrderSummaryListHtmlEmail(data) +
     "<p>We will contact you if needed regarding payment and shipping.</p>" +
     "<p>Best regards,<br><strong>" +
     escapeHtmlEmail(site) +
     "</strong></p></body></html>"
+  );
+}
+
+function buildOrderShippedEmailHtml(orderId, carrierLabel, trackingNumber, trackingUrl) {
+  const safeId = escapeHtmlEmail(orderId);
+  const safeCarrier = escapeHtmlEmail(carrierLabel || "the courier");
+  const safeNumber = escapeHtmlEmail(trackingNumber || "");
+  const safeUrl = escapeHtmlEmail(trackingUrl || "");
+  return (
+    "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"></head>" +
+    "<body style=\"font-family:system-ui,sans-serif;line-height:1.55;color:#1a1a1a;max-width:560px\">" +
+    "<p>Hello,</p>" +
+    "<p>Your Aura HomeSystems order <strong>" +
+    safeId +
+    "</strong> has been handed to " +
+    safeCarrier +
+    ".</p>" +
+    (safeNumber ? "<p>Tracking number: <strong>" + safeNumber + "</strong></p>" : "") +
+    (safeUrl
+      ? "<p><a href=\"" +
+        safeUrl +
+        "\" style=\"display:inline-block;padding:12px 20px;background:#22c55e;color:#022c22;text-decoration:none;border-radius:8px;font-weight:600\">See where the parcel is</a></p>"
+      : "") +
+    "<p>The courier page is where the parcel location updates.</p>" +
+    "<p>Best regards,<br><strong>Aura HomeSystems</strong></p></body></html>"
   );
 }
 
@@ -1112,6 +1151,186 @@ try {
   console.warn("[Aura] Firebase Admin not configured:", e.message);
 }
 
+const ORDER_CARRIERS = {
+  speedy: "Speedy",
+  bgpost: "Bulgarian Post",
+  econt: "Econt",
+  dhl: "DHL",
+  ups: "UPS",
+  link: "Courier",
+};
+
+function makeShopOrderId() {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const bytes = crypto.randomBytes(4);
+  let id = "AHS-";
+  for (let i = 0; i < 4; i++) id += alphabet[bytes[i] % alphabet.length];
+  return id;
+}
+
+function formatEuDate(date) {
+  const dd = String(date.getUTCDate()).padStart(2, "0");
+  const mm = String(date.getUTCMonth() + 1).padStart(2, "0");
+  return dd + "." + mm + "." + date.getUTCFullYear();
+}
+
+function addWorkingDaysUtc(fromDate, workingDays) {
+  const d = new Date(fromDate.getTime());
+  let added = 0;
+  const steps = Math.max(0, workingDays);
+  while (added < steps) {
+    d.setUTCDate(d.getUTCDate() + 1);
+    const day = d.getUTCDay();
+    if (day !== 0 && day !== 6) added++;
+  }
+  return d;
+}
+
+function deliveryWindowForOrder(order) {
+  if (!order || !order.createdAt || !order.zone) return null;
+  const zone = loadShippingConfig().zones.find((z) => z.id === order.zone);
+  if (!zone) return null;
+  const express = order.method === "express" && hasExpressZone(zone);
+  const shipMin = express ? zone.expressShippingDaysMin || 0 : zone.shippingDaysMin || 0;
+  const shipMax = express ? zone.expressShippingDaysMax || 0 : zone.shippingDaysMax || 0;
+  const start = new Date(order.createdAt);
+  return {
+    from: formatEuDate(addWorkingDaysUtc(start, (zone.processingDaysMin || 0) + shipMin)),
+    to: formatEuDate(addWorkingDaysUtc(start, (zone.processingDaysMax || 0) + shipMax)),
+  };
+}
+
+function trackingUrlForCarrier(carrier, rawNumber) {
+  const number = String(rawNumber || "").trim();
+  if (!number) return "";
+  if (carrier === "link") {
+    if (!/^https:\/\/[^\s]+$/i.test(number) || number.length > 300) return "";
+    return number;
+  }
+  if (number.length > 40 || /\s/.test(number)) return "";
+  const encoded = encodeURIComponent(number);
+  if (carrier === "speedy") return "https://www.speedy.bg/en/track-shipment?shipmentNumber=" + encoded;
+  if (carrier === "bgpost") return "https://www.17track.net/en/track?nums=" + encoded;
+  if (carrier === "econt") return "https://www.econt.com/services/track-shipment/" + encoded;
+  if (carrier === "dhl") return "https://www.dhl.com/bg-en/home/tracking.html?tracking-id=" + encoded;
+  if (carrier === "ups") return "https://www.ups.com/track?tracknum=" + encoded;
+  return "";
+}
+
+function createShopOrder(parsed) {
+  return new Promise((resolve) => {
+    if (!firebaseDb || String(parsed.orderType || "").trim() !== "direct") {
+      resolve(null);
+      return;
+    }
+    const email = String(parsed.email || parsed._replyto || "").trim().toLowerCase();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      resolve(null);
+      return;
+    }
+    const reserve = (attempt) => {
+      if (attempt > 5) {
+        resolve(null);
+        return;
+      }
+      const id = makeShopOrderId();
+      const ref = firebaseDb.ref("shopOrders/" + id);
+      ref.once("value").then((snap) => {
+        if (snap.exists()) {
+          reserve(attempt + 1);
+          return;
+        }
+        const token = crypto.randomBytes(18).toString("hex");
+        const method = String(parsed.shippingMethod || "standard").trim() === "express" ? "express" : "standard";
+        const record = {
+          email,
+          createdAt: Date.now(),
+          status: "preparing",
+          product: String(parsed.productLabel || parsed.subject || "Aura order").slice(0, 180),
+          quantity: String(parsed.quantity || "").slice(0, 8),
+          country: String(parsed.deliveryCountry || "").trim().toUpperCase().slice(0, 2),
+          zone: String(parsed.shippingZone || "").trim().slice(0, 40),
+          method,
+          shipToken: token,
+        };
+        return ref.set(record).then(() => {
+          resolve({
+            id,
+            token,
+            trackUrl: "https://aurahomesystems.eu/track.html?order=" + encodeURIComponent(id),
+          });
+        });
+      }).catch((err) => {
+        console.error("[shop-order] save failed:", err.message || err);
+        resolve(null);
+      });
+    };
+    reserve(1);
+  });
+}
+
+function readShopOrder(id) {
+  if (!firebaseDb) return Promise.resolve(null);
+  return firebaseDb.ref("shopOrders/" + id).once("value").then((snap) => snap.val());
+}
+
+function publicShopOrder(id, row) {
+  const window = deliveryWindowForOrder(row);
+  return {
+    found: true,
+    orderId: id,
+    status: row.status === "shipped" ? "shipped" : "preparing",
+    product: row.product || "",
+    country: row.country || "",
+    etaFrom: window ? window.from : "",
+    etaTo: window ? window.to : "",
+    carrier: row.carrier || "",
+    carrierLabel: ORDER_CARRIERS[row.carrier] || "",
+    trackingNumber: row.trackingNumber || "",
+    trackingUrl: row.trackingUrl || "",
+    shippedAt: row.shippedAt || 0,
+  };
+}
+
+function readJsonBody(req, limit, callback) {
+  let body = "";
+  let done = false;
+  const finish = (err, parsed) => {
+    if (done) return;
+    done = true;
+    callback(err, parsed);
+  };
+  req.on("data", (chunk) => {
+    body += chunk;
+    if (body.length > limit) {
+      body = "";
+      req.destroy();
+    }
+  });
+  req.on("end", () => {
+    try {
+      finish(null, JSON.parse(body || "{}"));
+    } catch (e) {
+      finish(e);
+    }
+  });
+  req.on("error", (err) => finish(err));
+}
+
+function shopOrderIdOk(id) {
+  return /^AHS-[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{4}$/.test(String(id || ""));
+}
+
+const shopOrderLookups = new Map();
+
+function shopLookupLimited(ip) {
+  const now = Date.now();
+  const hits = (shopOrderLookups.get(ip) || []).filter((t) => now - t < 60000);
+  hits.push(now);
+  shopOrderLookups.set(ip, hits);
+  return hits.length > 30;
+}
+
 function logStartupConfig() {
   const hasResend = !!(
     process.env.RESEND_API_KEY && String(process.env.RESEND_API_KEY).trim()
@@ -1410,28 +1629,136 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  if (requestPath === "/submitInquiry" && req.method === "POST") {
+  if (requestPath === "/api/order-status" && req.method === "GET") {
     setCors(res, req);
-    let body = "";
-    req.on("data", (chunk) => { body += chunk; });
-    req.on("end", () => {
-      let parsed = {};
-      try {
-        parsed = JSON.parse(body || "{}");
-      } catch (e) {
+    res.setHeader("Cache-Control", "no-store");
+    const ip = String(req.socket && req.socket.remoteAddress || "");
+    if (shopLookupLimited(ip)) {
+      res.writeHead(429, { "Content-Type": "application/json; charset=utf-8" });
+      res.end(JSON.stringify({ error: "Too many lookups" }));
+      return;
+    }
+    const orderId = String(requestUrl.searchParams.get("order") || "").trim().toUpperCase();
+    const email = String(requestUrl.searchParams.get("email") || "").trim().toLowerCase();
+    if (!shopOrderIdOk(orderId) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !firebaseDb) {
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+      res.end(JSON.stringify({ found: false }));
+      return;
+    }
+    readShopOrder(orderId)
+      .then((row) => {
+        if (!row || String(row.email || "") !== email) {
+          res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify({ found: false }));
+          return;
+        }
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify(publicShopOrder(orderId, row)));
+      })
+      .catch(() => {
+        res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({ error: "Lookup failed" }));
+      });
+    return;
+  }
+
+  if (requestPath === "/api/order-ship" && req.method === "POST") {
+    setCors(res, req);
+    readJsonBody(req, 8000, (err, parsed) => {
+      if (err || !parsed) {
         res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
         res.end(JSON.stringify({ error: "Invalid JSON" }));
         return;
       }
-      forwardToFormspree(parsed, (err, statusCode, formspreeRes) => {
-        if (err) {
-          res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
-          res.end(JSON.stringify({ error: "Server error" }));
+      const orderId = String(parsed.orderId || "").trim().toUpperCase();
+      const token = String(parsed.token || "").trim();
+      const carrier = String(parsed.carrier || "").trim();
+      const trackingNumber = String(parsed.trackingNumber || "").trim();
+      const trackingUrl = trackingUrlForCarrier(carrier, trackingNumber);
+      if (!shopOrderIdOk(orderId) || !ORDER_CARRIERS[carrier] || !trackingUrl || !firebaseDb) {
+        res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({ error: "Check the order link, courier and tracking number." }));
+        return;
+      }
+      const ref = firebaseDb.ref("shopOrders/" + orderId);
+      ref.once("value").then((snap) => {
+        const row = snap.val();
+        const stored = row && String(row.shipToken || "");
+        const given = Buffer.from(token);
+        const have = Buffer.from(stored);
+        if (!row || !stored || given.length !== have.length || !crypto.timingSafeEqual(given, have)) {
+          res.writeHead(403, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify({ error: "This shipping link is not valid." }));
           return;
         }
-        maybeSendCustomerOrderConfirmation(parsed);
-        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-        res.end(JSON.stringify({ success: true }));
+        const shippedAt = Date.now();
+        return ref.update({
+          status: "shipped",
+          carrier,
+          trackingNumber: carrier === "link" ? "" : trackingNumber,
+          trackingUrl,
+          shippedAt,
+        }).then(() => {
+          const apiKey = process.env.RESEND_API_KEY;
+          const to = String(row.email || "").trim();
+          if (apiKey && to) {
+            sendResendEmail(apiKey, {
+              from: process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev",
+              to: [to],
+              subject: "Your order " + orderId + " is on the way – Aura HomeSystems",
+              html: buildOrderShippedEmailHtml(orderId, ORDER_CARRIERS[carrier], carrier === "link" ? "" : trackingNumber, trackingUrl),
+            });
+          }
+          res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify({ success: true, orderId }));
+        });
+      }).catch((saveErr) => {
+        console.error("[shop-order] ship update failed:", saveErr.message || saveErr);
+        res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({ error: "Could not save the tracking number." }));
+      });
+    });
+    return;
+  }
+
+  if (requestPath === "/submitInquiry" && req.method === "POST") {
+    setCors(res, req);
+    readJsonBody(req, 100000, (err, parsed) => {
+      if (err || !parsed) {
+        res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({ error: "Invalid JSON" }));
+        return;
+      }
+      createShopOrder(parsed).then((order) => {
+        if (order) {
+          parsed.orderId = order.id;
+          parsed.trackUrl = order.trackUrl;
+          const shipLink =
+            "https://aurahomesystems.eu/ship.html?order=" +
+            encodeURIComponent(order.id) +
+            "&token=" +
+            encodeURIComponent(order.token);
+          parsed.message =
+            String(parsed.message || "") +
+            "\n\nOrder " +
+            order.id +
+            "\nWhen the parcel is handed to the courier, open this link and paste the tracking number:\n" +
+            shipLink;
+        }
+        forwardToFormspree(parsed, (forwardErr) => {
+          if (forwardErr) {
+            res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+            res.end(JSON.stringify({ error: "Server error" }));
+            return;
+          }
+          maybeSendCustomerOrderConfirmation(parsed);
+          res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify({
+            success: true,
+            orderId: order ? order.id : "",
+            trackUrl: order ? order.trackUrl : "",
+          }));
+        });
       });
     });
     return;

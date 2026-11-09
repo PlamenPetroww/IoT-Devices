@@ -16,6 +16,10 @@
         }
       }
     },
+    "shopOrders": {
+      ".read": false,
+      ".write": false
+    },
     "nativeDeviceTokens": {
       "$deviceId": {
         ".read": "auth != null",

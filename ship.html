@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <meta name="referrer" content="no-referrer" />
+    <title>Add parcel tracking – Aura HomeSystems</title>
+    <script src="inquiry-config.js"></script>
+    <style>
+      :root { color-scheme: dark; }
+      body { margin: 0; font-family: system-ui, sans-serif; background: #0b1220; color: #e5e7eb; }
+      main { max-width: 520px; margin: 0 auto; padding: 32px 20px 64px; }
+      a { color: #86efac; }
+      h1 { font-size: 1.6rem; margin: 12px 0; }
+      p { line-height: 1.5; }
+      form { display: flex; flex-direction: column; gap: 12px; background: #0f172a; border: 1px solid rgba(148,163,184,.35); border-radius: 16px; padding: 18px; }
+      label { display: flex; flex-direction: column; gap: 6px; }
+      input, select { min-height: 48px; border-radius: 12px; border: 1px solid rgba(148,163,184,.45); background: #f1f5f9; color: #0f172a; padding: 0 14px; font-size: 1rem; }
+      button { min-height: 48px; border: 0; border-radius: 12px; background: #22c55e; color: #022c22; font-weight: 700; font-size: 1rem; cursor: pointer; }
+      .muted { color: #cbd5e1; }
+      .error { color: #fecaca; }
+      .ok { color: #4ade80; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <a href="index.html">Aura HomeSystems</a>
+      <h1>Add parcel tracking</h1>
+      <p class="muted">Open this page from the link in the order email. Paste the number from Speedy, Bulgarian Post, Econt, DHL or UPS. The customer then sees it on their tracking page and gets an email.</p>
+      <form id="shipForm">
+        <label>Order
+          <input id="orderInput" name="order" required />
+        </label>
+        <label>Courier
+          <select id="carrierInput" name="carrier" required>
+            <option value="speedy">Speedy</option>
+            <option value="bgpost">Bulgarian Post</option>
+            <option value="econt">Econt</option>
+            <option value="dhl">DHL</option>
+            <option value="ups">UPS</option>
+            <option value="link">Other — paste the full https link</option>
+          </select>
+        </label>
+        <label>Tracking number or link
+          <input id="numberInput" name="trackingNumber" required autocomplete="off" />
+        </label>
+        <button type="submit">Save and email the customer</button>
+        <p id="shipMessage" hidden></p>
+      </form>
+    </main>
+    <script>
+      var params = new URLSearchParams(location.search);
+      var order = params.get("order") || "";
+      var token = params.get("token") || "";
+      document.getElementById("orderInput").value = order;
+      var message = document.getElementById("shipMessage");
+      document.getElementById("shipForm").addEventListener("submit", function (event) {
+        event.preventDefault();
+        message.hidden = true;
+        if (!token) {
+          message.textContent = "Open the link from the order email. It contains the private key for this order.";
+          message.className = "error";
+          message.hidden = false;
+          return;
+        }
+        var base = (window.INQUIRY_FUNCTIONS_BASE_URL || "").replace(/\/$/, "");
+        fetch(base + "/api/order-ship", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            orderId: document.getElementById("orderInput").value.trim(),
+            token: token,
+            carrier: document.getElementById("carrierInput").value,
+            trackingNumber: document.getElementById("numberInput").value.trim()
+          })
+        }).then(function (res) { return res.json().then(function (data) { return { ok: res.ok, data: data }; }); })
+          .then(function (result) {
+            message.className = result.ok ? "ok" : "error";
+            message.textContent = result.ok
+              ? "Saved. The customer can now see the courier tracking."
+              : ((result.data && result.data.error) || "Could not save it.");
+            message.hidden = false;
+          })
+          .catch(function () {
+            message.className = "error";
+            message.textContent = "The server did not answer. If this is a new order, deploy cleverhaus on Render first.";
+            message.hidden = false;
+          });
+      });
+    </script>
+  </body>
+</html>

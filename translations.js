@@ -493,7 +493,7 @@ const translations = {
             serverUnreachable: "Server unreachable. Close the app, reopen it, and try again.",
             awayPushFailed: "Alerts not linked yet. Away mode is on — reopen the app and tap the yellow text."
         },
-        footer: { text: "Smart sensors for a calmer home.", wifiNote: "A stable WiFi connection at home is required to use our sensors.", impressum: "Impressum", privacy: "Privacy Policy", installation: "Sensor installation", windowSensor: "Window sensor", windowSensorHref: "window-sensor.html" },
+        footer: { text: "Smart sensors for a calmer home.", wifiNote: "A stable WiFi connection at home is required to use our sensors.", impressum: "Impressum", privacy: "Privacy Policy", trackOrder: "Track an order", installation: "Sensor installation", windowSensor: "Window sensor", windowSensorHref: "window-sensor.html" },
         impressum: {
             pageTitle: "Impressum – Aura HomeSystems",
             title: "Impressum (Legal information)",
@@ -1084,7 +1084,7 @@ const translations = {
             serverUnreachable: "Server nicht erreichbar. App schließen, neu öffnen und erneut versuchen.",
             awayPushFailed: "Benachrichtigungen noch nicht verknüpft. Modus „Unterwegs“ ist an — App öffnen und gelben Text tippen."
         },
-        footer: { text: "Smarte Sensoren für ein ruhigeres Zuhause.", wifiNote: "Für unsere Sensoren ist eine stabile WLAN-Verbindung zu Hause erforderlich.", impressum: "Impressum", privacy: "Datenschutz", installation: "Sensor-Installation", windowSensor: "Fenstersensor", windowSensorHref: "window-sensor.html" },
+        footer: { text: "Smarte Sensoren für ein ruhigeres Zuhause.", wifiNote: "Für unsere Sensoren ist eine stabile WLAN-Verbindung zu Hause erforderlich.", impressum: "Impressum", privacy: "Datenschutz", trackOrder: "Bestellung verfolgen", installation: "Sensor-Installation", windowSensor: "Fenstersensor", windowSensorHref: "window-sensor.html" },
         impressum: {
             pageTitle: "Impressum – Aura HomeSystems",
             title: "Impressum (Rechtliche Angaben)",

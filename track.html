@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Track an order – Aura HomeSystems</title>
+    <meta name="description" content="See when your Aura HomeSystems order should arrive and follow the courier tracking after it ships." />
+    <link rel="canonical" href="https://aurahomesystems.eu/track.html" />
+    <script src="inquiry-config.js"></script>
+    <style>
+      :root { color-scheme: dark; }
+      body { margin: 0; font-family: system-ui, sans-serif; background: #0b1220; color: #e5e7eb; }
+      main { max-width: 520px; margin: 0 auto; padding: 32px 20px 64px; }
+      a { color: #86efac; }
+      h1 { font-size: 1.6rem; margin: 12px 0; }
+      p { line-height: 1.5; }
+      form, .card { display: flex; flex-direction: column; gap: 12px; background: #0f172a; border: 1px solid rgba(148,163,184,.35); border-radius: 16px; padding: 18px; }
+      label { display: flex; flex-direction: column; gap: 6px; font-size: 0.95rem; }
+      input { min-height: 48px; border-radius: 12px; border: 1px solid rgba(148,163,184,.45); background: #f1f5f9; color: #0f172a; padding: 0 14px; font-size: 1rem; }
+      button, .go { min-height: 48px; border: 0; border-radius: 12px; background: #22c55e; color: #022c22; font-weight: 700; font-size: 1rem; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
+      .muted { color: #cbd5e1; }
+      .status { font-weight: 700; color: #4ade80; }
+      .error { color: #fecaca; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <a href="index.html">Aura HomeSystems</a>
+      <h1>Track an order</h1>
+      <p class="muted">Use the order number and the email from the order. Before the parcel leaves, this page shows when it should arrive. After it is handed to the courier, the same page opens the courier tracking.</p>
+      <form id="trackForm">
+        <label>Order number
+          <input id="orderInput" name="order" autocomplete="off" required placeholder="AHS-7K2M" />
+        </label>
+        <label>Email
+          <input id="emailInput" name="email" type="email" autocomplete="email" required placeholder="you@email.com" />
+        </label>
+        <button type="submit">Show delivery</button>
+        <p id="trackError" class="error" hidden></p>
+      </form>
+      <section id="trackResult" class="card" hidden>
+        <p id="trackOrder"></p>
+        <p id="trackProduct"></p>
+        <p>Status: <span id="trackStatus" class="status"></span></p>
+        <p id="trackEta"></p>
+        <p id="trackHint" class="muted"></p>
+        <a id="trackLink" class="go" hidden target="_blank" rel="noopener noreferrer">See where the parcel is</a>
+      </section>
+    </main>
+    <script>
+      var params = new URLSearchParams(location.search);
+      if (params.get("order")) document.getElementById("orderInput").value = params.get("order");
+      var form = document.getElementById("trackForm");
+      var errorEl = document.getElementById("trackError");
+      var resultEl = document.getElementById("trackResult");
+      form.addEventListener("submit", function (event) {
+        event.preventDefault();
+        errorEl.hidden = true;
+        resultEl.hidden = true;
+        var base = (window.INQUIRY_FUNCTIONS_BASE_URL || "").replace(/\/$/, "");
+        var order = document.getElementById("orderInput").value.trim();
+        var email = document.getElementById("emailInput").value.trim();
+        fetch(base + "/api/order-status?order=" + encodeURIComponent(order) + "&email=" + encodeURIComponent(email), { cache: "no-store" })
+          .then(function (res) { return res.json(); })
+          .then(function (data) {
+            if (!data || !data.found) {
+              errorEl.textContent = "No order found for that number and email.";
+              errorEl.hidden = false;
+              return;
+            }
+            document.getElementById("trackOrder").textContent = "Order " + data.orderId;
+            document.getElementById("trackProduct").textContent = data.product || "";
+            var country = "";
+            if (data.country) {
+              try { country = new Intl.DisplayNames(["en"], { type: "region" }).of(data.country) || data.country; } catch (e) { country = data.country; }
+            }
+            document.getElementById("trackStatus").textContent = data.status === "shipped" ? "On the way" : "Being prepared";
+            var eta = document.getElementById("trackEta");
+            eta.textContent = data.etaFrom && data.etaTo
+              ? "Expected arrival" + (country ? " in " + country : "") + ": " + data.etaFrom + " – " + data.etaTo + "."
+              : "";
+            var hint = document.getElementById("trackHint");
+            var link = document.getElementById("trackLink");
+            if (data.status === "shipped" && data.trackingUrl) {
+              hint.textContent = (data.carrierLabel || "The courier") + (data.trackingNumber ? " · " + data.trackingNumber : "") + ". The courier page shows where the parcel is.";
+              link.href = data.trackingUrl;
+              link.hidden = false;
+            } else {
+              hint.textContent = "The courier tracking appears here after the parcel leaves us.";
+              link.hidden = true;
+            }
+            resultEl.hidden = false;
+          })
+          .catch(function () {
+            errorEl.textContent = "The tracking page could not reach the server. Try again in a minute.";
+            errorEl.hidden = false;
+          });
+      });
+    </script>
+  </body>
+</html>

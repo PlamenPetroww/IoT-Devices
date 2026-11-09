@@ -1009,8 +1009,9 @@ function initBuyPanel() {
     }
 
     function getRevolutCardFieldOptions() {
+        const fieldFont = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
         return {
-            theme: "dark",
+            theme: "light",
             showLoadingIndicator: false,
             hidePostcodeField: true,
             locale: getRevolutCardFieldLocale(),
@@ -1024,13 +1025,35 @@ function initBuyPanel() {
             },
             styles: {
                 default: {
-                    color: "#f1f5f9",
+                    color: "#0f172a",
+                    backgroundColor: "#f1f5f9",
+                    caretColor: "#0f172a",
+                    borderRadius: "14px",
+                    border: "1px solid rgba(148, 163, 184, 0.45)",
+                    padding: "10px 14px",
                     fontSize: "14px",
-                    fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
+                    fontFamily: fieldFont,
                     fontWeight: "500",
+                    "::placeholder": { color: "#64748b" },
                 },
-                invalid: { color: "#fca5a5" },
-                placeholder: { color: "#94a3b8" },
+                focused: {
+                    color: "#0f172a",
+                    backgroundColor: "#f8fafc",
+                    borderColor: "rgba(34, 197, 94, 0.7)",
+                },
+                invalid: {
+                    color: "#991b1b",
+                    backgroundColor: "#fef2f2",
+                    borderColor: "rgba(239, 68, 68, 0.85)",
+                },
+                autofilled: {
+                    color: "#0f172a",
+                    backgroundColor: "#f1f5f9",
+                },
+                completed: {
+                    color: "#0f172a",
+                    backgroundColor: "#f1f5f9",
+                },
             },
         };
     }
@@ -1440,6 +1463,10 @@ function initBuyPanel() {
 
         const mountKey = getCardMountKey();
         if (cardPayModeActive && cardFieldInstance && mountKey === lastCardMountKey) {
+            if (buyStatus) {
+                buyStatus.textContent = "";
+                buyStatus.className = "form-status";
+            }
             return;
         }
 

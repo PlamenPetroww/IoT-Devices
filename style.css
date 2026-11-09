@@ -3018,7 +3018,7 @@ body.buy-panel-open {
 
 .buy-card-pay-mount {
     width: 100%;
-    min-height: 156px;
+    min-height: 46px;
     margin: 0;
     padding: 0;
     background: transparent;
@@ -3029,12 +3029,13 @@ body.buy-panel-open {
 .buy-card-pay-mount .aura-rc-card-field {
     display: block;
     width: 100%;
-    min-height: 44px;
-    padding: 10px 14px;
-    border-radius: var(--radius-md);
-    border: 1px solid var(--border-subtle);
-    background: rgba(15, 23, 42, 0.95);
+    min-height: 46px;
+    padding: 0;
+    border-radius: 14px;
+    border: none;
+    background: #f1f5f9;
     box-sizing: border-box;
+    overflow: hidden;
     transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
@@ -3056,9 +3057,11 @@ body.buy-panel-open {
     display: block !important;
     width: 100% !important;
     max-width: 100% !important;
-    height: 148px !important;
-    min-height: 148px !important;
+    height: 46px !important;
+    min-height: 46px !important;
     border: 0 !important;
+    border-radius: 14px;
+    background: #f1f5f9;
 }
 
 .buy-card-trust {
@@ -3076,6 +3079,16 @@ body.buy-panel-open {
 .buy-cardholder-field {
     max-width: 360px;
     margin: 0 auto;
+}
+
+.buy-cardholder-field .form-input {
+    background: #f1f5f9;
+    color: #0f172a;
+    border-color: rgba(148, 163, 184, 0.45);
+}
+
+.buy-cardholder-field .form-input::placeholder {
+    color: #64748b;
 }
 
 .buy-card-validation-hint {

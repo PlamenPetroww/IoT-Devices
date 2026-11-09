@@ -1089,6 +1089,58 @@ function maybeSendCustomerOrderConfirmation(parsed) {
   );
 }
 
+function buildShopOrderNoticeHtml(data) {
+  const orderId = data.orderId ? escapeHtmlEmail(String(data.orderId)) : "";
+  const customer = escapeHtmlEmail(String(data.email || data._replyto || "").trim());
+  const shipUrl = data.shipUrl ? escapeHtmlEmail(String(data.shipUrl)) : "";
+  return (
+    "<!DOCTYPE html><html lang=\"bg\"><head><meta charset=\"UTF-8\"></head>" +
+    "<body style=\"font-family:system-ui,sans-serif;line-height:1.55;color:#1a1a1a;max-width:560px\">" +
+    "<p><strong>Има нова поръчка" +
+    (orderId ? " " + orderId : "") +
+    ".</strong></p>" +
+    directOrderSummaryListHtmlEmail(data) +
+    (customer ? "<p><strong>Имейл на клиента:</strong> " + customer + "</p>" : "") +
+    (shipUrl
+      ? "<p><a href=\"" +
+        shipUrl +
+        "\" style=\"display:inline-block;padding:12px 20px;background:#22c55e;color:#022c22;text-decoration:none;border-radius:8px;font-weight:600\">Смени статуса на поръчката</a></p>" +
+        "<p>От този линк слагаш номера на Speedy. Когато клиентът получи пратката, оттам я отбелязваш като доставена.</p>"
+      : "") +
+    "</body></html>"
+  );
+}
+
+function maybeSendShopOrderNotice(parsed) {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) return;
+  if (String(parsed.orderType || "").trim() !== "direct") return;
+  const to = process.env.ORDER_NOTIFY_EMAIL || "office@aurahomesystems.eu";
+  const fromAddr = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
+  const customer = String(parsed.email || parsed._replyto || "").trim();
+  sendResendEmail(
+    key,
+    {
+      from: fromAddr,
+      to: [to],
+      reply_to: customer || undefined,
+      subject:
+        "Нова поръчка" +
+        (parsed.orderId ? " " + parsed.orderId : "") +
+        " – Aura HomeSystems",
+      html: buildShopOrderNoticeHtml(parsed),
+    },
+    (err, status, body) => {
+      if (err) console.error("Resend shop order email:", err.message);
+      else if (status && status >= 400) {
+        console.error("Resend shop order email HTTP:", status, body || "");
+      } else {
+        console.log("[Resend] Shop order notice sent to", to);
+      }
+    }
+  );
+}
+
 function forwardToFormspree(body, callback) {
   const payload = JSON.stringify({
     email: body.email || body._replyto,
@@ -1843,7 +1895,7 @@ const server = http.createServer((req, res) => {
           parsed.orderId = order.id;
           parsed.trackUrl = order.trackUrl;
           parsed.receivedAt = order.receivedAt;
-          const shipLink =
+          parsed.shipUrl =
             "https://aurahomesystems.eu/ship.html?order=" +
             encodeURIComponent(order.id) +
             "&token=" +
@@ -1853,7 +1905,7 @@ const server = http.createServer((req, res) => {
             "\n\nOrder " +
             order.id +
             "\nWhen the parcel is handed to the courier, open this link and paste the tracking number:\n" +
-            shipLink;
+            parsed.shipUrl;
         }
         forwardToFormspree(parsed, (forwardErr) => {
           if (forwardErr) {
@@ -1862,6 +1914,7 @@ const server = http.createServer((req, res) => {
             return;
           }
           maybeSendCustomerOrderConfirmation(parsed);
+          maybeSendShopOrderNotice(parsed);
           res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
           res.end(JSON.stringify({
             success: true,

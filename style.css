@@ -2715,6 +2715,13 @@ main {
     transform: none;
 }
 
+@media (max-width: 1100px) {
+    .buy-panel {
+        width: 100%;
+        border-left: 0;
+    }
+}
+
 .buy-panel-inner {
     height: 100%;
     padding: 48px 20px 0;
@@ -2892,32 +2899,44 @@ body.buy-panel-open {
 
 @media (max-width: 860px) {
     .buy-panel-inner {
-        overflow-y: auto;
-        padding: 56px 18px 0;
-    }
-
-    .buy-panel-form {
-        flex: none;
+        padding: 44px 10px 0;
     }
 
     .buy-panel-layout {
-        display: flex;
-        flex-direction: column;
-        overflow: visible;
-        flex: none;
-        gap: 24px;
+        gap: 12px;
     }
 
-    .buy-panel-customer,
+    .buy-panel-title {
+        font-size: 1.05rem;
+        margin-bottom: 8px;
+    }
+
+    .buy-panel-desc,
+    .buy-fieldset-hint,
+    .buy-panel-play-note,
+    .form-label-text {
+        font-size: 12px;
+    }
+
+    .buy-mode-option,
+    .buy-pack-option {
+        padding: 8px 8px;
+        gap: 8px;
+        font-size: 0.82rem;
+    }
+
+    .form-input,
+    .form-select {
+        padding: 8px 10px;
+        font-size: 13px;
+    }
+
     .buy-panel-payment {
-        overflow: visible;
-        padding-left: 0;
-        border-left: 0;
+        padding: 0 2px 12px 10px;
     }
 
-    .buy-panel-pay-footer {
-        position: sticky;
-        bottom: 0;
+    .buy-panel-customer {
+        padding-bottom: 12px;
     }
 }
 

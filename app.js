@@ -474,9 +474,9 @@ function initBuyPanel() {
             }
         }
         const parts = [];
-        if (String(recipient).trim()) parts.push(String(recipient).trim());
         if (countryName) parts.push(countryName);
         if (String(city).trim()) parts.push(String(city).trim());
+        if (String(recipient).trim()) parts.push(String(recipient).trim());
         if (String(postal).trim()) parts.push(String(postal).trim());
         if (String(street).trim()) parts.push(String(street).trim());
         return parts.join(" · ");

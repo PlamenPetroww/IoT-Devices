@@ -239,6 +239,7 @@ const translations = {
         },
         buyPanel: {
             title: "Direct order",
+            customerTitle: "Delivery details",
             productDesc: "Choose sensors only, a siren, or bundled home packs. No hub — same Aura app for everything.",
             priceLabel: "Selected product",
             priceValue: "59.00 €",
@@ -833,6 +834,7 @@ const translations = {
         },
         buyPanel: {
             title: "Direktbestellung",
+            customerTitle: "Lieferdaten",
             productDesc: "Nur Sensoren, Sirene oder Komplettpakete — ohne Hub, alles in derselben Aura-App.",
             priceLabel: "Gewähltes Produkt",
             priceValue: "59.00 €",

@@ -1097,12 +1097,7 @@
         id="buyPanelOverlay"
         class="buy-panel-overlay"
         aria-hidden="true"
-      >
-        <div class="buy-panel-stage">
-          <p class="buy-panel-stage-name">Aura HomeSystems</p>
-          <p class="buy-panel-stage-line" data-i18n="hero.headlineLead">No monthly fees. No hubs.</p>
-        </div>
-      </div>
+      ></div>
       <aside
         id="buyPanel"
         class="buy-panel"
@@ -1120,13 +1115,6 @@
            aria-label="Close">
             ×
           </button>
-          <h2 id="buyPanelTitle" class="buy-panel-title" data-i18n="buyPanel.title">Direct order</h2>
-          <p class="buy-panel-desc" data-i18n="buyPanel.productDesc">Wireless window and door sensors — no hub or extra devices. They connect straight to the app and notify you when something opens.</p>
-          <div class="buy-panel-price-row">
-            <span class="buy-panel-price-label" data-i18n="buyPanel.priceLabel">Price per sensor</span>
-            <span class="buy-panel-price">59.00&nbsp;€</span>
-          </div>
-          <p class="buy-panel-note" data-i18n="buyPanel.shippingNote">Price does not include shipping – delivery costs are covered by the buyer.</p>
           <form id="buyPanelForm" class="buy-panel-form">
             <input type="hidden" name="_subject" value="Direct order" />
             <input type="hidden" name="orderType" value="direct" />
@@ -1134,60 +1122,52 @@
             <input type="hidden" name="sensorPack" id="buySensorPackInput" value="1" />
             <input type="hidden" name="sirenCount" id="buySirenCountInput" value="0" />
             <input type="hidden" id="buyShippingZone" value="" />
-            <label class="form-label form-label-shipping-method" id="buyShippingMethodWrap" style="display: none;">
-              <span class="form-label-text" data-i18n="buyPanel.shippingMethodLabel">Delivery method</span>
-              <select id="buyShippingMethod" class="form-input form-select">
-                <option value="standard" data-i18n="buyPanel.shippingMethodStandard">Standard (cheaper, slower)</option>
-                <option value="express" data-i18n="buyPanel.shippingMethodExpress">Express (faster, higher cost)</option>
-              </select>
-            </label>
             <div class="buy-panel-layout">
-              <div class="buy-panel-summary">
-                <h3 class="buy-summary-title" data-i18n="buyPanel.summaryTitle">Your order</h3>
-                <ul class="buy-summary-list">
-                  <li class="buy-summary-row">
-                    <span class="buy-summary-label" data-i18n="buyPanel.summarySensors">Sensors</span>
-                    <span class="buy-summary-value" id="buySummaryQtyValue">1 sensor</span>
-                  </li>
-                  <li class="buy-summary-row" id="buySummarySirenRow" hidden>
-                    <span class="buy-summary-label" data-i18n="buyPanel.summarySirens">Sirens</span>
-                    <span class="buy-summary-value" id="buySummarySirenValue">× 1</span>
-                  </li>
-                  <li class="buy-summary-row">
-                    <span class="buy-summary-label" id="buySummaryPriceLabel" data-i18n="buyPanel.priceLabel"
-                      >Price per sensor</span
-                    >
-                    <span
-                      class="buy-summary-value buy-summary-value-num"
-                      id="buySummaryUnitPrice"
-                      >59.00 €</span
-                    >
-                  </li>
-                  <li class="buy-summary-row">
-                    <span class="buy-summary-label" data-i18n="buyPanel.summarySubtotal">Subtotal</span>
-                    <span
-                      class="buy-summary-value buy-summary-value-num"
-                      id="buySummarySubtotal"
-                      >59.00 €</span
-                    >
-                  </li>
-                  <li class="buy-summary-row">
-                    <span class="buy-summary-label" data-i18n="buyPanel.summaryDelivery">Delivery</span>
-                    <span class="buy-summary-value" id="buySummaryDeliveryEstimate">
-                      <span id="buySummaryDeliveryPriceDays"></span>
-                    </span>
-                  </li>
-                  <li class="buy-summary-row buy-summary-total">
-                    <span class="buy-summary-label" data-i18n="buyPanel.summaryTotal">Total</span>
-                    <span
-                      class="buy-summary-value buy-summary-value-num"
-                      id="buySummaryTotal"
-                      >59.00 €</span
-                    >
-                  </li>
-                </ul>
-              </div>
-              <div class="buy-panel-payment">
+              <section class="buy-panel-customer">
+                <h2 class="buy-panel-title" data-i18n="buyPanel.customerTitle">Delivery details</h2>
+                <p class="buy-panel-play-note" data-i18n="buyPanel.playStoreCountriesNote">Orders only to countries where Google Play is available and the app can be installed.</p>
+                <label class="form-label">
+                  <span class="form-label-text" data-i18n="buyPanel.deliveryCountryLabel">Country for delivery</span>
+                  <select id="buyDeliveryCountry" name="deliveryCountry" class="form-input form-select" required autocomplete="country">
+                    <option value="" data-i18n="buyPanel.shippingZoneChoose">Choose</option>
+                  </select>
+                </label>
+                <label class="form-label">
+                  <span class="form-label-text" data-i18n="buyPanel.deliveryCityLabel">City</span>
+                  <input type="text" name="deliveryCity" id="buyDeliveryCity" class="form-input" required maxlength="120" autocomplete="address-level2" data-i18n-placeholder="buyPanel.deliveryCityPlaceholder" placeholder="e.g. Berlin" />
+                </label>
+                <label class="form-label">
+                  <span class="form-label-text" data-i18n="buyPanel.deliveryNameLabel">Name for delivery</span>
+                  <input type="text" name="deliveryName" id="buyDeliveryName" class="form-input" required maxlength="120" autocomplete="name" data-i18n-placeholder="buyPanel.deliveryNamePlaceholder" placeholder="First and last name" />
+                </label>
+                <label class="form-label">
+                  <span class="form-label-text" data-i18n="buyPanel.deliveryPostalLabel">Postal code</span>
+                  <input type="text" name="deliveryPostalCode" id="buyDeliveryPostal" class="form-input" maxlength="20" autocomplete="postal-code" data-i18n-placeholder="buyPanel.deliveryPostalPlaceholder" placeholder="optional" />
+                </label>
+                <label class="form-label">
+                  <span class="form-label-text" data-i18n="buyPanel.deliveryStreetLabel">Street address (no., building)</span>
+                  <input type="text" name="deliveryStreet" id="buyDeliveryStreet" class="form-input" required maxlength="240" autocomplete="street-address" data-i18n-placeholder="buyPanel.deliveryStreetPlaceholder" placeholder="street, no., floor, apt." />
+                </label>
+                <input type="hidden" name="deliveryAddress" id="buyDeliveryAddressCombined" value="" />
+                <label class="form-label">
+                  <span class="form-label-text" data-i18n="form.phone">Phone</span>
+                  <input type="tel" name="phone" class="form-input" required data-i18n-placeholder="form.phonePlaceholder" placeholder="+1 234 567 890" />
+                </label>
+                <label class="form-label">
+                  <span class="form-label-text" data-i18n="form.email">Email</span>
+                  <input type="email" name="_replyto" class="form-input" required data-i18n-placeholder="form.emailPlaceholder" placeholder="your@email.com" />
+                </label>
+                <label class="form-label form-label-shipping-method" id="buyShippingMethodWrap" style="display: none;">
+                  <span class="form-label-text" data-i18n="buyPanel.shippingMethodLabel">Delivery method</span>
+                  <select id="buyShippingMethod" class="form-input form-select">
+                    <option value="standard" data-i18n="buyPanel.shippingMethodStandard">Standard (cheaper, slower)</option>
+                    <option value="express" data-i18n="buyPanel.shippingMethodExpress">Express (faster, higher cost)</option>
+                  </select>
+                </label>
+              </section>
+              <div class="buy-panel-payment" id="buyPanelPaySection">
+                <h2 id="buyPanelTitle" class="buy-panel-title" data-i18n="buyPanel.title">Direct order</h2>
+                <p class="buy-panel-desc" data-i18n="buyPanel.productDesc">Choose sensors only, a siren, or bundled home packs. No hub — same Aura app for everything.</p>
                 <fieldset class="buy-fieldset">
                   <legend class="form-label-text" data-i18n="buyPanel.orderTypeLegend">What do you need?</legend>
                   <div class="buy-mode-options">
@@ -1241,182 +1221,58 @@
                     class="form-input"
                     data-i18n-placeholder="buyPanel.revolutPlaceholder"
                    
-                  / placeholder="@user or phone">
-                </label>
-                <p class="buy-panel-play-note" data-i18n="buyPanel.playStoreCountriesNote">Orders only to countries where Google Play is available and the app can be installed.</p>
-                <label class="form-label">
-                  <span class="form-label-text" data-i18n="buyPanel.deliveryCountryLabel"
-                    >Country for delivery</span
-                  >
-                  <select
-                    id="buyDeliveryCountry"
-                    name="deliveryCountry"
-                    class="form-input form-select"
-                    required
-                    autocomplete="country"
-                  >
-                    <option value="" data-i18n="buyPanel.shippingZoneChoose">Choose</option>
-                  </select>
-                </label>
-                <label class="form-label">
-                  <span class="form-label-text" data-i18n="buyPanel.deliveryCityLabel">City</span>
-                  <input
-                    type="text"
-                    name="deliveryCity"
-                    id="buyDeliveryCity"
-                    class="form-input"
-                    required
-                    maxlength="120"
-                    autocomplete="address-level2"
-                    data-i18n-placeholder="buyPanel.deliveryCityPlaceholder"
-                   
-                  / placeholder="e.g. Berlin">
-                </label>
-                <label class="form-label">
-                  <span class="form-label-text" data-i18n="buyPanel.deliveryNameLabel">Name for delivery</span>
-                  <input
-                    type="text"
-                    name="deliveryName"
-                    id="buyDeliveryName"
-                    class="form-input"
-                    required
-                    maxlength="120"
-                    autocomplete="name"
-                    data-i18n-placeholder="buyPanel.deliveryNamePlaceholder"
-                    placeholder="First and last name"
+                    placeholder="@user or phone"
                   />
                 </label>
-                <label class="form-label">
-                  <span class="form-label-text" data-i18n="buyPanel.deliveryPostalLabel">Postal code</span>
-                  <input
-                    type="text"
-                    name="deliveryPostalCode"
-                    id="buyDeliveryPostal"
-                    class="form-input"
-                    maxlength="20"
-                    autocomplete="postal-code"
-                    data-i18n-placeholder="buyPanel.deliveryPostalPlaceholder"
-                   
-                  / placeholder="optional">
+                <label class="form-label buy-cardholder-field" id="cardholderField" style="display: none">
+                  <span class="form-label-text" data-i18n="buyPanel.cardholderName">Cardholder name</span>
+                  <input type="text" name="cardholderName" id="buyCardholderName" class="form-input" autocomplete="cc-name" maxlength="80" data-i18n-placeholder="buyPanel.cardholderPlaceholder" placeholder="First Last (as on card)" />
                 </label>
-                <label class="form-label">
-                  <span class="form-label-text" data-i18n="buyPanel.deliveryStreetLabel"
-                    >Street address (no., building)</span
-                  >
-                  <input
-                    type="text"
-                    name="deliveryStreet"
-                    id="buyDeliveryStreet"
-                    class="form-input"
-                    required
-                    maxlength="240"
-                    autocomplete="street-address"
-                    data-i18n-placeholder="buyPanel.deliveryStreetPlaceholder"
-                   
-                  / placeholder="street, no., floor, apt.">
+                <label class="form-label buy-card-entry" id="buyCardShell" hidden>
+                  <span class="form-label-text" data-i18n="buyPanel.cardDetailsLabel">Card number, expiry (MM/YY) and CVV</span>
+                  <div id="buyCardPayMount" class="buy-card-pay-mount"></div>
+                  <span class="buy-card-trust" data-i18n="buyPanel.cardSecureNote">Card details are processed directly by Revolut.</span>
                 </label>
-                <input type="hidden" name="deliveryAddress" id="buyDeliveryAddressCombined" value="" />
-                <label class="form-label">
-                  <span class="form-label-text" data-i18n="form.phone"
-                    >Phone</span
-                  >
-                  <input
-                    type="tel"
-                    name="phone"
-                    class="form-input"
-                    required
-                    data-i18n-placeholder="form.phonePlaceholder"
-                   
-                  / placeholder="+1 234 567 890">
-                </label>
-                <label class="form-label">
-                  <span class="form-label-text" data-i18n="form.email"
-                    >Email</span
-                  >
-                  <input
-                    type="email"
-                    name="_replyto"
-                    class="form-input"
-                    required
-                    data-i18n-placeholder="form.emailPlaceholder"
-                   
-                  / placeholder="your@email.com">
-                </label>
-              </div>
-            </div>
-            <p id="buyPanelStatus" class="form-status" aria-live="polite"></p>
-            <div class="buy-panel-pay-section" id="buyPanelPaySection">
-            <label class="form-label buy-cardholder-field" id="cardholderField" style="display: none">
-              <span class="form-label-text" data-i18n="buyPanel.cardholderName">Cardholder name</span>
-              <input
-                type="text"
-                name="cardholderName"
-                id="buyCardholderName"
-                class="form-input"
-                autocomplete="cc-name"
-                maxlength="80"
-                data-i18n-placeholder="buyPanel.cardholderPlaceholder"
-               
-              / placeholder="First Last (as on card)">
-            </label>
-            <label class="form-label buy-card-entry" id="buyCardShell" hidden>
-              <span class="form-label-text" data-i18n="buyPanel.cardDetailsLabel">Card number, expiry (MM/YY) and CVV</span>
-              <div id="buyCardPayMount" class="buy-card-pay-mount"></div>
-              <span class="buy-card-trust" data-i18n="buyPanel.cardSecureNote">Card details are processed directly by Revolut.</span>
-            </label>
-            <p id="buyCardValidationHint" class="buy-panel-play-note buy-card-validation-hint" hidden data-i18n="buyPanel.cardValidationHint">Complete all card fields (number, expiry, CVV).</p>
-            <div
-              id="buyRevolutPayMount"
-              class="buy-revolut-pay-mount"
-              hidden
-            ></div>
-            <div
-              id="buyCheckoutLoading"
-              class="buy-checkout-loading"
-              hidden
-              aria-live="polite"
-              aria-busy="true"
-            >
-              <div class="buy-checkout-loading-card">
-                <div class="buy-checkout-spinner" aria-hidden="true">
-                  <img src="icons/icon-192.png" alt="" width="48" height="48" />
-                  <span class="buy-checkout-spinner-ring"></span>
-                </div>
-                <p id="buyCheckoutLoadingText" class="buy-checkout-loading-text"></p>
+                <p id="buyCardValidationHint" class="buy-panel-play-note buy-card-validation-hint" hidden data-i18n="buyPanel.cardValidationHint">Complete all card fields (number, expiry, CVV).</p>
+                <div id="buyRevolutPayMount" class="buy-revolut-pay-mount" hidden></div>
               </div>
             </div>
             <div class="buy-panel-pay-footer" id="buyPanelPayFooter">
-            <div class="buy-pay-breakdown" id="buyPayDue">
-              <div class="buy-pay-breakdown-row">
-                <div class="buy-pay-breakdown-item">
-                  <span class="buy-pay-due-label" id="buyPayProductLabel">1 sensor</span>
-                  <strong class="buy-pay-due-amount" id="buyPayProductAmount">59.00 €</strong>
+              <p id="buyPanelStatus" class="form-status" aria-live="polite"></p>
+              <div class="buy-pay-breakdown" id="buyPayDue">
+                <div class="buy-pay-breakdown-row">
+                  <div class="buy-pay-breakdown-item">
+                    <span class="buy-pay-due-label" id="buyPayProductLabel">1 sensor</span>
+                    <strong class="buy-pay-due-amount" id="buyPayProductAmount">59.00 €</strong>
+                  </div>
+                  <div class="buy-pay-breakdown-item">
+                    <span class="buy-pay-due-label" id="buyPayDeliveryLabel" data-i18n="buyPanel.summaryDelivery">Delivery</span>
+                    <strong class="buy-pay-due-amount" id="buyPayDeliveryAmount">0.00 €</strong>
+                    <span class="buy-pay-delivery-when" id="buySummaryDeliveryPriceDays"></span>
+                  </div>
                 </div>
-                <div class="buy-pay-breakdown-item">
-                  <span class="buy-pay-due-label" id="buyPayDeliveryLabel" data-i18n="buyPanel.summaryDelivery">Delivery</span>
-                  <strong class="buy-pay-due-amount" id="buyPayDeliveryAmount">0.00 €</strong>
+                <div class="buy-pay-breakdown-total">
+                  <span class="buy-pay-due-label" id="buyPayDueLabel" data-i18n="buyPanel.summaryTotal">Total</span>
+                  <strong class="buy-pay-due-amount buy-pay-due-amount-total" id="buyPayDueAmount">59.00 €</strong>
                 </div>
               </div>
-              <div class="buy-pay-breakdown-total">
-                <span class="buy-pay-due-label" id="buyPayDueLabel" data-i18n="buyPanel.summaryTotal">Total</span>
-                <strong class="buy-pay-due-amount buy-pay-due-amount-total" id="buyPayDueAmount">59.00 €</strong>
-              </div>
-            </div>
-            <button
-              type="submit"
-              class="cta-primary-link cta-submit"
-              id="buyPanelSubmitBtn"
-              disabled
-              aria-disabled="true"
-            >
-              <span class="buy-submit-btn-content">
-                <span class="buy-submit-label" data-i18n="buyPanel.submit">Place order</span>
-                <span class="buy-submit-spinner" hidden aria-hidden="true"></span>
-              </span>
-            </button>
-            </div>
+              <button type="submit" class="cta-primary-link cta-submit" id="buyPanelSubmitBtn" disabled aria-disabled="true">
+                <span class="buy-submit-btn-content">
+                  <span class="buy-submit-label" data-i18n="buyPanel.submit">Place order</span>
+                  <span class="buy-submit-spinner" hidden aria-hidden="true"></span>
+                </span>
+              </button>
             </div>
           </form>
+          <div id="buyCheckoutLoading" class="buy-checkout-loading" hidden aria-live="polite" aria-busy="true">
+            <div class="buy-checkout-loading-card">
+              <div class="buy-checkout-spinner" aria-hidden="true">
+                <img src="icons/icon-192.png" alt="" width="48" height="48" />
+                <span class="buy-checkout-spinner-ring"></span>
+              </div>
+              <p id="buyCheckoutLoadingText" class="buy-checkout-loading-text"></p>
+            </div>
+          </div>
         </div>
       </aside>
       <footer class="site-footer">

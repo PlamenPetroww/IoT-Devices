@@ -595,7 +595,7 @@ function initBuyPanel() {
             const dateRangeStr = totalDaysMin === totalDaysMax
                 ? formatDeliveryDate(deliveryStart, refYear)
                 : formatDeliveryDate(deliveryStart, refYear) + " – " + formatDeliveryDate(deliveryEnd, refYear);
-            deliveryPriceDaysEl.textContent = priceStr + ", " + dateRangeStr + ".";
+            deliveryPriceDaysEl.textContent = dateRangeStr;
             updateSummary();
             updateOrderButtonState();
         }

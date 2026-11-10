@@ -1464,6 +1464,28 @@ function shopOrderIdOk(id) {
   return /^AHS-[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{4}$/.test(String(id || ""));
 }
 
+function shopShipTokenOk(row, token) {
+  const stored = row && String(row.shipToken || "");
+  const given = Buffer.from(String(token || ""));
+  const have = Buffer.from(stored);
+  if (!stored || given.length !== have.length) return false;
+  return crypto.timingSafeEqual(given, have);
+}
+
+function ownerShipView(id, row) {
+  const carrier = String((row && row.carrier) || "");
+  return {
+    found: true,
+    orderId: id,
+    status: shopStatus(row),
+    carrier,
+    carrierLabel: ORDER_CARRIERS[carrier] || "",
+    trackingNumber: carrier === "link" ? String(row.trackingUrl || "") : String(row.trackingNumber || ""),
+    shippedAt: formatSofiaDateTime(row.shippedAt),
+    deliveredAt: formatSofiaDateTime(row.deliveredAt),
+  };
+}
+
 const shopOrderLookups = new Map();
 
 function shopLookupLimited(ip) {
@@ -1805,6 +1827,39 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  if (requestPath === "/api/order-ship" && req.method === "GET") {
+    setCors(res, req);
+    res.setHeader("Cache-Control", "no-store");
+    const ip = String(req.socket && req.socket.remoteAddress || "");
+    if (shopLookupLimited(ip)) {
+      res.writeHead(429, { "Content-Type": "application/json; charset=utf-8" });
+      res.end(JSON.stringify({ error: "Too many lookups" }));
+      return;
+    }
+    const orderId = String(requestUrl.searchParams.get("order") || "").trim().toUpperCase();
+    const token = String(requestUrl.searchParams.get("token") || "").trim();
+    if (!shopOrderIdOk(orderId) || !token || !firebaseDb) {
+      res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+      res.end(JSON.stringify({ error: "Open the link from the order email." }));
+      return;
+    }
+    readShopOrder(orderId)
+      .then((row) => {
+        if (!shopShipTokenOk(row, token)) {
+          res.writeHead(403, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify({ error: "This shipping link is not valid." }));
+          return;
+        }
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify(ownerShipView(orderId, row)));
+      })
+      .catch(() => {
+        res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({ error: "Lookup failed" }));
+      });
+    return;
+  }
+
   if (requestPath === "/api/order-ship" && req.method === "POST") {
     setCors(res, req);
     readJsonBody(req, 8000, (err, parsed) => {
@@ -1827,10 +1882,7 @@ const server = http.createServer((req, res) => {
       const ref = firebaseDb.ref("shopOrders/" + orderId);
       ref.once("value").then((snap) => {
         const row = snap.val();
-        const stored = row && String(row.shipToken || "");
-        const given = Buffer.from(token);
-        const have = Buffer.from(stored);
-        if (!row || !stored || given.length !== have.length || !crypto.timingSafeEqual(given, have)) {
+        if (!shopShipTokenOk(row, token)) {
           res.writeHead(403, { "Content-Type": "application/json; charset=utf-8" });
           res.end(JSON.stringify({ error: "This shipping link is not valid." }));
           return;
@@ -1839,6 +1891,11 @@ const server = http.createServer((req, res) => {
         const to = String(row.email || "").trim();
         const from = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
         if (action === "delivered") {
+          if (shopStatus(row) === "delivered") {
+            res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+            res.end(JSON.stringify({ success: true, orderId, status: "delivered" }));
+            return;
+          }
           const deliveredAt = Date.now();
           return ref.update({ status: "delivered", deliveredAt }).then(() => {
             if (apiKey && to) {
@@ -1852,6 +1909,16 @@ const server = http.createServer((req, res) => {
             res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
             res.end(JSON.stringify({ success: true, orderId, status: "delivered" }));
           });
+        }
+        if (shopStatus(row) === "delivered") {
+          res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify({ error: "This parcel is already marked delivered." }));
+          return;
+        }
+        if (shopStatus(row) === "shipped" && String(row.trackingUrl || "") === trackingUrl && String(row.carrier || "") === carrier) {
+          res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify({ success: true, orderId, status: "shipped" }));
+          return;
         }
         const shippedAt = Date.now();
         return ref.update({

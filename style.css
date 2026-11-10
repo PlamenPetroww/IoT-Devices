@@ -2113,13 +2113,8 @@ main {
 }
 
 .pricing-grid-siren {
-    margin: 20px auto 0;
-    max-width: 960px;
+    margin-top: 20px;
     width: 100%;
-}
-
-.pricing-grid-siren .pricing-card-popular {
-    transform: none;
 }
 
 .buy-fieldset {

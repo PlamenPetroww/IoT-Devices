@@ -2137,16 +2137,21 @@ html.aura-play-app .device-menu-dropdown {
     height: 46px;
     margin-left: auto;
     margin-right: auto;
-    border-radius: 50%;
-    border: 2px solid rgba(226, 232, 240, 0.72);
-    background: radial-gradient(circle, #e2e8f0 0 4px, transparent 5px);
-    box-shadow: 0 0 0 6px rgba(226, 232, 240, 0.08);
+    border: 0;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    color: rgba(226, 232, 240, 0.88);
+}
+
+.dashboard-page .siren-head .siren-mark svg {
+    display: block;
+    width: 46px;
+    height: 46px;
 }
 
 .siren-controls.is-standby .siren-mark {
-    border-color: #fbbf24;
-    background: radial-gradient(circle, #fde68a 0 4px, transparent 5px);
-    box-shadow: 0 0 0 6px rgba(251, 191, 36, 0.2);
+    color: #fbbf24;
 }
 
 .siren-controls.is-active {
@@ -2155,9 +2160,7 @@ html.aura-play-app .device-menu-dropdown {
 }
 
 .siren-controls.is-active .siren-mark {
-    border-color: #fb923c;
-    background: radial-gradient(circle, #fff7ed 0 4px, transparent 5px);
-    box-shadow: 0 0 0 6px rgba(251, 146, 60, 0.28);
+    color: #fb923c;
 }
 
 .dashboard-page .siren-controls strong {

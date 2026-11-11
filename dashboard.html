@@ -138,9 +138,12 @@
               🏠 Sensors are off (Home mode).
             </div>
             <div id="sirenControls" class="siren-controls">
-              <div>
-                <strong data-i18n="dashboard.sirenTitle">Siren</strong>
-                <span id="sirenStatus" data-i18n="dashboard.sirenUnavailable">Not connected</span>
+              <div class="siren-head">
+                <span class="siren-mark" aria-hidden="true"></span>
+                <div>
+                  <strong data-i18n="dashboard.sirenTitle">Siren</strong>
+                  <span id="sirenStatus" data-i18n="dashboard.sirenUnavailable">Not connected</span>
+                </div>
               </div>
               <div class="siren-actions">
                 <button type="button" id="sirenEnable" class="mode-btn siren-toggle" data-i18n="dashboard.sirenEnable" disabled>
@@ -301,6 +304,11 @@
             : sirenEnabled
               ? "standby"
               : "";
+          var sirenBox = document.getElementById("sirenControls");
+          if (sirenBox) {
+            sirenBox.classList.toggle("is-standby", sirenAvailable && sirenEnabled && !sirenActive);
+            sirenBox.classList.toggle("is-active", sirenAvailable && sirenActive);
+          }
           sirenStatus.textContent = !sirenAvailable
             ? authT("dashboard.sirenUnavailable")
             : sirenActive

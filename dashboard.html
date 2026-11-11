@@ -769,9 +769,7 @@
                 icon +
                 '</span><span class="name">' +
                 escapeHtml(dev.name) +
-                "</span>" +
-                lastSeenHtml +
-                "</span>" +
+                "</span></span>" +
                 menuHtml +
                 "</div>" +
                 '<div class="contact-stage" aria-hidden="true">' +
@@ -779,6 +777,7 @@
                 '<div class="contact-core"><span class="magnet magnet-top"></span><span class="magnet-beam"></span><span class="magnet magnet-bottom"></span></div>' +
                 "</div>" +
                 '<div class="sensor-card-meta">' +
+                '<div class="sensor-status-line">' +
                 '<span class="status ' +
                 dev.status +
                 '">' +
@@ -786,6 +785,8 @@
                   ? escapeHtml(authT("dashboard.statusOpen"))
                   : escapeHtml(authT("dashboard.statusClosed"))) +
                 "</span>" +
+                lastSeenHtml +
+                "</div>" +
                 powerHtml +
                 meterHtml +
                 "</div>" +

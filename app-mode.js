@@ -11,6 +11,7 @@
     "login.html",
     "register.html",
     "dashboard.html",
+    "sensor-history.html",
     "reset-password.html",
     "delete-account.html",
     "privacy.html",

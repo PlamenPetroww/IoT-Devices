@@ -523,6 +523,24 @@ body {
 .header-menu-lang-options {
     display: flex;
     gap: 6px;
+    align-items: center;
+}
+
+.header-menu-plus {
+    flex: 0 0 40px;
+    width: 40px;
+    height: 36px;
+    border: 1px solid rgba(74, 222, 128, 0.55);
+    border-radius: 8px;
+    background: rgba(74, 222, 128, 0.14);
+    color: #4ade80;
+    font-size: 1.25rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.header-menu-plus[hidden] {
+    display: none;
 }
 
 .header-menu-lang-btn {

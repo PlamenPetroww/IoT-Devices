@@ -68,6 +68,16 @@
                 <button type="button" class="header-menu-lang-btn" data-lang="de">
                   DE
                 </button>
+                <button
+                  type="button"
+                  class="header-menu-plus"
+                  id="addSensorBtn"
+                  hidden
+                  aria-label="Add a sensor"
+                  data-i18n-aria="dashboard.addSensor"
+                >
+                  +
+                </button>
               </div>
             </div>
             <a
@@ -248,6 +258,33 @@
         var emailEl = document.getElementById("userEmail");
         emailEl.textContent = user.email;
         emailEl.title = user.email;
+        var addSensorBtn = document.getElementById("addSensorBtn");
+        if (addSensorBtn && window.AuraAppMode && AuraAppMode.isPlayApp() && !addSensorBtn.dataset.bound) {
+          addSensorBtn.dataset.bound = "1";
+          addSensorBtn.hidden = false;
+          addSensorBtn.addEventListener("click", function () {
+            closeHeaderMenu();
+            var accountEmail = user.email || "";
+            var platform = AuraAppMode.getNativePlatform ? AuraAppMode.getNativePlatform() : "";
+            var lang = (document.documentElement.lang || "en").toLowerCase().indexOf("de") === 0 ? "de" : "en";
+            if (platform === "ios") {
+              var cap = window.Capacitor;
+              if (cap && typeof cap.isPluginAvailable === "function" && cap.isPluginAvailable("AuraSetup")) {
+                var plugin = cap.registerPlugin ? cap.registerPlugin("AuraSetup") : cap.Plugins.AuraSetup;
+                plugin.open({ email: accountEmail });
+                return;
+              }
+              window.alert(authT("dashboard.addSensorIos"));
+              return;
+            }
+            window.location.href =
+              "intent://sensor-setup?email=" +
+              encodeURIComponent(accountEmail) +
+              "&lang=" +
+              lang +
+              "#Intent;scheme=aurahomesystems;package=com.aurahomesystems.app;end";
+          });
+        }
         const userPath = "users/" + getSafeEmail(user.email);
         if (window.AuraPush && AuraPush.syncNativeUserKeyToApp) {
           AuraPush.syncNativeUserKeyToApp(getSafeEmail(user.email));
@@ -1010,6 +1047,9 @@
           }
           if (historyData.length > 0) {
             return escapeHtml(authT("dashboard.waitingForSensorUpdate"));
+          }
+          if (window.AuraAppMode && AuraAppMode.isPlayApp()) {
+            return escapeHtml(authT("dashboard.noSensorsApp"));
           }
           return authT("dashboard.noSensorsHtml", { email: user.email || "" });
         }

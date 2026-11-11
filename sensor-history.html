@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <script src="app-mode.js"></script>
+    <title>History – Aura HomeSystems</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Aura Home" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <link rel="stylesheet" href="auth.css" />
+  </head>
+  <body class="dashboard-page sensor-history-page" data-i18n-page="dashboard">
+    <header class="dashboard-header">
+      <div class="dashboard-header-start">
+        <a class="history-back" href="dashboard.html" data-i18n="dashboard.historyBack">Back to sensors</a>
+      </div>
+      <div class="dashboard-header-center">
+        <a href="dashboard.html" class="dashboard-brand-link" aria-label="Aura HomeSystems dashboard" data-i18n-aria="dashboard.brandAria">
+          <h1>Aura <span class="brand-accent">Home</span>Systems</h1>
+        </a>
+      </div>
+      <div class="dashboard-header-end"></div>
+    </header>
+    <main class="dashboard-layout">
+      <section class="history-card">
+        <h2 id="historyTitle" data-i18n="dashboard.historyTitle">History</h2>
+        <p class="history-desc" id="historyDesc" data-i18n="dashboard.historyDesc">Recent open/close events per sensor.</p>
+        <div class="history-controls">
+          <span data-i18n="dashboard.historyShow">Show:</span>
+          <button type="button" class="history-limit-btn" data-limit="10">10</button>
+          <button type="button" class="history-limit-btn active" data-limit="20">20</button>
+          <button type="button" class="history-limit-btn" data-limit="50">50</button>
+        </div>
+        <ul id="historyList" class="history-list">
+          <li class="history-empty" data-i18n="dashboard.loading">Loading...</li>
+        </ul>
+      </section>
+    </main>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+    <script src="translations.js"></script>
+    <script src="auth-i18n.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="lang-sync.js"></script>
+    <script>
+      initAuthI18n("dashboard");
+      if (window.AuraLangSync) AuraLangSync.init();
+      var params = new URLSearchParams(window.location.search);
+      var deviceId = params.get("device") || "";
+      var deviceIdOk = /^[A-Za-z0-9_-]{1,128}$/.test(deviceId);
+      var historyLimit = 20;
+      var historyRows = [];
+      var liveName = "";
+      var liveIcon = "";
+      var deviceRecord = {};
+      var settingsRecord = {};
+
+      function escapeHtml(text) {
+        var div = document.createElement("div");
+        div.textContent = text == null ? "" : String(text);
+        return div.innerHTML;
+      }
+
+      function paintTitle() {
+        var titleEl = document.getElementById("historyTitle");
+        var name = liveName || deviceId;
+        var text = name
+          ? authT("dashboard.historyFor", { name: name })
+          : authT("dashboard.historyTitle");
+        if (titleEl) titleEl.textContent = text;
+        document.title = text + " – Aura HomeSystems";
+      }
+
+      function renderList() {
+        var listEl = document.getElementById("historyList");
+        if (!listEl) return;
+        if (!deviceIdOk) {
+          listEl.innerHTML = '<li class="history-empty">' + escapeHtml(authT("dashboard.historyEmpty")) + "</li>";
+          return;
+        }
+        var slice = historyRows.slice(-historyLimit).reverse();
+        if (!slice.length) {
+          listEl.innerHTML = '<li class="history-empty">' + escapeHtml(authT("dashboard.historyEmpty")) + "</li>";
+          return;
+        }
+        listEl.innerHTML = slice
+          .map(function (entry) {
+            var date = new Date(entry.timestamp);
+            var timeStr = date.toLocaleString(auraDateLocale(), {
+              day: "2-digit",
+              month: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+            });
+            var label = entry.status === "open" ? authT("dashboard.statusOpen") : authT("dashboard.statusClosed");
+            var icon = liveIcon || "📡";
+            return (
+              '<li class="history-item ' +
+              entry.status +
+              '"><span class="sensor-icon" aria-hidden="true">' +
+              escapeHtml(icon) +
+              '</span><span class="history-name">' +
+              escapeHtml(liveName || entry.deviceName || deviceId) +
+              '</span> <span class="history-status">' +
+              escapeHtml(label) +
+              '</span> <time class="history-time">' +
+              escapeHtml(timeStr) +
+              "</time></li>"
+            );
+          })
+          .join("");
+      }
+
+      function applyDevice() {
+        var saved = String(settingsRecord.displayName || "").trim();
+        var fromDevice = String(deviceRecord.displayName || deviceRecord.deviceName || "").trim();
+        liveName = saved || fromDevice || liveName || deviceId;
+        liveIcon = String(settingsRecord.displayIcon || deviceRecord.displayIcon || "").trim();
+        paintTitle();
+        renderList();
+      }
+
+      document.querySelectorAll(".history-limit-btn").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          document.querySelectorAll(".history-limit-btn").forEach(function (b) {
+            b.classList.remove("active");
+          });
+          btn.classList.add("active");
+          historyLimit = parseInt(btn.getAttribute("data-limit"), 10) || 20;
+          renderList();
+        });
+      });
+
+      firebase.auth().onAuthStateChanged(function (user) {
+        if (!user) {
+          window.location.href = "login.html";
+          return;
+        }
+        if (!deviceIdOk) {
+          paintTitle();
+          renderList();
+          return;
+        }
+        var emailKey = user.email
+          .trim()
+          .toLowerCase()
+          .replace(/\./g, "-")
+          .replace(/@/g, "_at_");
+        var userPath = "users/" + emailKey;
+        var db = firebase.database();
+        db.ref(userPath + "/devices/" + deviceId).on("value", function (snap) {
+          deviceRecord = snap.val() || {};
+          applyDevice();
+        });
+        db.ref(userPath + "/deviceSettings/" + deviceId).on("value", function (snap) {
+          settingsRecord = snap.val() || {};
+          applyDevice();
+        });
+        db.ref(userPath + "/history")
+          .orderByChild("timestamp")
+          .limitToLast(400)
+          .on("value", function (snap) {
+            var val = snap.val();
+            var rows = [];
+            if (val && typeof val === "object") {
+              Object.keys(val).forEach(function (key) {
+                var entry = val[key] || {};
+                if (entry.fromServerApi === true) return;
+                if (String(entry.deviceId || "") !== deviceId) return;
+                rows.push({
+                  deviceName: entry.deviceName || deviceId,
+                  status: entry.status === "open" ? "open" : "closed",
+                  timestamp: entry.timestamp || 0,
+                });
+              });
+            }
+            rows.sort(function (a, b) {
+              return (a.timestamp || 0) - (b.timestamp || 0);
+            });
+            var kept = [];
+            rows.forEach(function (entry) {
+              var prev = kept[kept.length - 1];
+              if (prev && prev.status === entry.status) return;
+              kept.push(entry);
+            });
+            historyRows = kept;
+            if (!liveName) {
+              var named = kept.length ? kept[kept.length - 1].deviceName : "";
+              if (named) liveName = named;
+            }
+            paintTitle();
+            renderList();
+          });
+      });
+
+      window.addEventListener("aura-lang-applied", function () {
+        paintTitle();
+        renderList();
+      });
+    </script>
+  </body>
+</html>

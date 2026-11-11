@@ -1944,6 +1944,9 @@ html.aura-play-app .device-menu-dropdown {
 }
 
 .sensor-history-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     min-height: 40px;
     margin-top: 6px;
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -1952,17 +1955,32 @@ html.aura-play-app .device-menu-dropdown {
     color: #e2e8f0;
     font-weight: 600;
     cursor: pointer;
+    text-decoration: none;
+    box-sizing: border-box;
 }
 
 .sensor-history-btn:hover {
     background: rgba(255, 255, 255, 0.06);
 }
 
-.history-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
+.history-back {
+    display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #e2e8f0;
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.history-back:hover {
+    color: #86efac;
+}
+
+.sensor-history-page .history-list {
+    max-height: none;
 }
 
 .history-head h2 {

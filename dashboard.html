@@ -124,7 +124,6 @@
           <div class="history-card">
             <div class="history-head">
               <h2 id="historyTitle" data-i18n="dashboard.historyTitle">History</h2>
-              <button type="button" id="historyShowAll" class="history-all-btn" hidden data-i18n="dashboard.historyAll">All sensors</button>
             </div>
             <p class="history-desc" id="historyDesc" data-i18n="dashboard.historyDesc">
               Recent open/close events per sensor.
@@ -393,8 +392,6 @@
         const historyRef = db.ref(userPath + "/history");
         let lastDevicesSnap = null;
         var sensorStatusMemory = {};
-        var historySensorFilter = "";
-        var historySensorName = "";
         let lastRemovedSnap = null;
         let lastSettingsSnap = null;
         function deviceSetting(id) {
@@ -792,13 +789,11 @@
                 powerHtml +
                 meterHtml +
                 "</div>" +
-                '<button type="button" class="sensor-history-btn" data-device-action="history" data-device-id="' +
-                escapeHtml(dev.id) +
-                '" data-device-name="' +
-                escapeHtml(dev.name) +
+                '<a class="sensor-history-btn" href="sensor-history.html?device=' +
+                encodeURIComponent(dev.id) +
                 '">' +
                 escapeHtml(authT("dashboard.sensorHistory") || "History") +
-                "</button>" +
+                "</a>" +
                 "</article>"
               );
             })
@@ -928,14 +923,6 @@
               return;
             }
             closeAllDeviceMenus();
-            if (action === "history") {
-              historySensorFilter = deviceId;
-              historySensorName = deviceName;
-              renderHistory();
-              var historyPanel = document.querySelector(".dashboard-history");
-              if (historyPanel) historyPanel.scrollIntoView({ behavior: "smooth", block: "nearest" });
-              return;
-            }
             if (action === "rename") {
               var nextName = window.prompt(
                 authT("dashboard.renameSensorPrompt", { name: deviceName }),
@@ -1138,24 +1125,8 @@
         }
         function renderHistory() {
           const listEl = document.getElementById("historyList");
-          const titleEl = document.getElementById("historyTitle");
-          const allBtn = document.getElementById("historyShowAll");
           const limit = historyLimit;
-          var source = historyForList(historyData);
-          if (historySensorFilter) {
-            var filterKey = String(historySensorFilter).trim().toLowerCase();
-            source = source.filter(function (entry) {
-              return historyDeviceKey(entry) === filterKey || String(entry.deviceId || "") === historySensorFilter;
-            });
-            if (titleEl) {
-              titleEl.textContent = authT("dashboard.historyFor", { name: historySensorName || historySensorFilter });
-            }
-            if (allBtn) allBtn.hidden = false;
-          } else {
-            if (titleEl) titleEl.textContent = authT("dashboard.historyTitle");
-            if (allBtn) allBtn.hidden = true;
-          }
-          const slice = source.slice(-limit).reverse();
+          const slice = historyForList(historyData).slice(-limit).reverse();
           if (slice.length === 0) {
             listEl.innerHTML =
               '<li class="history-empty">' + escapeHtml(authT("dashboard.historyEmpty")) + "</li>";
@@ -1192,14 +1163,6 @@
               return `<li class="history-item ${entry.status} ${htint}"><span class="sensor-icon" aria-hidden="true">${icon}</span><span class="history-name">${escapeHtml(historyName)}</span> <span class="history-status">${label}</span> <time class="history-time">${timeStr}</time></li>`;
             })
             .join("");
-        }
-        var historyShowAll = document.getElementById("historyShowAll");
-        if (historyShowAll) {
-          historyShowAll.addEventListener("click", function () {
-            historySensorFilter = "";
-            historySensorName = "";
-            renderHistory();
-          });
         }
         document.querySelectorAll(".history-limit-btn").forEach((btn) => {
           btn.addEventListener("click", function () {

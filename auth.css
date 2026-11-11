@@ -2105,16 +2105,25 @@ html.aura-play-app .device-menu-dropdown {
 
 .dashboard-page .siren-head {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 12px;
+    gap: 8px;
+    width: 100%;
     min-width: 0;
 }
 
 .dashboard-page .siren-head > div {
     display: grid;
+    justify-items: center;
+    text-align: center;
+    width: 100%;
     gap: 2px;
-    justify-items: start;
+}
+
+.dashboard-page .siren-controls strong,
+.dashboard-page .siren-controls .siren-head span {
+    text-align: center;
 }
 
 .siren-mark {

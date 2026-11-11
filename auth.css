@@ -1733,35 +1733,32 @@ html.aura-play-app .device-menu-dropdown {
 
 .sensor-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 14px;
+    grid-template-columns: 1fr;
+    gap: 12px;
 }
 
 .device-item.sensor-card {
     display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
+    flex-direction: row;
+    align-items: center;
+    gap: 16px;
     margin: 0;
-    padding: 18px 18px 14px;
-    border-radius: 28px;
-    background:
-        radial-gradient(80% 46% at 50% 42%, rgba(74, 222, 128, 0.1), transparent 68%),
-        linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.02));
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+    padding: 14px 16px;
+    border-radius: 22px;
+    background: #101826;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow: none;
     min-height: 0;
 }
 
 .device-item.sensor-card.is-open {
-    background:
-        radial-gradient(80% 46% at 50% 42%, rgba(251, 146, 60, 0.16), transparent 68%),
-        linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.02));
-    border-color: rgba(251, 146, 60, 0.32);
+    background: linear-gradient(90deg, rgba(251, 146, 60, 0.18), #101826 46%);
+    border-color: rgba(251, 146, 60, 0.28);
 }
 
 .device-item.sensor-card:hover {
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    box-shadow: none;
+    border-color: rgba(255, 255, 255, 0.14);
 }
 
 .sensor-card-top {
@@ -1785,104 +1782,141 @@ html.aura-play-app .device-menu-dropdown {
     grid-column: 1 / -1;
 }
 
-.device-item.sensor-card {
-    background: #0c1220;
-    border-color: rgba(255, 255, 255, 0.06);
-    box-shadow: none;
-}
-
-.device-item.sensor-card.is-open {
-    background: #140e0c;
-    border-color: rgba(251, 146, 60, 0.22);
-}
-
-.iris-stage {
+.slit {
     position: relative;
-    height: 188px;
-    display: grid;
-    place-items: center;
+    width: 76px;
+    height: 96px;
+    flex: 0 0 76px;
+    border-radius: 16px;
+    overflow: hidden;
+    background: #070b12;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
-.iris-bloom,
-.iris-disc {
-    grid-area: 1 / 1;
-    border-radius: 50%;
+.slit-glow {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, #fff7ed, #fb923c 42%, #9a3412);
+    opacity: 0;
 }
 
-.iris-bloom {
-    width: 156px;
-    height: 156px;
-    border: 1px solid transparent;
+.sensor-card.is-open .slit-glow {
+    opacity: 1;
 }
 
-.sensor-card.is-open .iris-bloom {
-    width: 176px;
-    height: 176px;
-    border-color: rgba(251, 146, 60, 0.55);
-    box-shadow: 0 0 0 16px rgba(251, 146, 60, 0.08);
+.slit-leaf {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 50%;
+    background: linear-gradient(180deg, #f8fafc, #cbd5e1 46%, #64748b);
 }
 
-.iris-disc {
-    width: 148px;
-    height: 148px;
-    display: grid;
-    place-items: center;
-    background: radial-gradient(circle at 32% 28%, #ecfdf5, #4ade80 34%, #16a34a 70%, #14532d);
-    box-shadow: 0 16px 36px rgba(22, 163, 74, 0.28);
+.slit-leaf-l {
+    left: 0;
 }
 
-.sensor-card.is-open .iris-disc {
-    width: 104px;
-    height: 104px;
-    background: radial-gradient(circle at 32% 28%, #fff7ed, #fb923c 42%, #c2410c 78%);
-    box-shadow: 0 16px 36px rgba(194, 65, 12, 0.32);
+.slit-leaf-r {
+    right: 0;
 }
 
-.sensor-card.door-just-changed.is-open .iris-disc {
-    animation: irisOpen 0.85s cubic-bezier(0.16, 1, 0.3, 1) both;
+.slit-leaf-l::after,
+.slit-leaf-r::after {
+    content: "";
+    position: absolute;
+    top: 22px;
+    width: 12px;
+    height: 18px;
+    border-radius: 3px;
+    background: rgba(15, 23, 42, 0.38);
 }
 
-.sensor-card.door-just-changed.is-closed .iris-disc {
-    animation: irisClose 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+.slit-leaf-l::after {
+    right: 7px;
 }
 
-.sensor-card.door-just-changed.is-open .iris-bloom {
-    animation: irisBloom 0.9s ease both;
+.slit-leaf-r::after {
+    left: 7px;
 }
 
-@keyframes irisOpen {
-    0% { transform: scale(1.42); }
-    100% { transform: scale(1); }
+.sensor-card.is-open .slit-leaf-l {
+    transform: translateX(-72%);
 }
 
-@keyframes irisClose {
-    0% { transform: scale(0.68); }
-    70% { transform: scale(1.05); }
-    100% { transform: scale(1); }
+.sensor-card.is-open .slit-leaf-r {
+    transform: translateX(72%);
 }
 
-@keyframes irisBloom {
-    0% { transform: scale(0.35); opacity: 0; }
-    100% { transform: scale(1); opacity: 1; }
+.sensor-card.door-just-changed.is-open .slit-leaf-l {
+    animation: slitOpenL 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-.dashboard-page .device-item.sensor-card .iris-disc .status {
-    font-size: 1.12rem;
+.sensor-card.door-just-changed.is-open .slit-leaf-r {
+    animation: slitOpenR 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.sensor-card.door-just-changed.is-closed .slit-leaf-l {
+    animation: slitCloseL 0.65s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.sensor-card.door-just-changed.is-closed .slit-leaf-r {
+    animation: slitCloseR 0.65s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.sensor-card.door-just-changed.is-open .slit-glow {
+    animation: slitGlow 0.7s ease both;
+}
+
+@keyframes slitOpenL {
+    from { transform: translateX(0); }
+    to { transform: translateX(-72%); }
+}
+
+@keyframes slitOpenR {
+    from { transform: translateX(0); }
+    to { transform: translateX(72%); }
+}
+
+@keyframes slitCloseL {
+    from { transform: translateX(-72%); }
+    to { transform: translateX(0); }
+}
+
+@keyframes slitCloseR {
+    from { transform: translateX(72%); }
+    to { transform: translateX(0); }
+}
+
+@keyframes slitGlow {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.sensor-card-main {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.dashboard-page .device-item.sensor-card .status {
+    align-self: flex-start;
+    font-size: 1.65rem;
     font-weight: 700;
-    letter-spacing: -0.03em;
-    line-height: 1.05;
-    padding: 0 12px;
-    text-align: center;
+    letter-spacing: -0.04em;
+    line-height: 1;
+    padding: 2px 0 4px;
     background: transparent;
 }
 
-.dashboard-page .device-item.sensor-card .iris-disc .status.closed {
-    color: #052e16;
+.dashboard-page .device-item.sensor-card .status.open {
+    color: #fdba74;
     background: transparent;
 }
 
-.dashboard-page .device-item.sensor-card .iris-disc .status.open {
-    color: #fff7ed;
+.dashboard-page .device-item.sensor-card .status.closed {
+    color: #86efac;
     background: transparent;
 }
 

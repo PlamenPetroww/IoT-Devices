@@ -211,6 +211,8 @@
 }
 
 .dashboard-header {
+    position: relative;
+    z-index: 40;
     padding-block: 16px;
     padding-inline: max(20px, env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px));
     display: grid;
@@ -303,6 +305,40 @@
     .dashboard-header-center .dashboard-brand-link h1 {
         font-size: 1.05rem;
     }
+    .dashboard-header-account {
+        grid-template-columns: 44px minmax(0, 1fr) 44px;
+        grid-template-areas: none;
+        row-gap: 0;
+    }
+    .dashboard-header-account .dashboard-header-center,
+    .dashboard-header-account .dashboard-header-end {
+        grid-area: auto;
+        grid-row: 1;
+    }
+}
+
+.dashboard-header-account {
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
+}
+
+.dashboard-header-account .dashboard-header-center {
+    grid-column: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-width: 0;
+}
+
+.dashboard-header-account .dashboard-header-end {
+    grid-column: 3;
+    justify-self: end;
+}
+
+.dashboard-header-account .user-email {
+    width: 100%;
+    text-align: center;
 }
 
 .dashboard-header .user-uid-hint {
@@ -413,13 +449,13 @@
     position: absolute;
     top: calc(100% + 8px);
     right: 0;
-    min-width: 200px;
+    min-width: 220px;
     padding: 6px;
     border-radius: 12px;
-    background: linear-gradient(160deg, rgba(15, 23, 42, 0.98), rgba(2, 6, 23, 0.99));
-    border: 1px solid rgba(148, 163, 184, 0.3);
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
-    z-index: 50;
+    background: #0f172a;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.55);
+    z-index: 80;
 }
 
 .header-menu-dropdown[hidden] {
@@ -432,8 +468,9 @@
     border-radius: 8px;
     font-size: 0.9rem;
     font-weight: 600;
-    color: #e2e8f0;
+    color: #f8fafc;
     text-decoration: none;
+    background: transparent;
     transition: background 0.15s;
 }
 

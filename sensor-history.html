@@ -58,7 +58,6 @@
       var historyLimit = 20;
       var historyRows = [];
       var liveName = "";
-      var liveIcon = "";
       var deviceRecord = {};
       var settingsRecord = {};
 
@@ -101,13 +100,10 @@
               second: "2-digit",
             });
             var label = entry.status === "open" ? authT("dashboard.statusOpen") : authT("dashboard.statusClosed");
-            var icon = liveIcon || "📡";
             return (
               '<li class="history-item ' +
               entry.status +
-              '"><span class="sensor-icon" aria-hidden="true">' +
-              escapeHtml(icon) +
-              '</span><span class="history-name">' +
+              '"><span class="history-name">' +
               escapeHtml(liveName || entry.deviceName || deviceId) +
               '</span> <span class="history-status">' +
               escapeHtml(label) +
@@ -123,7 +119,6 @@
         var saved = String(settingsRecord.displayName || "").trim();
         var fromDevice = String(deviceRecord.displayName || deviceRecord.deviceName || "").trim();
         liveName = saved || fromDevice || liveName || deviceId;
-        liveIcon = String(settingsRecord.displayIcon || deviceRecord.displayIcon || "").trim();
         paintTitle();
         renderList();
       }

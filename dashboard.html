@@ -120,35 +120,6 @@
         </div>
       </section>
       <div class="dashboard-bottom">
-        <aside class="dashboard-history">
-          <div class="history-card">
-            <div class="history-head">
-              <h2 id="historyTitle" data-i18n="dashboard.historyTitle">History</h2>
-            </div>
-            <p class="history-desc" id="historyDesc" data-i18n="dashboard.historyDesc">
-              Recent open/close events per sensor.
-            </p>
-            <div class="history-controls">
-              <span data-i18n="dashboard.historyShow">Show:</span>
-              <button
-                type="button"
-                class="history-limit-btn active"
-                data-limit="3"
-              >
-                3
-              </button>
-              <button type="button" class="history-limit-btn" data-limit="10">
-                10
-              </button>
-              <button type="button" class="history-limit-btn" data-limit="20">
-                20
-              </button>
-            </div>
-            <ul id="historyList" class="history-list">
-              <li class="history-empty" data-i18n="dashboard.historyEmpty">No history entries yet.</li>
-            </ul>
-          </div>
-        </aside>
         <aside class="dashboard-mode">
           <div class="mode-card">
             <h2 data-i18n="dashboard.modeTitle">System mode</h2>
@@ -1126,6 +1097,7 @@
         }
         function renderHistory() {
           const listEl = document.getElementById("historyList");
+          if (!listEl) return;
           const limit = historyLimit;
           const slice = historyForList(historyData).slice(-limit).reverse();
           if (slice.length === 0) {

@@ -120,6 +120,17 @@
     } catch (_) {}
   }
 
+  function pushStatusIcon(title, body) {
+    var text = ((title || "") + "\n" + (body || "")).toLowerCase();
+    if (text.indexOf("was closed") !== -1 || text.indexOf("wurde geschlossen") !== -1) {
+      return "/icons/push-closed.png";
+    }
+    if (text.indexOf("was opened") !== -1 || text.indexOf("wurde geöffnet") !== -1) {
+      return "/icons/push-open.png";
+    }
+    return "/favicon.png";
+  }
+
   function bindForegroundHandler(messaging) {
     if (!messaging || !messaging.onMessage || state.foregroundBound) return;
     state.foregroundBound = true;
@@ -143,7 +154,7 @@
             "aura-" + Date.now();
           new Notification(title, {
             body: body,
-            icon: "/favicon.png",
+            icon: pushStatusIcon(title, body),
             tag: tag,
             silent: !playSound,
           });

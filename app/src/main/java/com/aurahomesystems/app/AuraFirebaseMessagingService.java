@@ -7,6 +7,8 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.media.AudioAttributes;
 import android.os.Build;
 import android.os.PowerManager;
@@ -302,6 +304,10 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .setFullScreenIntent(fullScreenIntent, true)
                 .setVibrate(new long[]{0, 600, 200, 600, 200, 600});
+        Bitmap statusIcon = statusLargeIcon(context, title, body);
+        if (statusIcon != null) {
+            builder.setLargeIcon(statusIcon);
+        }
 
         if (playSound) {
             builder.setDefaults(NotificationCompat.DEFAULT_ALL);
@@ -333,6 +339,23 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
         }
         NativePushRegistrar.sendAck(context, "shown", eventTag, CHANNEL_ID, userKey);
         return true;
+    }
+
+    private static Bitmap statusLargeIcon(Context context, String title, String body) {
+        String text = ((title == null ? "" : title) + "\n" + (body == null ? "" : body))
+                .toLowerCase(Locale.ROOT);
+        int resId = 0;
+        if (text.contains("was closed") || text.contains("wurde geschlossen")) {
+            resId = R.drawable.ic_push_closed;
+        } else if (text.contains("was opened") || text.contains("wurde geöffnet")) {
+            resId = R.drawable.ic_push_open;
+        }
+        if (resId == 0) return null;
+        try {
+            return BitmapFactory.decodeResource(context.getResources(), resId);
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 
     private static boolean isSamsung() {

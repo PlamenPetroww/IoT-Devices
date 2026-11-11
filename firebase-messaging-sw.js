@@ -17,6 +17,17 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 
+function pushStatusIcon(title, body) {
+  var text = ((title || "") + "\n" + (body || "")).toLowerCase();
+  if (text.indexOf("was closed") !== -1 || text.indexOf("wurde geschlossen") !== -1) {
+    return "/icons/push-closed.png";
+  }
+  if (text.indexOf("was opened") !== -1 || text.indexOf("wurde geöffnet") !== -1) {
+    return "/icons/push-open.png";
+  }
+  return "/favicon.png";
+}
+
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
 });
@@ -36,7 +47,7 @@ firebase.messaging().onBackgroundMessage((payload) => {
   const body = data.body || "";
   const options = {
     body,
-    icon: "/favicon.png",
+    icon: pushStatusIcon(title, body),
     tag: data.eventTag || "aura-" + Date.now(),
     renotify: true,
     silent: !playSound,

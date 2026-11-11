@@ -777,11 +777,9 @@
                 "</span>" +
                 menuHtml +
                 "</div>" +
-                '<div class="contact-stage" aria-hidden="true">' +
-                '<div class="contact-ring"></div>' +
-                '<div class="contact-core"><span class="magnet magnet-top"></span><span class="magnet-beam"></span><span class="magnet magnet-bottom"></span></div>' +
-                "</div>" +
-                '<div class="sensor-card-meta">' +
+                '<div class="iris-stage">' +
+                '<div class="iris-bloom" aria-hidden="true"></div>' +
+                '<div class="iris-disc">' +
                 '<span class="status ' +
                 dev.status +
                 '">' +
@@ -789,9 +787,13 @@
                   ? escapeHtml(authT("dashboard.statusOpen"))
                   : escapeHtml(authT("dashboard.statusClosed"))) +
                 "</span>" +
+                "</div>" +
+                "</div>" +
+                '<div class="sensor-card-foot">' +
+                '<span class="sensor-power-stack">' +
                 powerHtml +
                 meterHtml +
-                "</div>" +
+                "</span>" +
                 '<button type="button" class="sensor-history-btn" data-device-action="history" data-device-id="' +
                 escapeHtml(dev.id) +
                 '" data-device-name="' +
@@ -799,6 +801,7 @@
                 '">' +
                 escapeHtml(authT("dashboard.sensorHistory") || "History") +
                 "</button>" +
+                "</div>" +
                 "</article>"
               );
             })

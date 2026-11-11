@@ -1723,3 +1723,188 @@ html.aura-play-app .mode-card {
 html.aura-play-app .device-menu-dropdown {
     max-width: min(11.5rem, calc(100% - 24px));
 }
+
+.sensor-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 16px;
+}
+
+.device-item.sensor-card {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    margin: 0;
+    padding: 16px 16px 14px;
+    border-radius: 24px;
+    background:
+        radial-gradient(120% 80% at 50% 0%, rgba(34, 197, 94, 0.14), transparent 55%),
+        linear-gradient(180deg, #111827, #0b1220);
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
+    min-height: 320px;
+}
+
+.device-item.sensor-card.is-open {
+    background:
+        radial-gradient(120% 80% at 50% 0%, rgba(251, 146, 60, 0.22), transparent 58%),
+        linear-gradient(180deg, #1c1410, #0b1220);
+    border-color: rgba(251, 146, 60, 0.45);
+}
+
+.sensor-card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    position: relative;
+    z-index: 2;
+}
+
+.sensor-card-top .device-name-wrap {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+}
+
+.door-stage {
+    position: relative;
+    height: 148px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+}
+
+.door-glow {
+    position: absolute;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: rgba(74, 222, 128, 0.18);
+    filter: blur(8px);
+}
+
+.sensor-card.is-open .door-glow {
+    background: rgba(251, 146, 60, 0.28);
+}
+
+.door-frame {
+    position: relative;
+    width: 92px;
+    height: 132px;
+    border-radius: 10px 10px 4px 4px;
+    background:
+        linear-gradient(90deg, transparent 0 70%, rgba(251, 191, 36, 0.55) 70% 78%, transparent 78%),
+        #020617;
+    border: 3px solid #94a3b8;
+    box-shadow: inset 0 0 0 6px #0f172a;
+    perspective: 500px;
+    overflow: visible;
+}
+
+.door-leaf {
+    position: absolute;
+    inset: 6px;
+    border-radius: 6px;
+    background: linear-gradient(160deg, #e2e8f0, #94a3b8 55%, #64748b);
+    transform-origin: left center;
+    transform: perspective(500px) rotateY(0deg);
+    box-shadow: 6px 0 16px rgba(0, 0, 0, 0.25);
+}
+
+.sensor-card.is-open .door-leaf {
+    transform: perspective(500px) rotateY(-62deg);
+    background: linear-gradient(160deg, #fdba74, #f97316 50%, #c2410c);
+}
+
+.sensor-card.door-just-changed.is-open .door-leaf {
+    animation: doorSwingOpen 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.sensor-card.door-just-changed.is-closed .door-leaf {
+    animation: doorSwingClose 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.sensor-card.door-just-changed .door-glow {
+    animation: doorPulse 0.9s ease;
+}
+
+@keyframes doorSwingOpen {
+    0% { transform: perspective(500px) rotateY(0deg); }
+    70% { transform: perspective(500px) rotateY(-70deg); }
+    100% { transform: perspective(500px) rotateY(-62deg); }
+}
+
+@keyframes doorSwingClose {
+    0% { transform: perspective(500px) rotateY(-62deg); }
+    100% { transform: perspective(500px) rotateY(0deg); }
+}
+
+@keyframes doorPulse {
+    0% { transform: scale(0.8); opacity: 0.2; }
+    40% { transform: scale(1.15); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.door-window {
+    position: absolute;
+    top: 16px;
+    left: 18px;
+    right: 18px;
+    height: 36px;
+    border-radius: 4px;
+    background: rgba(15, 23, 42, 0.55);
+}
+
+.door-handle {
+    position: absolute;
+    right: 10px;
+    top: 62px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #0f172a;
+}
+
+.sensor-card-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.sensor-history-btn {
+    min-height: 40px;
+    border: 0;
+    border-radius: 999px;
+    background: #f8fafc;
+    color: #0f172a;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.sensor-history-btn:hover {
+    background: #e2e8f0;
+}
+
+.history-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.history-head h2 {
+    margin: 0;
+}
+
+.history-all-btn {
+    border: 1px solid rgba(148, 163, 184, 0.45);
+    background: transparent;
+    color: #e5e7eb;
+    border-radius: 999px;
+    min-height: 36px;
+    padding: 0 12px;
+    cursor: pointer;
+}

@@ -107,7 +107,7 @@
             style="display: none"
             role="alert"
           ></div>
-          <div id="devicesList">
+          <div id="devicesList" class="sensor-grid">
             <p class="devices-empty" data-i18n="dashboard.loading">Loading...</p>
           </div>
           <div id="removedDevicesSection" class="removed-devices-section" hidden>
@@ -122,8 +122,11 @@
       <div class="dashboard-bottom">
         <aside class="dashboard-history">
           <div class="history-card">
-            <h2 data-i18n="dashboard.historyTitle">History</h2>
-            <p class="history-desc" data-i18n="dashboard.historyDesc">
+            <div class="history-head">
+              <h2 id="historyTitle" data-i18n="dashboard.historyTitle">History</h2>
+              <button type="button" id="historyShowAll" class="history-all-btn" hidden data-i18n="dashboard.historyAll">All sensors</button>
+            </div>
+            <p class="history-desc" id="historyDesc" data-i18n="dashboard.historyDesc">
               Recent open/close events per sensor.
             </p>
             <div class="history-controls">
@@ -389,6 +392,9 @@
         const devicesCard = document.getElementById("devicesCard");
         const historyRef = db.ref(userPath + "/history");
         let lastDevicesSnap = null;
+        var sensorStatusMemory = {};
+        var historySensorFilter = "";
+        var historySensorName = "";
         let lastRemovedSnap = null;
         let lastSettingsSnap = null;
         function deviceSetting(id) {
@@ -736,10 +742,20 @@
                 escapeHtml(authT("dashboard.removeSensor")) +
                 "</button>" +
                 "</div></div>";
+              var previousStatus = sensorStatusMemory[dev.id];
+              var justChanged = previousStatus && previousStatus !== dev.status;
+              sensorStatusMemory[dev.id] = dev.status;
+              var poseClass = dev.status === "open" ? "is-open" : "is-closed";
               return (
-                '<div class="device-item ' +
+                '<article class="device-item sensor-card ' +
                 tintClass +
+                " " +
+                poseClass +
+                (justChanged ? " door-just-changed" : "") +
+                '" data-device-id="' +
+                escapeHtml(dev.id) +
                 '">' +
+                '<div class="sensor-card-top">' +
                 '<span class="device-name-wrap"><span class="sensor-icon" aria-hidden="true">' +
                 icon +
                 '</span><span class="name">' +
@@ -747,7 +763,13 @@
                 "</span>" +
                 lastSeenHtml +
                 "</span>" +
-                '<span class="device-right">' +
+                menuHtml +
+                "</div>" +
+                '<div class="door-stage" aria-hidden="true">' +
+                '<div class="door-glow"></div>' +
+                '<div class="door-frame"><div class="door-leaf"><span class="door-window"></span><span class="door-handle"></span></div></div>' +
+                "</div>" +
+                '<div class="sensor-card-meta">' +
                 powerHtml +
                 '<span class="status ' +
                 dev.status +
@@ -756,9 +778,15 @@
                   ? escapeHtml(authT("dashboard.statusOpen"))
                   : escapeHtml(authT("dashboard.statusClosed"))) +
                 "</span>" +
-                menuHtml +
-                "</span>" +
-                "</div>"
+                "</div>" +
+                '<button type="button" class="sensor-history-btn" data-device-action="history" data-device-id="' +
+                escapeHtml(dev.id) +
+                '" data-device-name="' +
+                escapeHtml(dev.name) +
+                '">' +
+                escapeHtml(authT("dashboard.sensorHistory") || "History") +
+                "</button>" +
+                "</article>"
               );
             })
             .join("");
@@ -887,6 +915,14 @@
               return;
             }
             closeAllDeviceMenus();
+            if (action === "history") {
+              historySensorFilter = deviceId;
+              historySensorName = deviceName;
+              renderHistory();
+              var historyPanel = document.querySelector(".dashboard-history");
+              if (historyPanel) historyPanel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+              return;
+            }
             if (action === "rename") {
               var nextName = window.prompt(
                 authT("dashboard.renameSensorPrompt", { name: deviceName }),
@@ -1089,8 +1125,24 @@
         }
         function renderHistory() {
           const listEl = document.getElementById("historyList");
+          const titleEl = document.getElementById("historyTitle");
+          const allBtn = document.getElementById("historyShowAll");
           const limit = historyLimit;
-          const slice = historyForList(historyData).slice(-limit).reverse();
+          var source = historyForList(historyData);
+          if (historySensorFilter) {
+            var filterKey = String(historySensorFilter).trim().toLowerCase();
+            source = source.filter(function (entry) {
+              return historyDeviceKey(entry) === filterKey || String(entry.deviceId || "") === historySensorFilter;
+            });
+            if (titleEl) {
+              titleEl.textContent = authT("dashboard.historyFor", { name: historySensorName || historySensorFilter });
+            }
+            if (allBtn) allBtn.hidden = false;
+          } else {
+            if (titleEl) titleEl.textContent = authT("dashboard.historyTitle");
+            if (allBtn) allBtn.hidden = true;
+          }
+          const slice = source.slice(-limit).reverse();
           if (slice.length === 0) {
             listEl.innerHTML =
               '<li class="history-empty">' + escapeHtml(authT("dashboard.historyEmpty")) + "</li>";
@@ -1127,6 +1179,14 @@
               return `<li class="history-item ${entry.status} ${htint}"><span class="sensor-icon" aria-hidden="true">${icon}</span><span class="history-name">${escapeHtml(historyName)}</span> <span class="history-status">${label}</span> <time class="history-time">${timeStr}</time></li>`;
             })
             .join("");
+        }
+        var historyShowAll = document.getElementById("historyShowAll");
+        if (historyShowAll) {
+          historyShowAll.addEventListener("click", function () {
+            historySensorFilter = "";
+            historySensorName = "";
+            renderHistory();
+          });
         }
         document.querySelectorAll(".history-limit-btn").forEach((btn) => {
           btn.addEventListener("click", function () {

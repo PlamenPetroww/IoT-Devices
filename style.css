@@ -1882,8 +1882,7 @@ main {
     width: 280px;
     max-width: 100%;
     height: auto;
-    aspect-ratio: 1000 / 1106;
-    object-fit: cover;
+    object-fit: contain;
     object-position: center;
     border-radius: 16px;
     background: #0e1524;

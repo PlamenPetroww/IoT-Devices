@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Saved variant: swinging door</title>
+  <style>
+    body { margin: 0; background: #020617; color: #e5e7eb; font-family: system-ui, sans-serif; }
+    .note { max-width: 720px; margin: 0 auto; padding: 20px 16px 0; color: #94a3b8; font-size: 0.9rem; }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 16px; }
+    .sensor-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px; }
+    .sensor-card { display: flex; flex-direction: column; gap: 12px; padding: 16px 16px 14px; border-radius: 24px; background: radial-gradient(120% 80% at 50% 0%, rgba(34, 197, 94, 0.14), transparent 55%), linear-gradient(180deg, #111827, #0b1220); border: 1px solid rgba(148, 163, 184, 0.22); min-height: 320px; }
+    .sensor-card.is-open { background: radial-gradient(120% 80% at 50% 0%, rgba(251, 146, 60, 0.22), transparent 58%), linear-gradient(180deg, #1c1410, #0b1220); border-color: rgba(251, 146, 60, 0.45); }
+    .sensor-card-top { display: flex; justify-content: space-between; }
+    .name { font-weight: 600; }
+    .device-last-seen { display: block; color: #94a3b8; font-size: 0.8rem; }
+    .door-stage { position: relative; height: 148px; display: flex; align-items: flex-end; justify-content: center; }
+    .door-glow { position: absolute; width: 120px; height: 120px; border-radius: 50%; background: rgba(74, 222, 128, 0.18); filter: blur(8px); }
+    .is-open .door-glow { background: rgba(251, 146, 60, 0.28); }
+    .door-frame { position: relative; width: 92px; height: 132px; border-radius: 10px 10px 4px 4px; background: linear-gradient(90deg, transparent 0 70%, rgba(251, 191, 36, 0.55) 70% 78%, transparent 78%), #020617; border: 3px solid #94a3b8; box-shadow: inset 0 0 0 6px #0f172a; perspective: 500px; }
+    .door-leaf { position: absolute; inset: 6px; border-radius: 6px; background: linear-gradient(160deg, #e2e8f0, #94a3b8 55%, #64748b); transform-origin: left center; transform: perspective(500px) rotateY(0deg); }
+    .is-open .door-leaf { transform: perspective(500px) rotateY(-62deg); background: linear-gradient(160deg, #fdba74, #f97316 50%, #c2410c); }
+    .door-just-changed.is-open .door-leaf { animation: doorSwingOpen 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+    .door-window { position: absolute; top: 16px; left: 18px; right: 18px; height: 36px; border-radius: 4px; background: rgba(15, 23, 42, 0.55); }
+    .door-handle { position: absolute; right: 10px; top: 62px; width: 8px; height: 8px; border-radius: 50%; background: #0f172a; }
+    .sensor-card-meta { display: flex; justify-content: space-between; align-items: center; }
+    .status.closed { color: #bbf7d0; background: rgba(34, 197, 94, 0.2); border-radius: 999px; padding: 4px 10px; }
+    .status.open { color: #fecaca; background: rgba(248, 113, 113, 0.2); border-radius: 999px; padding: 4px 10px; }
+    .sensor-history-btn { min-height: 40px; border: 0; border-radius: 999px; background: #f8fafc; color: #0f172a; font-weight: 700; }
+    @keyframes doorSwingOpen { 0% { transform: perspective(500px) rotateY(0deg); } 70% { transform: perspective(500px) rotateY(-70deg); } 100% { transform: perspective(500px) rotateY(-62deg); } }
+  </style>
+</head>
+<body>
+  <p class="note">Saved look from before the magnetic-ring cards. Git commit acdee71. This file is only a preview. The live app does not use it.</p>
+  <div class="wrap sensor-grid">
+    <article class="sensor-card is-closed">
+      <div class="sensor-card-top"><div><span class="name">Front door</span><span class="device-last-seen">2 min ago</span></div></div>
+      <div class="door-stage"><div class="door-glow"></div><div class="door-frame"><div class="door-leaf"><span class="door-window"></span><span class="door-handle"></span></div></div></div>
+      <div class="sensor-card-meta"><span>Battery 86%</span><span class="status closed">Closed</span></div>
+      <button class="sensor-history-btn" type="button">History</button>
+    </article>
+    <article class="sensor-card is-open door-just-changed">
+      <div class="sensor-card-top"><div><span class="name">Kitchen window</span><span class="device-last-seen">just now</span></div></div>
+      <div class="door-stage"><div class="door-glow"></div><div class="door-frame"><div class="door-leaf"><span class="door-window"></span><span class="door-handle"></span></div></div></div>
+      <div class="sensor-card-meta"><span>Battery 64%</span><span class="status open">Open</span></div>
+      <button class="sensor-history-btn" type="button">History</button>
+    </article>
+  </div>
+</body>
+</html>

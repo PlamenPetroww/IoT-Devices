@@ -704,6 +704,18 @@
                     "</span>";
                 }
               }
+              var meterHtml = "";
+              if (dev.powerSource !== "usb") {
+                var battKnown = !(
+                  dev.batteryStatus === "unknown" ||
+                  (dev.battery != null && dev.battery < 0)
+                );
+                if (battKnown && dev.battery != null && dev.battery >= 0) {
+                  var battPct = Math.max(0, Math.min(100, Math.round(Number(dev.battery))));
+                  meterHtml =
+                    '<span class="battery-meter" style="--batt:' + battPct + '%"></span>';
+                }
+              }
               const tintClass =
                 "device-tint-" + getTintIndexForSensor(dev.name || dev.id);
               const icon = resolveSensorIcon(dev.name, dev.displayIcon);
@@ -765,12 +777,11 @@
                 "</span>" +
                 menuHtml +
                 "</div>" +
-                '<div class="door-stage" aria-hidden="true">' +
-                '<div class="door-glow"></div>' +
-                '<div class="door-frame"><div class="door-leaf"><span class="door-window"></span><span class="door-handle"></span></div></div>' +
+                '<div class="contact-stage" aria-hidden="true">' +
+                '<div class="contact-ring"></div>' +
+                '<div class="contact-core"><span class="magnet magnet-top"></span><span class="magnet-beam"></span><span class="magnet magnet-bottom"></span></div>' +
                 "</div>" +
                 '<div class="sensor-card-meta">' +
-                powerHtml +
                 '<span class="status ' +
                 dev.status +
                 '">' +
@@ -778,6 +789,8 @@
                   ? escapeHtml(authT("dashboard.statusOpen"))
                   : escapeHtml(authT("dashboard.statusClosed"))) +
                 "</span>" +
+                powerHtml +
+                meterHtml +
                 "</div>" +
                 '<button type="button" class="sensor-history-btn" data-device-action="history" data-device-id="' +
                 escapeHtml(dev.id) +

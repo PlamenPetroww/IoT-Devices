@@ -767,12 +767,6 @@
                 '" data-device-id="' +
                 escapeHtml(dev.id) +
                 '">' +
-                '<div class="slit" aria-hidden="true">' +
-                '<span class="slit-glow"></span>' +
-                '<span class="slit-leaf slit-leaf-l"></span>' +
-                '<span class="slit-leaf slit-leaf-r"></span>' +
-                "</div>" +
-                '<div class="sensor-card-main">' +
                 '<div class="sensor-card-top">' +
                 '<span class="device-name-wrap"><span class="sensor-icon" aria-hidden="true">' +
                 icon +
@@ -790,6 +784,7 @@
                   ? escapeHtml(authT("dashboard.statusOpen"))
                   : escapeHtml(authT("dashboard.statusClosed"))) +
                 "</span>" +
+                '<span class="state-bar" aria-hidden="true"></span>' +
                 '<div class="sensor-card-foot">' +
                 '<span class="sensor-power-stack">' +
                 powerHtml +
@@ -802,7 +797,6 @@
                 '">' +
                 escapeHtml(authT("dashboard.sensorHistory") || "History") +
                 "</button>" +
-                "</div>" +
                 "</div>" +
                 "</article>"
               );

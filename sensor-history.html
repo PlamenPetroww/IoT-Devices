@@ -33,9 +33,9 @@
         <p class="history-desc" id="historyDesc" data-i18n="dashboard.historyDesc">Recent open/close events per sensor.</p>
         <div class="history-controls">
           <span data-i18n="dashboard.historyShow">Show:</span>
+          <button type="button" class="history-limit-btn active" data-limit="3">3</button>
           <button type="button" class="history-limit-btn" data-limit="10">10</button>
-          <button type="button" class="history-limit-btn active" data-limit="20">20</button>
-          <button type="button" class="history-limit-btn" data-limit="50">50</button>
+          <button type="button" class="history-limit-btn" data-limit="20">20</button>
         </div>
         <ul id="historyList" class="history-list">
           <li class="history-empty" data-i18n="dashboard.loading">Loading...</li>
@@ -55,7 +55,7 @@
       var params = new URLSearchParams(window.location.search);
       var deviceId = params.get("device") || "";
       var deviceIdOk = /^[A-Za-z0-9_-]{1,128}$/.test(deviceId);
-      var historyLimit = 20;
+      var historyLimit = 3;
       var historyRows = [];
       var liveName = "";
       var deviceRecord = {};
@@ -129,7 +129,7 @@
             b.classList.remove("active");
           });
           btn.classList.add("active");
-          historyLimit = parseInt(btn.getAttribute("data-limit"), 10) || 20;
+          historyLimit = parseInt(btn.getAttribute("data-limit"), 10) || 3;
           renderList();
         });
       });

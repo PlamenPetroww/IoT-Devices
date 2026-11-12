@@ -671,10 +671,6 @@
                     (dev.battery != null &&
                       dev.battery >= 0 &&
                       dev.battery <= 20));
-                var pctLabel =
-                  !isUnknown && dev.battery != null && dev.battery >= 0
-                    ? " (" + dev.battery + "%)"
-                    : "";
                 var battTitle =
                   (authT("dashboard.batteryTitle") || "Battery level") +
                   (dev.battery != null && dev.battery >= 0
@@ -692,26 +688,20 @@
                       authT("dashboard.batteryNoSense") || "Battery —"
                     ) +
                     "</span>";
-                } else if (isBatteryLow) {
-                  powerHtml =
-                    '<span class="device-power battery-low" title="' +
-                    escapeHtml(
-                      authT("dashboard.batteryLowTitle") ||
-                        "Battery level is low"
-                    ) +
-                    '">' +
-                    escapeHtml(
-                      (authT("dashboard.batteryLow") || "Battery Low") + pctLabel
-                    ) +
-                    "</span>";
                 } else {
+                  var pctText = Math.round(Number(dev.battery)) + "%";
                   powerHtml =
-                    '<span class="device-power battery-ok" title="' +
-                    escapeHtml(battTitle) +
-                    '">' +
+                    '<span class="device-power ' +
+                    (isBatteryLow ? "battery-low" : "battery-ok") +
+                    '" title="' +
                     escapeHtml(
-                      (authT("dashboard.batteryOk") || "Battery OK") + pctLabel
+                      isBatteryLow
+                        ? authT("dashboard.batteryLowTitle") ||
+                            "Battery level is low"
+                        : battTitle
                     ) +
+                    '">' +
+                    escapeHtml(pctText) +
                     "</span>";
                 }
               }

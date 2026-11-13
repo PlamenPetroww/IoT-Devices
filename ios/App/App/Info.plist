@@ -26,6 +26,8 @@
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>Aura finds your sensor nearby to send the home Wi-Fi password.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>

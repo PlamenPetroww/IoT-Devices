@@ -270,11 +270,20 @@
             var platform = AuraAppMode.getNativePlatform ? AuraAppMode.getNativePlatform() : "";
             var lang = (document.documentElement.lang || "en").toLowerCase().indexOf("de") === 0 ? "de" : "en";
             if (platform === "ios") {
-              var cap = window.Capacitor;
-              if (cap && typeof cap.isPluginAvailable === "function" && cap.isPluginAvailable("AuraSetup")) {
-                var plugin = cap.registerPlugin ? cap.registerPlugin("AuraSetup") : cap.Plugins.AuraSetup;
-                plugin.open({ email: accountEmail });
-                return;
+              try {
+                var cap = window.Capacitor;
+                var plugin =
+                  cap && cap.registerPlugin
+                    ? cap.registerPlugin("AuraSetup")
+                    : cap && cap.Plugins
+                      ? cap.Plugins.AuraSetup
+                      : null;
+                if (plugin && typeof plugin.open === "function") {
+                  plugin.open({ email: accountEmail });
+                  return;
+                }
+              } catch (err) {
+                console.warn("AuraSetup open failed", err);
               }
               window.alert(authT("dashboard.addSensorIos"));
               return;

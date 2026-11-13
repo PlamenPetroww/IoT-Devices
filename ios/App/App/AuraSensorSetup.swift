@@ -33,7 +33,7 @@ public class AuraSetupPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 }
 
-final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBPeripheralDelegate {
+final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBPeripheralDelegate, UITextFieldDelegate {
     private let setupApSsid = "AuraHomeSystems_Setup"
     private let pingUrl = URL(string: "http://192.168.4.1/ping")!
     private let wifiUrl = URL(string: "http://192.168.4.1/wifi")!
@@ -54,13 +54,15 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
     private lazy var softApSession: URLSession = {
         let config = URLSessionConfiguration.ephemeral
         config.allowsCellularAccess = false
-        config.waitsForConnectivity = true
-        config.timeoutIntervalForRequest = 25
+        config.waitsForConnectivity = false
+        config.timeoutIntervalForRequest = 45
         config.timeoutIntervalForResource = 90
         return URLSession(configuration: config)
     }()
 
-    private let pageBg = UIColor(red: 0.06, green: 0.09, blue: 0.16, alpha: 1)
+    private let pageBg = UIColor(red: 15 / 255, green: 23 / 255, blue: 42 / 255, alpha: 1)
+    private let scrollView = UIScrollView()
+    private let brand = UILabel()
     private let headline = UILabel()
     private let detail = UILabel()
     private let percent = UILabel()
@@ -74,7 +76,9 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
     private let nameField = UITextField()
     private let networks = UIStackView()
     private let form = UIStackView()
+    private let refreshNetworksButton = UIButton(type: .system)
     private let connectButton = UIButton(type: .system)
+    private var scrollBottomConstraint: NSLayoutConstraint?
 
     init(email: String) {
         self.email = email
@@ -85,41 +89,66 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         return nil
     }
 
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+        magnetTimer?.invalidate()
+    }
+
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = pageBg
-        headline.textColor = .white
+        brand.text = "Aura HomeSystems"
+        brand.textColor = UIColor(red: 0.58, green: 0.64, blue: 0.72, alpha: 1)
+        brand.font = .systemFont(ofSize: 13, weight: .regular)
+        brand.textAlignment = .center
+        headline.textColor = UIColor(red: 0.97, green: 0.98, blue: 0.99, alpha: 1)
         headline.font = .systemFont(ofSize: 24, weight: .medium)
         headline.textAlignment = .center
         headline.numberOfLines = 0
-        detail.textColor = UIColor(white: 0.8, alpha: 1)
+        detail.textColor = UIColor(red: 0.80, green: 0.84, blue: 0.88, alpha: 1)
         detail.font = .systemFont(ofSize: 15)
         detail.textAlignment = .center
         detail.numberOfLines = 0
         percent.textColor = UIColor(red: 0.29, green: 0.87, blue: 0.5, alpha: 1)
-        percent.font = .systemFont(ofSize: 52, weight: .medium)
+        percent.font = .systemFont(ofSize: 52, weight: .regular)
         percent.textAlignment = .center
         percent.isHidden = true
-        // Original Aura mark; plate blends into page background.
+        // Same mark as Android setup / App Icon.
         searchLogo.image = UIImage(named: "AuraMark")
-        searchLogo.contentMode = .scaleAspectFit
+        searchLogo.contentMode = .scaleAspectFill
         searchLogo.clipsToBounds = true
         searchLogo.backgroundColor = pageBg
+        searchLogo.layer.cornerRadius = 48
         searchLogo.translatesAutoresizingMaskIntoConstraints = false
-        searchLogo.widthAnchor.constraint(equalToConstant: 112).isActive = true
-        searchLogo.heightAnchor.constraint(equalToConstant: 112).isActive = true
+        searchLogo.widthAnchor.constraint(equalToConstant: 96).isActive = true
+        searchLogo.heightAnchor.constraint(equalToConstant: 96).isActive = true
         magnets.isHidden = true
         magnets.translatesAutoresizingMaskIntoConstraints = false
+        magnets.widthAnchor.constraint(equalToConstant: 168).isActive = true
         magnets.heightAnchor.constraint(equalToConstant: 168).isActive = true
         form.axis = .vertical
         form.spacing = 8
         form.isHidden = true
         networks.axis = .vertical
+        networks.spacing = 2
         style(ssidField, placeholder: "Wi-Fi name")
         style(passField, placeholder: "Password")
         passField.isSecureTextEntry = true
         style(nameField, placeholder: "Front Door")
         nameField.text = "Front Door"
+        ssidField.returnKeyType = .next
+        passField.returnKeyType = .next
+        nameField.returnKeyType = .done
+        ssidField.delegate = self
+        passField.delegate = self
+        nameField.delegate = self
+        attachKeyboardToolbar(to: ssidField)
+        attachKeyboardToolbar(to: passField)
+        attachKeyboardToolbar(to: nameField)
+        refreshNetworksButton.setTitle("Refresh networks", for: .normal)
+        refreshNetworksButton.setTitleColor(UIColor(red: 0.29, green: 0.87, blue: 0.5, alpha: 1), for: .normal)
+        refreshNetworksButton.contentHorizontalAlignment = .leading
+        refreshNetworksButton.addTarget(self, action: #selector(refreshNetworksTapped), for: .touchUpInside)
         connectButton.setTitle("Connect", for: .normal)
         connectButton.setTitleColor(.white, for: .normal)
         connectButton.backgroundColor = UIColor(red: 0.09, green: 0.64, blue: 0.29, alpha: 1)
@@ -135,40 +164,117 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         close.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(close)
 
-        let stack = UIStackView(arrangedSubviews: [searchLogo, percent, headline, detail, magnets, form, connectButton])
+        scrollView.translatesAutoresizingMaskIntoConstraints = false
+        scrollView.alwaysBounceVertical = true
+        scrollView.keyboardDismissMode = .interactive
+        scrollView.backgroundColor = pageBg
+        view.addSubview(scrollView)
+
+        let stack = UIStackView(arrangedSubviews: [brand, searchLogo, percent, headline, detail, magnets, form, connectButton])
         stack.axis = .vertical
         stack.spacing = 14
         stack.alignment = .center
         stack.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(stack)
+        scrollView.addSubview(stack)
+
+        let bottom = scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        scrollBottomConstraint = bottom
         NSLayoutConstraint.activate([
             close.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
             close.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -16),
-            stack.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 20),
-            stack.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -20),
-            stack.topAnchor.constraint(equalTo: close.bottomAnchor, constant: 24),
+            scrollView.topAnchor.constraint(equalTo: close.bottomAnchor, constant: 8),
+            scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            bottom,
+            stack.topAnchor.constraint(equalTo: scrollView.contentLayoutGuide.topAnchor, constant: 12),
+            stack.leadingAnchor.constraint(equalTo: scrollView.frameLayoutGuide.leadingAnchor, constant: 20),
+            stack.trailingAnchor.constraint(equalTo: scrollView.frameLayoutGuide.trailingAnchor, constant: -20),
+            stack.bottomAnchor.constraint(equalTo: scrollView.contentLayoutGuide.bottomAnchor, constant: -28),
             form.widthAnchor.constraint(equalTo: stack.widthAnchor),
             connectButton.widthAnchor.constraint(equalTo: stack.widthAnchor),
             headline.widthAnchor.constraint(equalTo: stack.widthAnchor),
-            detail.widthAnchor.constraint(equalTo: stack.widthAnchor),
-            magnets.widthAnchor.constraint(equalToConstant: 168)
+            detail.widthAnchor.constraint(equalTo: stack.widthAnchor)
         ])
         form.addArrangedSubview(caption("Network"))
         form.addArrangedSubview(ssidField)
         form.addArrangedSubview(networks)
+        form.addArrangedSubview(refreshNetworksButton)
         form.addArrangedSubview(caption("Password"))
         form.addArrangedSubview(passField)
         form.addArrangedSubview(caption("Sensor name"))
         form.addArrangedSubview(nameField)
         form.addArrangedSubview(caption("Choose the 2.4 GHz network."))
+
+        let tap = UITapGestureRecognizer(target: self, action: #selector(dismissKeyboard))
+        tap.cancelsTouchesInView = false
+        view.addGestureRecognizer(tap)
+        NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillChange(_:)), name: UIResponder.keyboardWillChangeFrameNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillHide(_:)), name: UIResponder.keyboardWillHideNotification, object: nil)
+
         headline.text = "Looking for the sensor"
-        detail.text = "Restart the sensor and stay next to it. Everything stays in the app."
+        detail.text = "Turn the sensor on and stay next to it for about a minute."
         startSearchSpinner()
         central = CBCentralManager(delegate: self, queue: nil)
         // Same timing as Android: SoftAP after ~8s on board → app joins ~10s.
         let work = DispatchWorkItem { [weak self] in self?.startSoftApSetup() }
         softApFallbackWork = work
         DispatchQueue.main.asyncAfter(deadline: .now() + 10, execute: work)
+    }
+
+    @objc private func dismissKeyboard() {
+        view.endEditing(true)
+    }
+
+    private func attachKeyboardToolbar(to field: UITextField) {
+        let bar = UIToolbar()
+        bar.sizeToFit()
+        let flex = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
+        let done = UIBarButtonItem(title: "Done", style: .done, target: self, action: #selector(dismissKeyboard))
+        bar.items = [flex, done]
+        field.inputAccessoryView = bar
+    }
+
+    @objc private func keyboardWillChange(_ note: Notification) {
+        guard let frame = note.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else { return }
+        let kb = view.convert(frame, from: nil)
+        let overlap = max(0, view.bounds.maxY - kb.minY)
+        let inset = UIEdgeInsets(top: 0, left: 0, bottom: overlap + 12, right: 0)
+        scrollView.contentInset = inset
+        scrollView.verticalScrollIndicatorInsets = inset
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            let target = self.connectButton.isHidden ? (self.nameField.isFirstResponder ? self.nameField : self.passField.isFirstResponder ? self.passField : self.ssidField) : self.connectButton
+            self.scrollView.scrollRectToVisible(target.convert(target.bounds.insetBy(dx: 0, dy: -24), to: self.scrollView), animated: true)
+        }
+    }
+
+    @objc private func keyboardWillHide(_ note: Notification) {
+        scrollView.contentInset = .zero
+        scrollView.verticalScrollIndicatorInsets = .zero
+    }
+
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        if textField === ssidField {
+            passField.becomeFirstResponder()
+        } else if textField === passField {
+            nameField.becomeFirstResponder()
+        } else {
+            dismissKeyboard()
+            if !connectButton.isHidden && connectButton.isEnabled {
+                scrollView.scrollRectToVisible(connectButton.convert(connectButton.bounds, to: scrollView), animated: true)
+            }
+        }
+        return true
+    }
+
+    @objc private func refreshNetworksTapped() {
+        dismissKeyboard()
+        detail.text = "Loading Wi-Fi list…"
+        refreshNetworksButton.isEnabled = false
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            self?.fetchWifiList(retries: 4)
+            DispatchQueue.main.async { self?.refreshNetworksButton.isEnabled = true }
+        }
     }
 
     private func startSearchSpinner() {
@@ -263,7 +369,7 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
             if pingSoftAp() { break }
             Thread.sleep(forTimeInterval: 0.5)
         }
-        fetchWifiList()
+        fetchWifiList(retries: 5)
     }
 
     private func pingSoftAp() -> Bool {
@@ -282,10 +388,38 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         return ok
     }
 
-    private func fetchWifiList() {
+    /// Sensor /wifi does a full scan — can take ~20–30s; retry when SoftAP routing is flaky.
+    private func fetchWifiList(retries: Int) {
+        var lastSsids: [String] = []
+        var lastFailed = true
+        for attempt in 1...max(1, retries) {
+            if finishedOk { return }
+            let result = requestWifiListOnce()
+            lastFailed = result.failed
+            lastSsids = result.ssids
+            if !result.failed && !result.ssids.isEmpty { break }
+            if attempt < retries {
+                Thread.sleep(forTimeInterval: 2.0)
+            }
+        }
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self, !self.finishedOk else { return }
+            if lastFailed {
+                self.detail.text = "Wi-Fi list unavailable — type the name, then Connect. Or tap Refresh networks."
+            } else {
+                self.showWifiSuggestions(lastSsids)
+                self.detail.text = lastSsids.isEmpty
+                    ? "No networks found — type the Wi-Fi name, then Connect. Or tap Refresh networks."
+                    : "Tap a network or type it, enter the password, then Connect."
+            }
+        }
+    }
+
+    private func requestWifiListOnce() -> (ssids: [String], failed: Bool) {
         var request = URLRequest(url: wifiUrl)
         request.httpMethod = "GET"
-        request.timeoutInterval = 25
+        request.timeoutInterval = 45
+        request.cachePolicy = .reloadIgnoringLocalCacheData
         let sem = DispatchSemaphore(value: 0)
         var ssids: [String] = []
         var failed = false
@@ -303,18 +437,8 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
                 ssids.append(ssid)
             }
         }.resume()
-        _ = sem.wait(timeout: .now() + 30)
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self, !self.finishedOk else { return }
-            if failed {
-                self.detail.text = "Wi-Fi list unavailable — type the name, then Connect."
-            } else {
-                self.showWifiSuggestions(ssids)
-                self.detail.text = ssids.isEmpty
-                    ? "No networks found — type the Wi-Fi name, then Connect."
-                    : "Tap a network or type it, enter the password, then Connect."
-            }
-        }
+        _ = sem.wait(timeout: .now() + 50)
+        return (ssids, failed)
     }
 
     private func showWifiSuggestions(_ ssids: [String]) {
@@ -338,10 +462,19 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
 
     private func postSoftApCredentials(ssid: String, pass: String, name: String) {
         credsSent = true
+        dismissKeyboard()
         form.isHidden = true
         connectButton.isHidden = true
-        showProgress(40, title: "Connecting")
+        searchLogo.isHidden = true
+        shownPct = 0
+        magnets.pct = 0
+        showProgress(35, title: "Connecting")
         detail.text = "Sending Wi-Fi to the sensor… This can take up to a minute."
+        // Keep magnets approaching while SoftAP provision runs (same feel as Android).
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in
+            guard let self = self, self.credsSent, !self.finishedOk else { return }
+            self.showProgress(70, title: "Connecting")
+        }
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
             if !self.pingSoftAp() {
@@ -352,9 +485,14 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
                     self.connectButton.isEnabled = true
                     self.percent.isHidden = true
                     self.magnets.isHidden = true
+                    self.searchLogo.isHidden = false
                     self.detail.text = "Could not reach the sensor. Restart it and try again."
                 }
                 return
+            }
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self, self.credsSent, !self.finishedOk else { return }
+                self.showProgress(85, title: "Connecting")
             }
             let body: [String: String] = ["ssid": ssid, "pass": pass, "email": self.email, "name": name]
             guard let data = try? JSONSerialization.data(withJSONObject: body) else { return }
@@ -373,7 +511,7 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
             DispatchQueue.main.async {
                 if code >= 200 && code < 300 {
                     self.finishedOk = true
-                    self.showProgress(100, title: "Done")
+                    self.showProgress(100, title: "Connected")
                     self.detail.text = "Sensor is connected. Tap below to return to the dashboard."
                     self.connectButton.isHidden = false
                     self.connectButton.isEnabled = true
@@ -388,6 +526,7 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
                     self.connectButton.isEnabled = true
                     self.percent.isHidden = true
                     self.magnets.isHidden = true
+                    self.searchLogo.isHidden = false
                     self.detail.text = "Send failed. Check the Wi-Fi password and try again."
                 }
             }
@@ -487,6 +626,7 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
     }
 
     @objc private func sendCredentials() {
+        dismissKeyboard()
         let ssid = (ssidField.text ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         let pass = passField.text ?? ""
         var name = (nameField.text ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
@@ -507,6 +647,9 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         credsSent = true
         form.isHidden = true
         connectButton.isHidden = true
+        searchLogo.isHidden = true
+        shownPct = 0
+        magnets.pct = 0
         showProgress(45, title: "Connecting")
         peripheral.writeValue(data, for: cred, type: .withResponse)
     }
@@ -558,12 +701,14 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
 
     private func showProgress(_ pct: Int, title: String) {
         stopSearchSpinner(hideLogo: true)
+        searchLogo.isHidden = true
         percent.isHidden = false
         magnets.isHidden = false
+        magnets.setNeedsDisplay()
         headline.text = title
         targetPct = min(100, max(0, pct))
         magnetTimer?.invalidate()
-        magnetTimer = Timer.scheduledTimer(withTimeInterval: 0.028, repeats: true) { [weak self] timer in
+        let timer = Timer(timeInterval: 0.028, repeats: true) { [weak self] timer in
             guard let self = self else { timer.invalidate(); return }
             if self.shownPct >= self.targetPct {
                 timer.invalidate()
@@ -572,8 +717,14 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
             self.shownPct += 1
             self.magnets.pct = self.shownPct
             self.percent.text = "\(self.shownPct)%"
-            self.percent.textColor = Self.blend(from: UIColor(red: 0.99, green: 0.65, blue: 0.65, alpha: 1), to: UIColor(red: 0.29, green: 0.87, blue: 0.5, alpha: 1), t: CGFloat(self.shownPct) / 100)
+            self.percent.textColor = Self.blend(
+                from: UIColor(red: 0.99, green: 0.65, blue: 0.65, alpha: 1),
+                to: UIColor(red: 0.29, green: 0.87, blue: 0.5, alpha: 1),
+                t: CGFloat(self.shownPct) / 100
+            )
         }
+        magnetTimer = timer
+        RunLoop.main.add(timer, forMode: .common)
     }
 
     private static func blend(from: UIColor, to: UIColor, t: CGFloat) -> UIColor {
@@ -604,6 +755,10 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
     private func style(_ field: UITextField, placeholder: String) {
         field.placeholder = placeholder
         field.textColor = .white
+        field.attributedPlaceholder = NSAttributedString(
+            string: placeholder,
+            attributes: [.foregroundColor: UIColor(white: 0.45, alpha: 1)]
+        )
         field.backgroundColor = UIColor(red: 0.01, green: 0.02, blue: 0.09, alpha: 1)
         field.layer.cornerRadius = 12
         field.layer.borderWidth = 1
@@ -613,6 +768,7 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         field.heightAnchor.constraint(equalToConstant: 44).isActive = true
         field.autocapitalizationType = .none
         field.autocorrectionType = .no
+        field.keyboardAppearance = .dark
     }
 }
 

@@ -330,6 +330,8 @@
         let sirenAvailable = false;
         let sirenEnabled = false;
         let sirenActive = false;
+        // YouTube / demo: show Battery 100% on cards. Set false after filming.
+        var DEMO_SHOW_BATTERY_100 = true;
 
         function setSirenUI() {
           sirenEnable.disabled = !sirenAvailable || sirenEnabled;
@@ -594,14 +596,17 @@
                 displayIcon: shownDeviceIcon(id, d),
                 status: fromDevice,
                 lastSeen: d && d.lastSeen,
-                battery:
-                  d && typeof d.battery === "number"
+                battery: DEMO_SHOW_BATTERY_100
+                  ? 100
+                  : d && typeof d.battery === "number"
                     ? Math.max(-1, Math.min(100, Math.round(d.battery)))
                     : null,
                 batteryPinMv:
                   d && typeof d.batteryPinMv === "number" ? d.batteryPinMv : null,
                 powerSource: (d && d.powerSource) || "",
-                batteryStatus: (d && d.batteryStatus) || "",
+                batteryStatus: DEMO_SHOW_BATTERY_100
+                  ? "ok"
+                  : (d && d.batteryStatus) || "",
               };
             });
           function latestEventTime(dev) {

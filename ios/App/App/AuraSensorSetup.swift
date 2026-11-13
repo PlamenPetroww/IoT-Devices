@@ -60,10 +60,11 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         return URLSession(configuration: config)
     }()
 
+    private let pageBg = UIColor(red: 0.06, green: 0.09, blue: 0.16, alpha: 1)
     private let headline = UILabel()
     private let detail = UILabel()
     private let percent = UILabel()
-    private let searchLogo = CleanAuraMarkView()
+    private let searchLogo = UIImageView()
     private let magnets = MagnetMark()
     private var shownPct = 0
     private var targetPct = 0
@@ -86,7 +87,7 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = UIColor(red: 0.06, green: 0.09, blue: 0.16, alpha: 1)
+        view.backgroundColor = pageBg
         headline.textColor = .white
         headline.font = .systemFont(ofSize: 24, weight: .medium)
         headline.textAlignment = .center
@@ -99,11 +100,14 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         percent.font = .systemFont(ofSize: 52, weight: .medium)
         percent.textAlignment = .center
         percent.isHidden = true
-        searchLogo.backgroundColor = .clear
-        searchLogo.isOpaque = false
+        // Original Aura mark; plate blends into page background.
+        searchLogo.image = UIImage(named: "AuraMark")
+        searchLogo.contentMode = .scaleAspectFit
+        searchLogo.clipsToBounds = true
+        searchLogo.backgroundColor = pageBg
         searchLogo.translatesAutoresizingMaskIntoConstraints = false
-        searchLogo.widthAnchor.constraint(equalToConstant: 88).isActive = true
-        searchLogo.heightAnchor.constraint(equalToConstant: 88).isActive = true
+        searchLogo.widthAnchor.constraint(equalToConstant: 112).isActive = true
+        searchLogo.heightAnchor.constraint(equalToConstant: 112).isActive = true
         magnets.isHidden = true
         magnets.translatesAutoresizingMaskIntoConstraints = false
         magnets.heightAnchor.constraint(equalToConstant: 168).isActive = true
@@ -158,13 +162,13 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         form.addArrangedSubview(nameField)
         form.addArrangedSubview(caption("Choose the 2.4 GHz network."))
         headline.text = "Looking for the sensor"
-        detail.text = "Power the sensor and stay next to it."
+        detail.text = "Restart the sensor and stay next to it. Everything stays in the app."
         startSearchSpinner()
         central = CBCentralManager(delegate: self, queue: nil)
-        // SoftAP appears after ~8s BLE; wait longer, then offer Join (with retries).
-        let work = DispatchWorkItem { [weak self] in self?.offerSoftApJoin(autoAttempt: true) }
+        // Same timing as Android: SoftAP after ~8s on board → app joins ~10s.
+        let work = DispatchWorkItem { [weak self] in self?.startSoftApSetup() }
         softApFallbackWork = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 14, execute: work)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 10, execute: work)
     }
 
     private func startSearchSpinner() {
@@ -184,92 +188,61 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         if hideLogo { searchLogo.isHidden = true }
     }
 
-    private func offerSoftApJoin(autoAttempt: Bool) {
-        if finishedOk || peripheral != nil { return }
+    /// 1:1 with Android: system Wi‑Fi prompt for AuraHomeSystems_Setup, then in-app form.
+    private func startSoftApSetup() {
+        if finishedOk || softApMode || peripheral != nil { return }
         softApMode = true
         if central.state == .poweredOn { central.stopScan() }
         stopSearchSpinner(hideLogo: false)
         headline.text = "Sensor Wi-Fi"
-        detail.text = "1) Open iPhone Settings → Wi-Fi\n2) Join AuraHomeSystems_Setup\n3) Return here and tap Continue"
+        detail.text = "Confirm the Wi-Fi connection to the sensor (AuraHomeSystems_Setup)."
+        form.isHidden = false
         connectButton.isHidden = false
-        connectButton.isEnabled = true
-        connectButton.setTitle("Continue", for: .normal)
-        connectButton.removeTarget(nil, action: nil, for: .allEvents)
-        connectButton.addTarget(self, action: #selector(continueAfterManualJoin), for: .touchUpInside)
-        // Optional automatic attempt (often blocked on iOS) — does not replace manual path.
-        if autoAttempt {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
-                self?.tryAutomaticJoin(attempt: 1)
-            }
-        }
-    }
-
-    @objc private func continueAfterManualJoin() {
-        if finishedOk { return }
-        softApMode = true
         connectButton.isEnabled = false
-        connectButton.setTitle("Checking…", for: .normal)
-        detail.text = "Looking for the sensor on AuraHomeSystems_Setup…"
-        verifySoftApThenContinue(attempt: 1, fromManual: true)
+        connectButton.setTitle("Waiting…", for: .normal)
+        connectButton.removeTarget(nil, action: nil, for: .allEvents)
+        connectButton.addTarget(self, action: #selector(sendCredentials), for: .touchUpInside)
+        requestSoftApNetwork(attempt: 1)
     }
 
-    private func tryAutomaticJoin(attempt: Int) {
-        if finishedOk || softApReady { return }
+    @objc private func retrySoftApSetup() {
+        softApMode = false
+        softApReady = false
+        startSoftApSetup()
+    }
+
+    private func requestSoftApNetwork(attempt: Int) {
         let config = NEHotspotConfiguration(ssid: setupApSsid)
         config.joinOnce = true
         NEHotspotConfigurationManager.shared.apply(config) { [weak self] error in
             DispatchQueue.main.async {
-                guard let self = self, !self.finishedOk, !self.softApReady else { return }
+                guard let self = self, !self.finishedOk else { return }
                 if let error = error as NSError? {
                     if error.domain == NEHotspotConfigurationErrorDomain,
                        error.code == NEHotspotConfigurationError.alreadyAssociated.rawValue {
-                        self.verifySoftApThenContinue(attempt: attempt, fromManual: false)
+                        self.onSoftApNetworkAvailable()
                         return
                     }
-                    if attempt < 3 {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 5) { [weak self] in
-                            self?.tryAutomaticJoin(attempt: attempt + 1)
+                    if attempt < 5 {
+                        self.detail.text = "Confirm the Wi-Fi connection to the sensor (AuraHomeSystems_Setup)."
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
+                            self?.requestSoftApNetwork(attempt: attempt + 1)
                         }
+                        return
                     }
-                    // Keep manual Continue visible — do not show a hard failure yet.
+                    self.detail.text = "Sensor Wi-Fi not confirmed. Restart the sensor and try again."
+                    self.connectButton.isEnabled = true
+                    self.connectButton.setTitle("Try again", for: .normal)
+                    self.connectButton.removeTarget(nil, action: nil, for: .allEvents)
+                    self.connectButton.addTarget(self, action: #selector(self.retrySoftApSetup), for: .touchUpInside)
                     return
                 }
-                self.verifySoftApThenContinue(attempt: attempt, fromManual: false)
+                self.onSoftApNetworkAvailable()
             }
         }
     }
 
-    private func verifySoftApThenContinue(attempt: Int, fromManual: Bool) {
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            guard let self = self else { return }
-            var ok = false
-            for _ in 0..<20 {
-                if self.finishedOk { return }
-                if self.pingSoftAp() { ok = true; break }
-                Thread.sleep(forTimeInterval: 0.5)
-            }
-            DispatchQueue.main.async {
-                if ok {
-                    self.onSoftApJoined()
-                    return
-                }
-                if !fromManual && attempt < 3 {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 4) { [weak self] in
-                        self?.tryAutomaticJoin(attempt: attempt + 1)
-                    }
-                    return
-                }
-                self.detail.text = "Not connected yet. In Settings → Wi-Fi join AuraHomeSystems_Setup, then tap Continue."
-                self.connectButton.isEnabled = true
-                self.connectButton.setTitle("Continue", for: .normal)
-                self.connectButton.removeTarget(nil, action: nil, for: .allEvents)
-                self.connectButton.addTarget(self, action: #selector(self.continueAfterManualJoin), for: .touchUpInside)
-                self.searchLogo.isHidden = false
-            }
-        }
-    }
-
-    private func onSoftApJoined() {
+    private func onSoftApNetworkAvailable() {
         softApReady = true
         headline.text = "Home Wi-Fi"
         detail.text = "Linked to the sensor. Loading Wi-Fi list…"
@@ -640,63 +613,6 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         field.heightAnchor.constraint(equalToConstant: 44).isActive = true
         field.autocapitalizationType = .none
         field.autocorrectionType = .no
-    }
-}
-
-/// Clean mark for setup — no app-icon plate / neon glow from the PNG asset.
-final class CleanAuraMarkView: UIView {
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-        backgroundColor = .clear
-        isOpaque = false
-        contentMode = .redraw
-    }
-
-    required init?(coder: NSCoder) { nil }
-
-    override func draw(_ rect: CGRect) {
-        let inset = rect.insetBy(dx: rect.width * 0.08, dy: rect.height * 0.08)
-        let color = UIColor(red: 0.29, green: 0.87, blue: 0.5, alpha: 1)
-        color.setStroke()
-        let line = max(3, inset.width * 0.07)
-        let house = UIBezierPath()
-        house.lineWidth = line
-        house.lineJoinStyle = .round
-        house.lineCapStyle = .round
-        let left = inset.minX + inset.width * 0.12
-        let right = inset.maxX - inset.width * 0.12
-        let top = inset.minY + inset.height * 0.18
-        let eaves = inset.minY + inset.height * 0.42
-        let bottom = inset.maxY - inset.height * 0.12
-        let midX = inset.midX
-        house.move(to: CGPoint(x: left, y: eaves))
-        house.addLine(to: CGPoint(x: midX, y: top))
-        house.addLine(to: CGPoint(x: right, y: eaves))
-        house.addLine(to: CGPoint(x: right, y: bottom))
-        house.addLine(to: CGPoint(x: left, y: bottom))
-        house.close()
-        house.stroke()
-        // Wi‑Fi arcs
-        let cx = midX
-        let cy = inset.minY + inset.height * 0.62
-        for i in 1...3 {
-            let r = inset.width * (0.08 + 0.07 * CGFloat(i))
-            let arc = UIBezierPath(
-                arcCenter: CGPoint(x: cx, y: cy),
-                radius: r,
-                startAngle: .pi * 1.15,
-                endAngle: .pi * 1.85,
-                clockwise: true
-            )
-            arc.lineWidth = line * 0.7
-            arc.lineCapStyle = .round
-            arc.stroke()
-        }
-        let dot = UIBezierPath(
-            ovalIn: CGRect(x: cx - line * 0.35, y: cy - line * 0.1, width: line * 0.7, height: line * 0.7)
-        )
-        color.setFill()
-        dot.fill()
     }
 }
 

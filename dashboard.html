@@ -145,7 +145,7 @@
             <div id="sensorStatusMsg" class="sensor-status-msg home">
               🏠 Sensors are off (Home mode).
             </div>
-            <div id="sirenControls" class="siren-controls">
+            <div id="sirenControls" class="siren-controls" hidden>
               <div class="siren-head">
                 <span class="siren-mark" aria-hidden="true"><svg viewBox="0 0 46 46" width="46" height="46" focusable="false"><path d="M8.2 16.2c-2.6 2.8-2.6 10.8 0 13.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.45"/><path d="M12 19c-1.6 1.8-1.6 6.2 0 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M37.8 16.2c2.6 2.8 2.6 10.8 0 13.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.45"/><path d="M34 19c1.6 1.8 1.6 6.2 0 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M16 27.2v-3a7 7 0 0 1 14 0v3" fill="currentColor" fill-opacity="0.16" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><rect x="13" y="27.2" width="20" height="5.4" rx="1.6" fill="currentColor"/><path d="M16.4 32.8v3.3M29.6 32.8v3.3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>
                 <div>
@@ -330,10 +330,18 @@
         let sirenAvailable = false;
         let sirenEnabled = false;
         let sirenActive = false;
+        let sirenPresent = false;
         // YouTube / demo: show Battery 100% on cards. Set false after filming.
         var DEMO_SHOW_BATTERY_100 = true;
 
         function setSirenUI() {
+          var sirenBox = document.getElementById("sirenControls");
+          if (sirenBox) {
+            sirenBox.hidden = !sirenPresent;
+            sirenBox.classList.toggle("is-standby", sirenPresent && sirenAvailable && sirenEnabled && !sirenActive);
+            sirenBox.classList.toggle("is-active", sirenPresent && sirenAvailable && sirenActive);
+          }
+          if (!sirenPresent) return;
           sirenEnable.disabled = !sirenAvailable || sirenEnabled;
           sirenStop.disabled = !sirenAvailable || !sirenEnabled;
           sirenStatus.className = sirenActive
@@ -341,11 +349,6 @@
             : sirenEnabled
               ? "standby"
               : "";
-          var sirenBox = document.getElementById("sirenControls");
-          if (sirenBox) {
-            sirenBox.classList.toggle("is-standby", sirenAvailable && sirenEnabled && !sirenActive);
-            sirenBox.classList.toggle("is-active", sirenAvailable && sirenActive);
-          }
           sirenStatus.textContent = !sirenAvailable
             ? authT("dashboard.sirenUnavailable")
             : sirenActive
@@ -370,10 +373,15 @@
           setModeUI(val === true);
         });
         db.ref(userPath + "/siren").on("value", (snap) => {
-          const value = snap.val() || {};
-          sirenAvailable = value.online === true;
-          sirenEnabled = value.enabled === true;
-          sirenActive = value.active === true;
+          const value = snap.val();
+          // Same idea as sensors: show the block only when this account has a siren.
+          sirenPresent =
+            value != null &&
+            typeof value === "object" &&
+            Object.keys(value).length > 0;
+          sirenAvailable = !!(sirenPresent && value.online === true);
+          sirenEnabled = !!(sirenPresent && value.enabled === true);
+          sirenActive = !!(sirenPresent && value.active === true);
           setSirenUI();
         });
         modeHome.addEventListener("click", () => {

@@ -219,7 +219,8 @@ body {
 .dashboard-header {
     position: relative;
     z-index: 40;
-    padding-block: 16px;
+    padding-top: max(16px, calc(env(safe-area-inset-top, 0px) + 12px));
+    padding-bottom: 16px;
     padding-inline: max(20px, env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px));
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
@@ -1509,11 +1510,11 @@ body.dashboard-overlay-open {
     text-decoration: underline;
 }
 
-/* Language picker (app + auth pages) */
+/* Language picker (app + auth pages) — clear of status bar (signal / Wi‑Fi / battery) */
 .auth-lang-bar {
     position: fixed;
-    top: 14px;
-    right: 14px;
+    top: max(14px, calc(env(safe-area-inset-top, 0px) + 12px));
+    right: max(14px, env(safe-area-inset-right, 0px));
     z-index: 1200;
 }
 

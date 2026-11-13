@@ -145,15 +145,16 @@
             <div id="sensorStatusMsg" class="sensor-status-msg home">
               🏠 Sensors are off (Home mode).
             </div>
-            <div id="sirenControls" class="siren-controls" hidden>
-              <div class="siren-head">
+            <div id="sirenControls" class="siren-controls siren-controls--empty">
+              <div class="siren-head" id="sirenHead">
                 <span class="siren-mark" aria-hidden="true"><svg viewBox="0 0 46 46" width="46" height="46" focusable="false"><path d="M8.2 16.2c-2.6 2.8-2.6 10.8 0 13.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.45"/><path d="M12 19c-1.6 1.8-1.6 6.2 0 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M37.8 16.2c2.6 2.8 2.6 10.8 0 13.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.45"/><path d="M34 19c1.6 1.8 1.6 6.2 0 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M16 27.2v-3a7 7 0 0 1 14 0v3" fill="currentColor" fill-opacity="0.16" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><rect x="13" y="27.2" width="20" height="5.4" rx="1.6" fill="currentColor"/><path d="M16.4 32.8v3.3M29.6 32.8v3.3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>
                 <div>
                   <strong data-i18n="dashboard.sirenTitle">Siren</strong>
                   <span id="sirenStatus" data-i18n="dashboard.sirenUnavailable">Not connected</span>
                 </div>
               </div>
-              <div class="siren-actions">
+              <p id="sirenEmpty" class="siren-empty" data-i18n="dashboard.noSirenYet">No siren yet.</p>
+              <div class="siren-actions" id="sirenActions" hidden>
                 <button type="button" id="sirenEnable" class="mode-btn siren-toggle" data-i18n="dashboard.sirenEnable" disabled>
                   Enable siren
                 </button>
@@ -336,11 +337,22 @@
 
         function setSirenUI() {
           var sirenBox = document.getElementById("sirenControls");
+          var sirenHead = document.getElementById("sirenHead");
+          var sirenEmpty = document.getElementById("sirenEmpty");
+          var sirenActions = document.getElementById("sirenActions");
           if (sirenBox) {
-            sirenBox.hidden = !sirenPresent;
+            sirenBox.classList.toggle("siren-controls--empty", !sirenPresent);
             sirenBox.classList.toggle("is-standby", sirenPresent && sirenAvailable && sirenEnabled && !sirenActive);
             sirenBox.classList.toggle("is-active", sirenPresent && sirenAvailable && sirenActive);
           }
+          if (sirenHead) sirenHead.hidden = !sirenPresent;
+          if (sirenEmpty) {
+            sirenEmpty.hidden = sirenPresent;
+            if (!sirenPresent) {
+              sirenEmpty.textContent = authT("dashboard.noSirenYet") || "No siren yet.";
+            }
+          }
+          if (sirenActions) sirenActions.hidden = !sirenPresent;
           if (!sirenPresent) return;
           sirenEnable.disabled = !sirenAvailable || sirenEnabled;
           sirenStop.disabled = !sirenAvailable || !sirenEnabled;
@@ -368,17 +380,18 @@
             ? authT("dashboard.statusAway")
             : authT("dashboard.statusHome");
         }
+        setSirenUI();
         db.ref(userPath + "/systemEnabled").on("value", (snap) => {
           const val = snap.val();
           setModeUI(val === true);
         });
         db.ref(userPath + "/siren").on("value", (snap) => {
           const value = snap.val();
-          // Same idea as sensors: show the block only when this account has a siren.
+          // Real siren only (online/lastSeen from the device) — ignore leftover button clicks.
           sirenPresent =
             value != null &&
             typeof value === "object" &&
-            Object.keys(value).length > 0;
+            (value.online === true || typeof value.lastSeen === "number");
           sirenAvailable = !!(sirenPresent && value.online === true);
           sirenEnabled = !!(sirenPresent && value.enabled === true);
           sirenActive = !!(sirenPresent && value.active === true);

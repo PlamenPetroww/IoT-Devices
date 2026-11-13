@@ -841,6 +841,25 @@ body.dashboard-overlay-open {
     border-radius: 12px;
 }
 
+.siren-controls--empty {
+    justify-content: center;
+}
+
+.siren-empty {
+    margin: 0;
+    width: 100%;
+    text-align: center;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #94a3b8;
+}
+
+.siren-empty[hidden],
+.siren-head[hidden],
+.siren-actions[hidden] {
+    display: none !important;
+}
+
 .siren-controls > div:first-child {
     display: grid;
     gap: 3px;

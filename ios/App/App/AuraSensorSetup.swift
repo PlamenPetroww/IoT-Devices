@@ -215,10 +215,10 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         detail.text = "Turn the sensor on and stay next to it for about a minute."
         startSearchSpinner()
         central = CBCentralManager(delegate: self, queue: nil)
-        // Same timing as Android: SoftAP after ~8s on board → app joins ~10s.
+        // Board opens SoftAP after ~8s BLE; wait a bit longer so the AP is up.
         let work = DispatchWorkItem { [weak self] in self?.startSoftApSetup() }
         softApFallbackWork = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 10, execute: work)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 12, execute: work)
     }
 
     @objc private func dismissKeyboard() {
@@ -318,34 +318,89 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
     }
 
     private func requestSoftApNetwork(attempt: Int) {
+        // Already on SoftAP? Skip the system dialog.
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
+            if self.pingSoftAp() {
+                DispatchQueue.main.async { self.onSoftApNetworkAvailable() }
+                return
+            }
+            DispatchQueue.main.async {
+                self.applySoftApJoin(attempt: attempt)
+            }
+        }
+    }
+
+    private func applySoftApJoin(attempt: Int) {
         let config = NEHotspotConfiguration(ssid: setupApSsid)
-        config.joinOnce = true
+        config.joinOnce = false
+        detail.text = "Confirm the Wi-Fi connection to the sensor (AuraHomeSystems_Setup)."
         NEHotspotConfigurationManager.shared.apply(config) { [weak self] error in
             DispatchQueue.main.async {
                 guard let self = self, !self.finishedOk else { return }
                 if let error = error as NSError? {
                     if error.domain == NEHotspotConfigurationErrorDomain,
                        error.code == NEHotspotConfigurationError.alreadyAssociated.rawValue {
-                        self.onSoftApNetworkAvailable()
+                        self.verifySoftApOrRetry(attempt: attempt)
                         return
                     }
-                    if attempt < 5 {
-                        self.detail.text = "Confirm the Wi-Fi connection to the sensor (AuraHomeSystems_Setup)."
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
+                    // User cancelled the system Join dialog.
+                    if error.domain == NEHotspotConfigurationErrorDomain,
+                       error.code == NEHotspotConfigurationError.userDenied.rawValue {
+                        self.detail.text = "Tap Join on the Wi-Fi popup, then Try again. Sensor must be on."
+                        self.showSoftApTryAgain()
+                        return
+                    }
+                    if attempt < 6 {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in
                             self?.requestSoftApNetwork(attempt: attempt + 1)
                         }
                         return
                     }
                     self.detail.text = "Sensor Wi-Fi not confirmed. Restart the sensor and try again."
-                    self.connectButton.isEnabled = true
-                    self.connectButton.setTitle("Try again", for: .normal)
-                    self.connectButton.removeTarget(nil, action: nil, for: .allEvents)
-                    self.connectButton.addTarget(self, action: #selector(self.retrySoftApSetup), for: .touchUpInside)
+                    self.showSoftApTryAgain()
                     return
                 }
-                self.onSoftApNetworkAvailable()
+                // Give iOS a moment to finish associating, then ping.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
+                    self?.verifySoftApOrRetry(attempt: attempt)
+                }
             }
         }
+    }
+
+    private func verifySoftApOrRetry(attempt: Int) {
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
+            var ok = false
+            for _ in 0..<16 {
+                if self.finishedOk { return }
+                if self.pingSoftAp() { ok = true; break }
+                Thread.sleep(forTimeInterval: 0.4)
+            }
+            DispatchQueue.main.async {
+                if ok {
+                    self.onSoftApNetworkAvailable()
+                    return
+                }
+                if attempt < 6 {
+                    self.detail.text = "Still linking to AuraHomeSystems_Setup…"
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
+                        self?.requestSoftApNetwork(attempt: attempt + 1)
+                    }
+                    return
+                }
+                self.detail.text = "Sensor Wi-Fi not confirmed. Restart the sensor and try again."
+                self.showSoftApTryAgain()
+            }
+        }
+    }
+
+    private func showSoftApTryAgain() {
+        connectButton.isEnabled = true
+        connectButton.setTitle("Try again", for: .normal)
+        connectButton.removeTarget(nil, action: nil, for: .allEvents)
+        connectButton.addTarget(self, action: #selector(retrySoftApSetup), for: .touchUpInside)
     }
 
     private func onSoftApNetworkAvailable() {

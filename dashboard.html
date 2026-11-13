@@ -440,6 +440,8 @@
         var sensorStatusMemory = {};
         let lastRemovedSnap = null;
         let lastSettingsSnap = null;
+        // Always hide these ids even before Firebase removedDevices catches up.
+        var localRemovedIds = {};
         function deviceSetting(id) {
           var all = lastSettingsSnap && lastSettingsSnap.val();
           if (!all || !id) return {};
@@ -552,9 +554,14 @@
           );
         }
         function getRemovedDeviceIds() {
+          const ids = new Set(Object.keys(localRemovedIds));
           const removed = lastRemovedSnap && lastRemovedSnap.val();
-          if (!removed || typeof removed !== "object") return new Set();
-          return new Set(Object.keys(removed));
+          if (removed && typeof removed === "object") {
+            Object.keys(removed).forEach(function (id) {
+              ids.add(id);
+            });
+          }
+          return ids;
         }
         function renderRemovedDevices() {
           const removed = (lastRemovedSnap && lastRemovedSnap.val()) || {};
@@ -995,52 +1002,49 @@
               ) {
                 return;
               }
-              db.ref(userPath + "/devices/" + deviceId).once("value", function (deviceSnap) {
-                var d = deviceSnap.val() || {};
-                var updates = {};
-                updates[userPath + "/removedDevices/" + deviceId] = {
-                  deviceName: deviceName,
-                  removedAt: firebase.database.ServerValue.TIMESTAMP,
-                  lastStatus: d.status,
-                  lastBattery: d.battery,
-                  lastPowerSource: d.powerSource,
-                  lastSeen: d.lastSeen,
-                  displayName: d.displayName || deviceName || null,
-                  displayIcon: d.displayIcon || null,
-                };
-                db.ref()
-                  .update(updates)
-                  .then(function () {
-                    // Optimistic local hide if the listener is slow.
-                    if (!lastRemovedSnap || !lastRemovedSnap.val()) {
-                      lastRemovedSnap = {
-                        val: function () {
-                          var o = {};
-                          o[deviceId] = updates[userPath + "/removedDevices/" + deviceId];
-                          return o;
-                        },
-                      };
-                    } else {
-                      var cur = lastRemovedSnap.val() || {};
-                      cur[deviceId] = updates[userPath + "/removedDevices/" + deviceId];
-                      lastRemovedSnap = {
-                        val: function () {
-                          return cur;
-                        },
-                      };
-                    }
-                    if (lastDevicesSnap) renderDevicesFromSnap(lastDevicesSnap);
-                    else renderRemovedDevices();
-                  })
-                  .catch(function (err) {
-                    console.error("[dashboard] remove failed", err);
-                    window.alert(
-                      (authT("dashboard.removeSensorFailed") ||
-                        "Could not remove the sensor.") +
-                        (err && err.message ? " (" + err.message + ")" : "")
-                    );
-                  });
-              });
+              // Hide immediately in the UI, then sync Firebase.
+              localRemovedIds[deviceId] = true;
+              if (lastDevicesSnap) renderDevicesFromSnap(lastDevicesSnap);
+              else renderRemovedDevices();
+              db.ref(userPath + "/devices/" + deviceId).once(
+                "value",
+                function (deviceSnap) {
+                  var d = deviceSnap.val() || {};
+                  var updates = {};
+                  updates[userPath + "/removedDevices/" + deviceId] = {
+                    deviceName: deviceName,
+                    removedAt: Date.now(),
+                    lastStatus: d.status,
+                    lastBattery: d.battery,
+                    lastPowerSource: d.powerSource,
+                    lastSeen: d.lastSeen,
+                    displayName: d.displayName || deviceName || null,
+                    displayIcon: d.displayIcon || null,
+                  };
+                  db.ref()
+                    .update(updates)
+                    .catch(function (err) {
+                      console.error("[dashboard] remove failed", err);
+                      delete localRemovedIds[deviceId];
+                      if (lastDevicesSnap) renderDevicesFromSnap(lastDevicesSnap);
+                      window.alert(
+                        (authT("dashboard.removeSensorFailed") ||
+                          "Could not remove the sensor.") +
+                          (err && err.message ? " (" + err.message + ")" : "")
+                      );
+                    });
+                },
+                function (err) {
+                  console.error("[dashboard] remove read failed", err);
+                  delete localRemovedIds[deviceId];
+                  if (lastDevicesSnap) renderDevicesFromSnap(lastDevicesSnap);
+                  window.alert(
+                    (authT("dashboard.removeSensorFailed") ||
+                      "Could not remove the sensor.") +
+                      (err && err.message ? " (" + err.message + ")" : "")
+                  );
+                }
+              );
               return;
             }
             if (action === "delete-forever") {
@@ -1051,6 +1055,7 @@
               ) {
                 return;
               }
+              delete localRemovedIds[deviceId];
               var forgetUpdates = {};
               forgetUpdates[userPath + "/removedDevices/" + deviceId] = null;
               forgetUpdates[userPath + "/devices/" + deviceId] = null;
@@ -1059,6 +1064,7 @@
               return;
             }
             if (action === "restore") {
+              delete localRemovedIds[deviceId];
               var removedRef = db.ref(userPath + "/removedDevices/" + deviceId);
               removedRef.once("value", function (removedSnap) {
                 var info = removedSnap.val() || {};

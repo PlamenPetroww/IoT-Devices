@@ -1,5 +1,6 @@
 import CoreBluetooth
 import Capacitor
+import NetworkExtension
 import UIKit
 
 class AuraBridgeViewController: CAPBridgeViewController {
@@ -33,6 +34,10 @@ public class AuraSetupPlugin: CAPPlugin, CAPBridgedPlugin {
 }
 
 final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBPeripheralDelegate {
+    private let setupApSsid = "AuraHomeSystems_Setup"
+    private let pingUrl = URL(string: "http://192.168.4.1/ping")!
+    private let wifiUrl = URL(string: "http://192.168.4.1/wifi")!
+    private let provUrl = URL(string: "http://192.168.4.1/prov")!
     private let service = CBUUID(string: "8a1f0001-7c3a-4b2e-9d11-0e5a6b7c8d01")
     private let listId = CBUUID(string: "8a1f0002-7c3a-4b2e-9d11-0e5a6b7c8d01")
     private let credId = CBUUID(string: "8a1f0003-7c3a-4b2e-9d11-0e5a6b7c8d01")
@@ -42,6 +47,9 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
     private var peripheral: CBPeripheral?
     private var credsSent = false
     private var finishedOk = false
+    private var softApMode = false
+    private var softApReady = false
+    private var softApFallbackWork: DispatchWorkItem?
 
     private let headline = UILabel()
     private let detail = UILabel()
@@ -83,12 +91,13 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         percent.textAlignment = .center
         percent.isHidden = true
         searchLogo.image = UIImage(named: "AuraMark")
-        searchLogo.contentMode = .scaleAspectFill
+        searchLogo.contentMode = .scaleAspectFit
         searchLogo.clipsToBounds = true
-        searchLogo.layer.cornerRadius = 48
+        searchLogo.layer.cornerRadius = 20
+        searchLogo.backgroundColor = UIColor(white: 1, alpha: 0.06)
         searchLogo.translatesAutoresizingMaskIntoConstraints = false
-        searchLogo.widthAnchor.constraint(equalToConstant: 96).isActive = true
-        searchLogo.heightAnchor.constraint(equalToConstant: 96).isActive = true
+        searchLogo.widthAnchor.constraint(equalToConstant: 112).isActive = true
+        searchLogo.heightAnchor.constraint(equalToConstant: 112).isActive = true
         magnets.isHidden = true
         magnets.translatesAutoresizingMaskIntoConstraints = false
         magnets.heightAnchor.constraint(equalToConstant: 168).isActive = true
@@ -117,6 +126,7 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         let stack = UIStackView(arrangedSubviews: [close, searchLogo, percent, headline, detail, magnets, form, connectButton])
         stack.axis = .vertical
         stack.spacing = 12
+        stack.alignment = .fill
         stack.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(stack)
         NSLayoutConstraint.activate([
@@ -133,9 +143,13 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         form.addArrangedSubview(nameField)
         form.addArrangedSubview(caption("Choose the 2.4 GHz network."))
         headline.text = "Looking for the sensor"
-        detail.text = "Turn the sensor on and stay next to it for about a minute."
+        detail.text = "Restart the sensor and stay next to it. Everything stays in the app."
         startSearchSpinner()
         central = CBCentralManager(delegate: self, queue: nil)
+        // Board opens SoftAP after ~8s BLE; join in-app like Android.
+        let work = DispatchWorkItem { [weak self] in self?.startSoftApSetup() }
+        softApFallbackWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 10, execute: work)
     }
 
     private func startSearchSpinner() {
@@ -155,21 +169,217 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         searchLogo.transform = .identity
     }
 
+    private func startSoftApSetup() {
+        if finishedOk || softApMode || peripheral != nil { return }
+        softApMode = true
+        if central.state == .poweredOn { central.stopScan() }
+        stopSearchSpinner()
+        headline.text = "Sensor Wi-Fi"
+        detail.text = "Connecting to AuraHomeSystems_Setup…"
+        connectButton.isHidden = false
+        connectButton.isEnabled = false
+        connectButton.setTitle("Connecting…", for: .normal)
+
+        let config = NEHotspotConfiguration(ssid: setupApSsid)
+        config.joinOnce = true
+        NEHotspotConfigurationManager.shared.apply(config) { [weak self] error in
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                if let error = error as NSError? {
+                    // Already connected is OK (code 13 / NEHotspotConfigurationError.alreadyAssociated).
+                    if error.domain == NEHotspotConfigurationErrorDomain,
+                       error.code == NEHotspotConfigurationError.alreadyAssociated.rawValue {
+                        self.onSoftApJoined()
+                        return
+                    }
+                    self.detail.text = "Could not join sensor Wi-Fi. Confirm the Wi-Fi prompt, restart the sensor, and try again."
+                    self.connectButton.isEnabled = true
+                    self.connectButton.setTitle("Try again", for: .normal)
+                    self.connectButton.removeTarget(nil, action: nil, for: .allEvents)
+                    self.connectButton.addTarget(self, action: #selector(self.retrySoftAp), for: .touchUpInside)
+                    return
+                }
+                self.onSoftApJoined()
+            }
+        }
+    }
+
+    @objc private func retrySoftAp() {
+        softApMode = false
+        softApReady = false
+        startSoftApSetup()
+    }
+
+    private func onSoftApJoined() {
+        softApReady = true
+        headline.text = "Home Wi-Fi"
+        detail.text = "Linked to the sensor. Loading Wi-Fi list…"
+        form.isHidden = false
+        connectButton.isHidden = false
+        connectButton.isEnabled = true
+        connectButton.setTitle("Connect", for: .normal)
+        connectButton.removeTarget(nil, action: nil, for: .allEvents)
+        connectButton.addTarget(self, action: #selector(sendCredentials), for: .touchUpInside)
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            self?.waitForPingThenFetchWifi()
+        }
+    }
+
+    private func waitForPingThenFetchWifi() {
+        for _ in 0..<40 {
+            if finishedOk { return }
+            if pingSoftAp() { break }
+            Thread.sleep(forTimeInterval: 0.5)
+        }
+        fetchWifiList()
+    }
+
+    private func pingSoftAp() -> Bool {
+        var request = URLRequest(url: pingUrl)
+        request.httpMethod = "GET"
+        request.timeoutInterval = 2
+        let sem = DispatchSemaphore(value: 0)
+        var ok = false
+        URLSession.shared.dataTask(with: request) { data, response, _ in
+            defer { sem.signal() }
+            let code = (response as? HTTPURLResponse)?.statusCode ?? 0
+            let body = String(data: data ?? Data(), encoding: .utf8) ?? ""
+            ok = code == 200 && body.contains("aura")
+        }.resume()
+        _ = sem.wait(timeout: .now() + 3)
+        return ok
+    }
+
+    private func fetchWifiList() {
+        var request = URLRequest(url: wifiUrl)
+        request.httpMethod = "GET"
+        request.timeoutInterval = 25
+        let sem = DispatchSemaphore(value: 0)
+        var ssids: [String] = []
+        var failed = false
+        URLSession.shared.dataTask(with: request) { data, response, _ in
+            defer { sem.signal() }
+            let code = (response as? HTTPURLResponse)?.statusCode ?? 0
+            guard code == 200, let data = data,
+                  let arr = try? JSONSerialization.jsonObject(with: data) as? [Any] else {
+                failed = true
+                return
+            }
+            for item in arr {
+                let ssid = (item as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                if ssid.isEmpty || ssid == self.setupApSsid || ssids.contains(ssid) { continue }
+                ssids.append(ssid)
+            }
+        }.resume()
+        _ = sem.wait(timeout: .now() + 30)
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self, !self.finishedOk else { return }
+            if failed {
+                self.detail.text = "Wi-Fi list unavailable — type the name, then Connect."
+            } else {
+                self.showWifiSuggestions(ssids)
+                self.detail.text = ssids.isEmpty
+                    ? "No networks found — type the Wi-Fi name, then Connect."
+                    : "Tap a network or type it, enter the password, then Connect."
+            }
+        }
+    }
+
+    private func showWifiSuggestions(_ ssids: [String]) {
+        networks.arrangedSubviews.forEach {
+            networks.removeArrangedSubview($0)
+            $0.removeFromSuperview()
+        }
+        if ssids.isEmpty { return }
+        if (ssidField.text ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            ssidField.text = ssids[0]
+        }
+        for ssid in ssids {
+            let pick = UIButton(type: .system)
+            pick.setTitle(ssid, for: .normal)
+            pick.setTitleColor(.white, for: .normal)
+            pick.contentHorizontalAlignment = .leading
+            pick.addAction(UIAction { [weak self] _ in self?.ssidField.text = ssid }, for: .touchUpInside)
+            networks.addArrangedSubview(pick)
+        }
+    }
+
+    private func postSoftApCredentials(ssid: String, pass: String, name: String) {
+        credsSent = true
+        form.isHidden = true
+        connectButton.isHidden = true
+        showProgress(40, title: "Connecting")
+        detail.text = "Sending Wi-Fi to the sensor… This can take up to a minute."
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
+            if !self.pingSoftAp() {
+                DispatchQueue.main.async {
+                    self.credsSent = false
+                    self.form.isHidden = false
+                    self.connectButton.isHidden = false
+                    self.connectButton.isEnabled = true
+                    self.percent.isHidden = true
+                    self.magnets.isHidden = true
+                    self.detail.text = "Could not reach the sensor. Restart it and try again."
+                }
+                return
+            }
+            let body: [String: String] = ["ssid": ssid, "pass": pass, "email": self.email, "name": name]
+            guard let data = try? JSONSerialization.data(withJSONObject: body) else { return }
+            var request = URLRequest(url: self.provUrl)
+            request.httpMethod = "POST"
+            request.timeoutInterval = 90
+            request.setValue("application/json; charset=utf-8", forHTTPHeaderField: "Content-Type")
+            request.httpBody = data
+            let sem = DispatchSemaphore(value: 0)
+            var code = 0
+            URLSession.shared.dataTask(with: request) { _, response, _ in
+                code = (response as? HTTPURLResponse)?.statusCode ?? 0
+                sem.signal()
+            }.resume()
+            _ = sem.wait(timeout: .now() + 95)
+            DispatchQueue.main.async {
+                if code >= 200 && code < 300 {
+                    self.finishedOk = true
+                    self.showProgress(100, title: "Done")
+                    self.detail.text = "Sensor is connected. Tap below to return to the dashboard."
+                    self.connectButton.isHidden = false
+                    self.connectButton.isEnabled = true
+                    self.connectButton.setTitle("Back to dashboard", for: .normal)
+                    self.connectButton.removeTarget(nil, action: nil, for: .allEvents)
+                    self.connectButton.addTarget(self, action: #selector(self.closeTapped), for: .touchUpInside)
+                    NEHotspotConfigurationManager.shared.removeConfiguration(forSSID: self.setupApSsid)
+                } else {
+                    self.credsSent = false
+                    self.form.isHidden = false
+                    self.connectButton.isHidden = false
+                    self.connectButton.isEnabled = true
+                    self.percent.isHidden = true
+                    self.magnets.isHidden = true
+                    self.detail.text = "Send failed. Check the Wi-Fi password and try again."
+                }
+            }
+        }
+    }
+
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
+        if softApMode || finishedOk { return }
         if central.state == .poweredOn {
             startSearchSpinner()
             central.scanForPeripherals(withServices: [service], options: nil)
         } else if central.state == .poweredOff {
-            stopSearchSpinner()
-            detail.text = "Turn Bluetooth on."
+            // SoftAP path still works without Bluetooth.
+            detail.text = "Bluetooth is off — joining sensor Wi-Fi shortly…"
         }
     }
 
     func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String: Any], rssi RSSI: NSNumber) {
+        if softApMode || finishedOk { return }
         let name = advertisementData[CBAdvertisementDataLocalNameKey] as? String ?? peripheral.name
         if name != "Aura Sensor" && name != "Aura" && advertisementData[CBAdvertisementDataServiceUUIDsKey] == nil {
             return
         }
+        softApFallbackWork?.cancel()
         self.peripheral = peripheral
         peripheral.delegate = self
         central.stopScan()
@@ -184,7 +394,7 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
     }
 
     func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
-        if finishedOk { return }
+        if finishedOk || softApMode { return }
         if credsSent {
             detail.text = "The sensor disconnected. Stay next to it and try again."
             credsSent = false
@@ -253,6 +463,10 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
             return
         }
         if name.isEmpty { name = "Front Door" }
+        if softApMode {
+            postSoftApCredentials(ssid: ssid, pass: pass, name: name)
+            return
+        }
         guard let peripheral = peripheral,
               let service = peripheral.services?.first(where: { $0.uuid == self.service }),
               let cred = service.characteristics?.first(where: { $0.uuid == credId }) else { return }
@@ -299,10 +513,12 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         if stage == "ok" || pct >= 100 {
             finishedOk = true
             showProgress(100, title: "Connected")
-            detail.text = "The sensor will show up on the dashboard in a moment."
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in
-                self?.dismiss(animated: true)
-            }
+            detail.text = "Sensor is connected. Tap below to return to the dashboard."
+            connectButton.isHidden = false
+            connectButton.isEnabled = true
+            connectButton.setTitle("Back to dashboard", for: .normal)
+            connectButton.removeTarget(nil, action: nil, for: .allEvents)
+            connectButton.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
             return
         }
         if pct > 0 { showProgress(pct, title: "Connecting") }
@@ -338,7 +554,8 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
     }
 
     @objc private func closeTapped() {
-        central.stopScan()
+        softApFallbackWork?.cancel()
+        if central.state == .poweredOn { central.stopScan() }
         if let peripheral = peripheral { central.cancelPeripheralConnection(peripheral) }
         dismiss(animated: true)
     }

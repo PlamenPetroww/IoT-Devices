@@ -28,6 +28,23 @@
 	<true/>
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>Aura finds your sensor nearby to send the home Wi-Fi password.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Aura talks to your sensor over the setup Wi-Fi to finish pairing.</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+		<key>NSExceptionDomains</key>
+		<dict>
+			<key>192.168.4.1</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+			</dict>
+		</dict>
+	</dict>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>

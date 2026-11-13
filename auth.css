@@ -57,7 +57,7 @@ body {
     justify-content: space-between;
     align-items: baseline;
     gap: 12px;
-    margin-bottom: 6px;
+    margin-bottom: 10px;
 }
 
 .auth-field-row label {
@@ -79,9 +79,10 @@ body {
 }
 
 .auth-hint {
-    margin: -10px 0 14px;
+    margin: 0 0 16px;
+    padding-top: 4px;
     font-size: 0.78rem;
-    line-height: 1.4;
+    line-height: 1.45;
     color: #64748b;
 }
 

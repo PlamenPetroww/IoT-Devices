@@ -130,31 +130,32 @@
       <div class="dashboard-bottom">
         <aside class="dashboard-mode">
           <div class="mode-card">
-            <h2 data-i18n="dashboard.modeTitle">System mode</h2>
-            <p data-i18n="dashboard.modeDesc">
-              When the system is “Away”, sensors are monitored and you receive alerts. In “Home” mode the system is off.
-            </p>
-            <div class="mode-buttons">
-              <button type="button" id="modeHome" class="mode-btn active" data-i18n="dashboard.modeHome">
-                🏠 Home
-              </button>
-              <button type="button" id="modeAway" class="mode-btn danger" data-i18n="dashboard.modeAway">
-                🛡️ Away
-              </button>
+            <div id="systemModeBlock" class="system-mode-block" hidden>
+              <h2 data-i18n="dashboard.modeTitle">System mode</h2>
+              <p data-i18n="dashboard.modeDesc">
+                When the system is “Away”, sensors are monitored and you receive alerts. In “Home” mode the system is off.
+              </p>
+              <div class="mode-buttons">
+                <button type="button" id="modeHome" class="mode-btn active" data-i18n="dashboard.modeHome">
+                  🏠 Home
+                </button>
+                <button type="button" id="modeAway" class="mode-btn danger" data-i18n="dashboard.modeAway">
+                  🛡️ Away
+                </button>
+              </div>
+              <div id="sensorStatusMsg" class="sensor-status-msg home">
+                🏠 Sensors are off (Home mode).
+              </div>
             </div>
-            <div id="sensorStatusMsg" class="sensor-status-msg home">
-              🏠 Sensors are off (Home mode).
-            </div>
-            <div id="sirenControls" class="siren-controls siren-controls--empty">
+            <div id="sirenControls" class="siren-controls">
               <div class="siren-head" id="sirenHead">
                 <span class="siren-mark" aria-hidden="true"><svg viewBox="0 0 46 46" width="46" height="46" focusable="false"><path d="M8.2 16.2c-2.6 2.8-2.6 10.8 0 13.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.45"/><path d="M12 19c-1.6 1.8-1.6 6.2 0 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M37.8 16.2c2.6 2.8 2.6 10.8 0 13.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.45"/><path d="M34 19c1.6 1.8 1.6 6.2 0 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M16 27.2v-3a7 7 0 0 1 14 0v3" fill="currentColor" fill-opacity="0.16" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><rect x="13" y="27.2" width="20" height="5.4" rx="1.6" fill="currentColor"/><path d="M16.4 32.8v3.3M29.6 32.8v3.3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>
                 <div>
                   <strong data-i18n="dashboard.sirenTitle">Siren</strong>
-                  <span id="sirenStatus" data-i18n="dashboard.sirenUnavailable">Not connected</span>
+                  <span id="sirenStatus" data-i18n="dashboard.noSirenYet">No siren yet.</span>
                 </div>
               </div>
-              <p id="sirenEmpty" class="siren-empty" data-i18n="dashboard.noSirenYet">No siren yet.</p>
-              <div class="siren-actions" id="sirenActions" hidden>
+              <div class="siren-actions" id="sirenActions">
                 <button type="button" id="sirenEnable" class="mode-btn siren-toggle" data-i18n="dashboard.sirenEnable" disabled>
                   Enable siren
                 </button>
@@ -337,23 +338,17 @@
 
         function setSirenUI() {
           var sirenBox = document.getElementById("sirenControls");
-          var sirenHead = document.getElementById("sirenHead");
-          var sirenEmpty = document.getElementById("sirenEmpty");
-          var sirenActions = document.getElementById("sirenActions");
           if (sirenBox) {
-            sirenBox.classList.toggle("siren-controls--empty", !sirenPresent);
             sirenBox.classList.toggle("is-standby", sirenPresent && sirenAvailable && sirenEnabled && !sirenActive);
             sirenBox.classList.toggle("is-active", sirenPresent && sirenAvailable && sirenActive);
           }
-          if (sirenHead) sirenHead.hidden = !sirenPresent;
-          if (sirenEmpty) {
-            sirenEmpty.hidden = sirenPresent;
-            if (!sirenPresent) {
-              sirenEmpty.textContent = authT("dashboard.noSirenYet") || "No siren yet.";
-            }
+          if (!sirenPresent) {
+            sirenEnable.disabled = true;
+            sirenStop.disabled = true;
+            sirenStatus.className = "";
+            sirenStatus.textContent = authT("dashboard.noSirenYet") || "No siren yet.";
+            return;
           }
-          if (sirenActions) sirenActions.hidden = !sirenPresent;
-          if (!sirenPresent) return;
           sirenEnable.disabled = !sirenAvailable || sirenEnabled;
           sirenStop.disabled = !sirenAvailable || !sirenEnabled;
           sirenStatus.className = sirenActive
@@ -368,6 +363,11 @@
               : sirenEnabled
                 ? authT("dashboard.sirenStandby")
                 : authT("dashboard.sirenOff");
+        }
+
+        function setSystemModeVisible(hasSensors) {
+          var block = document.getElementById("systemModeBlock");
+          if (block) block.hidden = !hasSensors;
         }
 
         function setModeUI(enabled) {
@@ -591,6 +591,7 @@
         function showDevicesError(msg) {
           devicesList.innerHTML =
             '<p class="devices-empty">' + msg + "</p>";
+          setSystemModeVisible(false);
         }
         function renderDevicesFromSnap(snap) {
           const data = snap.val();
@@ -599,6 +600,7 @@
             recoverDevicesFromHistory();
             devicesList.innerHTML =
               '<p class="devices-empty">' + devicesEmptyMessage() + "</p>";
+            setSystemModeVisible(false);
             renderRemovedDevices();
             return;
           }
@@ -679,9 +681,11 @@
             recoverDevicesFromHistory();
             devicesList.innerHTML =
               '<p class="devices-empty">' + devicesEmptyMessage() + "</p>";
+            setSystemModeVisible(false);
             renderRemovedDevices();
             return;
           }
+          setSystemModeVisible(true);
           devicesList.innerHTML = devices
             .map(function (dev, index) {
               let powerHtml = "";

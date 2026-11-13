@@ -27,7 +27,9 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>Aura finds your sensor nearby to send the home Wi-Fi password.</string>
+	<string>Aura uses Bluetooth to find your nearby Aura sensor during setup and send the home Wi-Fi password.</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>Aura uses Bluetooth to find your nearby Aura sensor during setup.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Aura talks to your sensor over the setup Wi-Fi to finish pairing.</string>
 	<key>NSAppTransportSecurity</key>

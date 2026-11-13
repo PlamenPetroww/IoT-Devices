@@ -50,6 +50,15 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
     private var softApMode = false
     private var softApReady = false
     private var softApFallbackWork: DispatchWorkItem?
+    /// SoftAP has no internet — block cellular so requests hit 192.168.4.1 on Wi‑Fi.
+    private lazy var softApSession: URLSession = {
+        let config = URLSessionConfiguration.ephemeral
+        config.allowsCellularAccess = false
+        config.waitsForConnectivity = true
+        config.timeoutIntervalForRequest = 25
+        config.timeoutIntervalForResource = 90
+        return URLSession(configuration: config)
+    }()
 
     private let headline = UILabel()
     private let detail = UILabel()
@@ -92,12 +101,11 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         percent.isHidden = true
         searchLogo.image = UIImage(named: "AuraMark")
         searchLogo.contentMode = .scaleAspectFit
-        searchLogo.clipsToBounds = true
-        searchLogo.layer.cornerRadius = 20
-        searchLogo.backgroundColor = UIColor(white: 1, alpha: 0.06)
+        searchLogo.clipsToBounds = false
+        searchLogo.backgroundColor = .clear
         searchLogo.translatesAutoresizingMaskIntoConstraints = false
-        searchLogo.widthAnchor.constraint(equalToConstant: 112).isActive = true
-        searchLogo.heightAnchor.constraint(equalToConstant: 112).isActive = true
+        searchLogo.widthAnchor.constraint(equalToConstant: 96).isActive = true
+        searchLogo.heightAnchor.constraint(equalToConstant: 96).isActive = true
         magnets.isHidden = true
         magnets.translatesAutoresizingMaskIntoConstraints = false
         magnets.heightAnchor.constraint(equalToConstant: 168).isActive = true
@@ -126,13 +134,19 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         let stack = UIStackView(arrangedSubviews: [close, searchLogo, percent, headline, detail, magnets, form, connectButton])
         stack.axis = .vertical
         stack.spacing = 12
-        stack.alignment = .fill
+        stack.alignment = .center
         stack.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(stack)
         NSLayoutConstraint.activate([
             stack.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 20),
             stack.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -20),
-            stack.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16)
+            stack.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
+            form.widthAnchor.constraint(equalTo: stack.widthAnchor),
+            connectButton.widthAnchor.constraint(equalTo: stack.widthAnchor),
+            headline.widthAnchor.constraint(equalTo: stack.widthAnchor),
+            detail.widthAnchor.constraint(equalTo: stack.widthAnchor),
+            close.widthAnchor.constraint(equalTo: stack.widthAnchor),
+            magnets.widthAnchor.constraint(equalToConstant: 168)
         ])
         form.addArrangedSubview(caption("Network"))
         form.addArrangedSubview(ssidField)
@@ -237,16 +251,16 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
     private func pingSoftAp() -> Bool {
         var request = URLRequest(url: pingUrl)
         request.httpMethod = "GET"
-        request.timeoutInterval = 2
+        request.timeoutInterval = 3
         let sem = DispatchSemaphore(value: 0)
         var ok = false
-        URLSession.shared.dataTask(with: request) { data, response, _ in
+        softApSession.dataTask(with: request) { data, response, _ in
             defer { sem.signal() }
             let code = (response as? HTTPURLResponse)?.statusCode ?? 0
             let body = String(data: data ?? Data(), encoding: .utf8) ?? ""
             ok = code == 200 && body.contains("aura")
         }.resume()
-        _ = sem.wait(timeout: .now() + 3)
+        _ = sem.wait(timeout: .now() + 4)
         return ok
     }
 
@@ -257,7 +271,7 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         let sem = DispatchSemaphore(value: 0)
         var ssids: [String] = []
         var failed = false
-        URLSession.shared.dataTask(with: request) { data, response, _ in
+        softApSession.dataTask(with: request) { data, response, _ in
             defer { sem.signal() }
             let code = (response as? HTTPURLResponse)?.statusCode ?? 0
             guard code == 200, let data = data,
@@ -333,7 +347,7 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
             request.httpBody = data
             let sem = DispatchSemaphore(value: 0)
             var code = 0
-            URLSession.shared.dataTask(with: request) { _, response, _ in
+            self.softApSession.dataTask(with: request) { _, response, _ in
                 code = (response as? HTTPURLResponse)?.statusCode ?? 0
                 sem.signal()
             }.resume()

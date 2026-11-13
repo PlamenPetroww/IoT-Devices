@@ -130,22 +130,25 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         close.setTitle("Close", for: .normal)
         close.setTitleColor(UIColor(white: 0.7, alpha: 1), for: .normal)
         close.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
+        close.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(close)
 
-        let stack = UIStackView(arrangedSubviews: [close, searchLogo, percent, headline, detail, magnets, form, connectButton])
+        let stack = UIStackView(arrangedSubviews: [searchLogo, percent, headline, detail, magnets, form, connectButton])
         stack.axis = .vertical
-        stack.spacing = 12
+        stack.spacing = 14
         stack.alignment = .center
         stack.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(stack)
         NSLayoutConstraint.activate([
+            close.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
+            close.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -16),
             stack.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 20),
             stack.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -20),
-            stack.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
+            stack.topAnchor.constraint(equalTo: close.bottomAnchor, constant: 24),
             form.widthAnchor.constraint(equalTo: stack.widthAnchor),
             connectButton.widthAnchor.constraint(equalTo: stack.widthAnchor),
             headline.widthAnchor.constraint(equalTo: stack.widthAnchor),
             detail.widthAnchor.constraint(equalTo: stack.widthAnchor),
-            close.widthAnchor.constraint(equalTo: stack.widthAnchor),
             magnets.widthAnchor.constraint(equalToConstant: 168)
         ])
         form.addArrangedSubview(caption("Network"))
@@ -157,13 +160,13 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         form.addArrangedSubview(nameField)
         form.addArrangedSubview(caption("Choose the 2.4 GHz network."))
         headline.text = "Looking for the sensor"
-        detail.text = "Restart the sensor and stay next to it. Everything stays in the app."
+        detail.text = "Power the sensor and stay next to it."
         startSearchSpinner()
         central = CBCentralManager(delegate: self, queue: nil)
-        // Board opens SoftAP after ~8s BLE; join in-app like Android.
-        let work = DispatchWorkItem { [weak self] in self?.startSoftApSetup() }
+        // SoftAP appears after ~8s BLE; wait longer, then offer Join (with retries).
+        let work = DispatchWorkItem { [weak self] in self?.offerSoftApJoin(autoAttempt: true) }
         softApFallbackWork = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 10, execute: work)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 14, execute: work)
     }
 
     private func startSearchSpinner() {
@@ -177,51 +180,104 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         searchLogo.layer.add(spin, forKey: "spin")
     }
 
-    private func stopSearchSpinner() {
+    private func stopSearchSpinner(hideLogo: Bool = true) {
         searchLogo.layer.removeAnimation(forKey: "spin")
-        searchLogo.isHidden = true
         searchLogo.transform = .identity
+        if hideLogo { searchLogo.isHidden = true }
     }
 
-    private func startSoftApSetup() {
-        if finishedOk || softApMode || peripheral != nil { return }
+    private func offerSoftApJoin(autoAttempt: Bool) {
+        if finishedOk || peripheral != nil { return }
         softApMode = true
         if central.state == .poweredOn { central.stopScan() }
-        stopSearchSpinner()
+        stopSearchSpinner(hideLogo: false)
         headline.text = "Sensor Wi-Fi"
-        detail.text = "Connecting to AuraHomeSystems_Setup…"
+        detail.text = "Tap Join and confirm the iPhone prompt for AuraHomeSystems_Setup."
         connectButton.isHidden = false
-        connectButton.isEnabled = false
-        connectButton.setTitle("Connecting…", for: .normal)
+        connectButton.isEnabled = true
+        connectButton.setTitle("Join sensor Wi-Fi", for: .normal)
+        connectButton.removeTarget(nil, action: nil, for: .allEvents)
+        connectButton.addTarget(self, action: #selector(joinSoftApTapped), for: .touchUpInside)
+        if autoAttempt {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in
+                self?.joinSoftApTapped()
+            }
+        }
+    }
 
+    @objc private func joinSoftApTapped() {
+        if finishedOk { return }
+        softApMode = true
+        connectButton.isEnabled = false
+        connectButton.setTitle("Joining…", for: .normal)
+        detail.text = "Confirm Join on the iPhone Wi-Fi prompt…"
+        applySoftAp(attempt: 1)
+    }
+
+    private func applySoftAp(attempt: Int) {
         let config = NEHotspotConfiguration(ssid: setupApSsid)
         config.joinOnce = true
         NEHotspotConfigurationManager.shared.apply(config) { [weak self] error in
             DispatchQueue.main.async {
                 guard let self = self else { return }
                 if let error = error as NSError? {
-                    // Already connected is OK (code 13 / NEHotspotConfigurationError.alreadyAssociated).
                     if error.domain == NEHotspotConfigurationErrorDomain,
                        error.code == NEHotspotConfigurationError.alreadyAssociated.rawValue {
-                        self.onSoftApJoined()
+                        self.verifySoftApThenContinue(attempt: attempt)
                         return
                     }
-                    self.detail.text = "Could not join sensor Wi-Fi. Confirm the Wi-Fi prompt, restart the sensor, and try again."
-                    self.connectButton.isEnabled = true
-                    self.connectButton.setTitle("Try again", for: .normal)
-                    self.connectButton.removeTarget(nil, action: nil, for: .allEvents)
-                    self.connectButton.addTarget(self, action: #selector(self.retrySoftAp), for: .touchUpInside)
+                    // User cancelled the system prompt — don't auto-loop forever.
+                    if error.domain == NEHotspotConfigurationErrorDomain,
+                       error.code == NEHotspotConfigurationError.userDenied.rawValue {
+                        self.failSoftApJoin("Wi-Fi join was cancelled. Tap Join and allow the prompt.")
+                        return
+                    }
+                    if attempt < 4 {
+                        self.detail.text = "Waiting for sensor Wi-Fi… (\(attempt)/4)"
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 4) { [weak self] in
+                            self?.applySoftAp(attempt: attempt + 1)
+                        }
+                        return
+                    }
+                    self.failSoftApJoin("Could not join sensor Wi-Fi. Restart the sensor, then tap Join and confirm the prompt.")
                     return
                 }
-                self.onSoftApJoined()
+                self.verifySoftApThenContinue(attempt: attempt)
             }
         }
     }
 
-    @objc private func retrySoftAp() {
-        softApMode = false
-        softApReady = false
-        startSoftApSetup()
+    private func verifySoftApThenContinue(attempt: Int) {
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
+            var ok = false
+            for _ in 0..<16 {
+                if self.finishedOk { return }
+                if self.pingSoftAp() { ok = true; break }
+                Thread.sleep(forTimeInterval: 0.6)
+            }
+            DispatchQueue.main.async {
+                if ok {
+                    self.onSoftApJoined()
+                } else if attempt < 4 {
+                    self.detail.text = "Sensor Wi-Fi found, waiting for setup… (\(attempt)/4)"
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
+                        self?.applySoftAp(attempt: attempt + 1)
+                    }
+                } else {
+                    self.failSoftApJoin("Joined Wi-Fi but sensor did not answer. Restart the sensor and tap Join again.")
+                }
+            }
+        }
+    }
+
+    private func failSoftApJoin(_ message: String) {
+        detail.text = message
+        connectButton.isEnabled = true
+        connectButton.setTitle("Join sensor Wi-Fi", for: .normal)
+        connectButton.removeTarget(nil, action: nil, for: .allEvents)
+        connectButton.addTarget(self, action: #selector(joinSoftApTapped), for: .touchUpInside)
+        searchLogo.isHidden = false
     }
 
     private func onSoftApJoined() {
@@ -446,7 +502,7 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
 
     private func showNetworks(_ raw: String) {
         if credsSent { return }
-        stopSearchSpinner()
+        stopSearchSpinner(hideLogo: true)
         form.isHidden = false
         connectButton.isHidden = false
         headline.text = "Home Wi-Fi"
@@ -539,7 +595,7 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
     }
 
     private func showProgress(_ pct: Int, title: String) {
-        stopSearchSpinner()
+        stopSearchSpinner(hideLogo: true)
         percent.isHidden = false
         magnets.isHidden = false
         headline.text = title

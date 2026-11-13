@@ -1005,10 +1005,41 @@
                   lastBattery: d.battery,
                   lastPowerSource: d.powerSource,
                   lastSeen: d.lastSeen,
-                  displayName: d.displayName || null,
+                  displayName: d.displayName || deviceName || null,
                   displayIcon: d.displayIcon || null,
                 };
-                db.ref().update(updates);
+                db.ref()
+                  .update(updates)
+                  .then(function () {
+                    // Optimistic local hide if the listener is slow.
+                    if (!lastRemovedSnap || !lastRemovedSnap.val()) {
+                      lastRemovedSnap = {
+                        val: function () {
+                          var o = {};
+                          o[deviceId] = updates[userPath + "/removedDevices/" + deviceId];
+                          return o;
+                        },
+                      };
+                    } else {
+                      var cur = lastRemovedSnap.val() || {};
+                      cur[deviceId] = updates[userPath + "/removedDevices/" + deviceId];
+                      lastRemovedSnap = {
+                        val: function () {
+                          return cur;
+                        },
+                      };
+                    }
+                    if (lastDevicesSnap) renderDevicesFromSnap(lastDevicesSnap);
+                    else renderRemovedDevices();
+                  })
+                  .catch(function (err) {
+                    console.error("[dashboard] remove failed", err);
+                    window.alert(
+                      (authT("dashboard.removeSensorFailed") ||
+                        "Could not remove the sensor.") +
+                        (err && err.message ? " (" + err.message + ")" : "")
+                    );
+                  });
               });
               return;
             }
@@ -1084,11 +1115,12 @@
         }
         function recoverDevicesFromHistory() {
           if (recoveredDevicesFromHistory || !historyData.length) return;
-          if (getRemovedDeviceIds().size > 0) return;
+          var removedIds = getRemovedDeviceIds();
           var latestByDevice = {};
           historyData.forEach(function (entry) {
             var id = String(entry.deviceId || entry.deviceName || "").trim();
             if (!id) return;
+            if (removedIds.has(id)) return;
             if (
               !latestByDevice[id] ||
               (entry.timestamp || 0) > (latestByDevice[id].timestamp || 0)

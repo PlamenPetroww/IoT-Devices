@@ -218,7 +218,10 @@ const translations = {
             or: "or",
             inquiryLabel: "Send an inquiry",
             scanQr: "Scan to download the Android app",
-            playStore: "Get it on Google Play"
+            scanQrAndroid: "Scan for Android",
+            scanQrIos: "Scan for iPhone",
+            playStore: "Get it on Google Play",
+            appStore: "Download on the App Store"
         },
         form: {
             title: "Subject",
@@ -820,7 +823,10 @@ const translations = {
             or: "oder",
             inquiryLabel: "Anfrage senden",
             scanQr: "Scannen, um die Android-App herunterzuladen",
-            playStore: "Im Google Play Store laden"
+            scanQrAndroid: "Für Android scannen",
+            scanQrIos: "Für iPhone scannen",
+            playStore: "Im Google Play Store laden",
+            appStore: "Im App Store laden"
         },
         form: {
             title: "Betreff",

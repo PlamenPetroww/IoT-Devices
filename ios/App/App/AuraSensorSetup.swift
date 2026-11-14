@@ -595,13 +595,15 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
 
     private func postSoftApCredentials(ssid: String, pass: String, name: String) {
         credsSent = true
+        finishedOk = false
         dismissKeyboard()
         setSetupControlsEnabled(false)
         form.isHidden = true
-        connectButton.isHidden = true
+        hideActionButton()
         searchLogo.isHidden = true
         shownPct = 0
         magnets.pct = 0
+        percent.text = "0%"
         showProgress(35, title: "Connecting")
         detail.text = "Sending Wi-Fi to the sensor… This can take up to a minute."
         // Keep magnets approaching while SoftAP provision runs (same feel as Android).
@@ -615,8 +617,7 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
                 DispatchQueue.main.async {
                     self.credsSent = false
                     self.form.isHidden = false
-                    self.connectButton.isHidden = false
-                    self.connectButton.isEnabled = true
+                    self.showConnectButton()
                     self.percent.isHidden = true
                     self.magnets.isHidden = true
                     self.searchLogo.isHidden = false
@@ -645,19 +646,19 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
             DispatchQueue.main.async {
                 if code >= 200 && code < 300 {
                     self.finishedOk = true
+                    self.hideActionButton()
                     self.showProgress(100, title: "Connected")
                     self.detail.text = "Sensor is connected. Tap below to return to the dashboard."
-                    self.connectButton.isHidden = false
-                    self.connectButton.isEnabled = true
-                    self.connectButton.setTitle("Back to dashboard", for: .normal)
-                    self.connectButton.removeTarget(nil, action: nil, for: .allEvents)
-                    self.connectButton.addTarget(self, action: #selector(self.closeTapped), for: .touchUpInside)
                     NEHotspotConfigurationManager.shared.removeConfiguration(forSSID: self.setupApSsid)
+                    // Show return only after % animation finishes — not at 0%.
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+                        guard let self = self, self.finishedOk else { return }
+                        self.showDashboardReturnButton()
+                    }
                 } else {
                     self.credsSent = false
                     self.form.isHidden = false
-                    self.connectButton.isHidden = false
-                    self.connectButton.isEnabled = true
+                    self.showConnectButton()
                     self.percent.isHidden = true
                     self.magnets.isHidden = true
                     self.searchLogo.isHidden = false
@@ -665,6 +666,33 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
                 }
             }
         }
+    }
+
+    private func hideActionButton() {
+        connectButton.isHidden = true
+        connectButton.isEnabled = false
+        connectButton.setTitle("Connect", for: .normal)
+        connectButton.removeTarget(nil, action: nil, for: .allEvents)
+        connectButton.addTarget(self, action: #selector(sendCredentials), for: .touchUpInside)
+    }
+
+    private func showConnectButton() {
+        connectButton.isHidden = false
+        connectButton.isEnabled = true
+        connectButton.setTitle("Connect", for: .normal)
+        connectButton.removeTarget(nil, action: nil, for: .allEvents)
+        connectButton.addTarget(self, action: #selector(sendCredentials), for: .touchUpInside)
+        setSetupControlsEnabled(true)
+    }
+
+    private func showDashboardReturnButton() {
+        connectButton.isHidden = false
+        connectButton.isEnabled = true
+        connectButton.setTitle("Back to dashboard", for: .normal)
+        connectButton.removeTarget(nil, action: nil, for: .allEvents)
+        connectButton.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
+        closeButton.isEnabled = true
+        closeButton.alpha = 1
     }
 
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
@@ -786,11 +814,13 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         let body: [String: String] = ["ssid": ssid, "pass": pass, "email": email, "name": name]
         guard let data = try? JSONSerialization.data(withJSONObject: body) else { return }
         credsSent = true
+        finishedOk = false
         form.isHidden = true
-        connectButton.isHidden = true
+        hideActionButton()
         searchLogo.isHidden = true
         shownPct = 0
         magnets.pct = 0
+        percent.text = "0%"
         showProgress(45, title: "Connecting")
         peripheral.writeValue(data, for: cred, type: .withResponse)
     }
@@ -828,25 +858,34 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         }
         if stage == "ok" || pct >= 100 {
             finishedOk = true
+            hideActionButton()
             showProgress(100, title: "Connected")
             detail.text = "Sensor is connected. Tap below to return to the dashboard."
-            connectButton.isHidden = false
-            connectButton.isEnabled = true
-            connectButton.setTitle("Back to dashboard", for: .normal)
-            connectButton.removeTarget(nil, action: nil, for: .allEvents)
-            connectButton.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+                guard let self = self, self.finishedOk else { return }
+                self.showDashboardReturnButton()
+            }
             return
         }
-        if pct > 0 { showProgress(pct, title: "Connecting") }
+        if pct > 0 {
+            hideActionButton()
+            showProgress(pct, title: "Connecting")
+        }
     }
 
     private func showProgress(_ pct: Int, title: String) {
         stopSearchSpinner(hideLogo: true)
         searchLogo.isHidden = true
+        // Never show Back to dashboard while % is still animating.
+        if !finishedOk || pct < 100 {
+            hideActionButton()
+        }
         percent.isHidden = false
         magnets.isHidden = false
         magnets.setNeedsDisplay()
         headline.text = title
+        percent.text = "\(shownPct)%"
+        magnets.pct = shownPct
         targetPct = min(100, max(0, pct))
         magnetTimer?.invalidate()
         let timer = Timer(timeInterval: 0.028, repeats: true) { [weak self] timer in

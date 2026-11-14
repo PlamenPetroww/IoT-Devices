@@ -78,6 +78,7 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
     private let form = UIStackView()
     private let refreshNetworksButton = UIButton(type: .system)
     private let connectButton = UIButton(type: .system)
+    private let closeButton = UIButton(type: .system)
     private var scrollBottomConstraint: NSLayoutConstraint?
 
     init(email: String) {
@@ -157,12 +158,11 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         connectButton.addTarget(self, action: #selector(sendCredentials), for: .touchUpInside)
         connectButton.isHidden = true
 
-        let close = UIButton(type: .system)
-        close.setTitle("Close", for: .normal)
-        close.setTitleColor(UIColor(white: 0.7, alpha: 1), for: .normal)
-        close.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
-        close.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(close)
+        closeButton.setTitle("Close", for: .normal)
+        closeButton.setTitleColor(UIColor(white: 0.7, alpha: 1), for: .normal)
+        closeButton.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
+        closeButton.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(closeButton)
 
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         scrollView.alwaysBounceVertical = true
@@ -180,9 +180,9 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         let bottom = scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         scrollBottomConstraint = bottom
         NSLayoutConstraint.activate([
-            close.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
-            close.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -16),
-            scrollView.topAnchor.constraint(equalTo: close.bottomAnchor, constant: 8),
+            closeButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
+            closeButton.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -16),
+            scrollView.topAnchor.constraint(equalTo: closeButton.bottomAnchor, constant: 8),
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             bottom,
@@ -304,11 +304,27 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         detail.text = "Confirm the Wi-Fi connection to the sensor (AuraHomeSystems_Setup)."
         form.isHidden = false
         connectButton.isHidden = false
-        connectButton.isEnabled = false
         connectButton.setTitle("Waiting…", for: .normal)
         connectButton.removeTarget(nil, action: nil, for: .allEvents)
         connectButton.addTarget(self, action: #selector(sendCredentials), for: .touchUpInside)
+        setSetupControlsEnabled(false)
         requestSoftApNetwork(attempt: 1)
+    }
+
+    /// While Waiting / linking — lock Close, fields, Refresh, Connect.
+    private func setSetupControlsEnabled(_ enabled: Bool) {
+        closeButton.isEnabled = enabled
+        closeButton.alpha = enabled ? 1 : 0.35
+        ssidField.isEnabled = enabled
+        passField.isEnabled = enabled
+        nameField.isEnabled = enabled
+        refreshNetworksButton.isEnabled = enabled
+        refreshNetworksButton.alpha = enabled ? 1 : 0.35
+        networks.isUserInteractionEnabled = enabled
+        connectButton.isEnabled = enabled
+        if !enabled {
+            view.endEditing(true)
+        }
     }
 
     @objc private func retrySoftApSetup() {
@@ -397,6 +413,7 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
     }
 
     private func showSoftApTryAgain() {
+        setSetupControlsEnabled(true)
         connectButton.isEnabled = true
         connectButton.setTitle("Try again", for: .normal)
         connectButton.removeTarget(nil, action: nil, for: .allEvents)
@@ -409,7 +426,7 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         detail.text = "Linked to the sensor. Loading Wi-Fi list…"
         form.isHidden = false
         connectButton.isHidden = false
-        connectButton.isEnabled = true
+        setSetupControlsEnabled(true)
         connectButton.setTitle("Connect", for: .normal)
         connectButton.removeTarget(nil, action: nil, for: .allEvents)
         connectButton.addTarget(self, action: #selector(sendCredentials), for: .touchUpInside)
@@ -518,6 +535,7 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
     private func postSoftApCredentials(ssid: String, pass: String, name: String) {
         credsSent = true
         dismissKeyboard()
+        setSetupControlsEnabled(false)
         form.isHidden = true
         connectButton.isHidden = true
         searchLogo.isHidden = true

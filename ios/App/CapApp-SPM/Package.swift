@@ -2,6 +2,7 @@
 import PackageDescription
 
 // DO NOT MODIFY THIS FILE - managed by Capacitor CLI commands
+// Paths must use forward slashes (Swift string escapes break on Windows `\`).
 let package = Package(
     name: "CapApp-SPM",
     platforms: [.iOS(.v15)],
@@ -12,9 +13,9 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git", exact: "8.4.2"),
-        .package(name: "CapacitorFirebaseMessaging", path: "..\..\..\node_modules\@capacitor-firebase\messaging"),
-        .package(name: "CapacitorApp", path: "..\..\..\node_modules\@capacitor\app"),
-        .package(name: "CapacitorBrowser", path: "..\..\..\node_modules\@capacitor\browser")
+        .package(name: "CapacitorFirebaseMessaging", path: "../../../node_modules/@capacitor-firebase/messaging"),
+        .package(name: "CapacitorApp", path: "../../../node_modules/@capacitor/app"),
+        .package(name: "CapacitorBrowser", path: "../../../node_modules/@capacitor/browser")
     ],
     targets: [
         .target(

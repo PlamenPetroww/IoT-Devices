@@ -650,11 +650,6 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
                     self.showProgress(100, title: "Connected")
                     self.detail.text = "Sensor is connected. Tap below to return to the dashboard."
                     NEHotspotConfigurationManager.shared.removeConfiguration(forSSID: self.setupApSsid)
-                    // Show return only after % animation finishes — not at 0%.
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
-                        guard let self = self, self.finishedOk else { return }
-                        self.showDashboardReturnButton()
-                    }
                 } else {
                     self.credsSent = false
                     self.form.isHidden = false
@@ -861,10 +856,6 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
             hideActionButton()
             showProgress(100, title: "Connected")
             detail.text = "Sensor is connected. Tap below to return to the dashboard."
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
-                guard let self = self, self.finishedOk else { return }
-                self.showDashboardReturnButton()
-            }
             return
         }
         if pct > 0 {
@@ -892,6 +883,9 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
             guard let self = self else { timer.invalidate(); return }
             if self.shownPct >= self.targetPct {
                 timer.invalidate()
+                if self.finishedOk && self.shownPct >= 100 {
+                    self.showDashboardReturnButton()
+                }
                 return
             }
             self.shownPct += 1
@@ -902,9 +896,17 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
                 to: UIColor(red: 0.29, green: 0.87, blue: 0.5, alpha: 1),
                 t: CGFloat(self.shownPct) / 100
             )
+            if self.finishedOk && self.shownPct >= 100 {
+                timer.invalidate()
+                self.showDashboardReturnButton()
+            }
         }
         magnetTimer = timer
         RunLoop.main.add(timer, forMode: .common)
+        // Already at 100% (no animation left) — show return immediately.
+        if finishedOk && shownPct >= 100 && targetPct >= 100 {
+            showDashboardReturnButton()
+        }
     }
 
     private static func blend(from: UIColor, to: UIColor, t: CGFloat) -> UIColor {

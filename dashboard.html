@@ -280,11 +280,8 @@
                       : null;
                 if (plugin && typeof plugin.open === "function") {
                   plugin.open({ email: accountEmail }).then(function () {
-                    // Setup closed — refresh removed list and devices from Firebase.
-                    try {
-                      window.localStorage.removeItem(removedStoreKey);
-                    } catch (e) {}
-                    localRemovedIds = {};
+                    // Setup closed — refresh from Firebase; keep local tombstones
+                    // (SoftAP re-setup clears removedDevices in RTDB when needed).
                     db.ref(userPath + "/removedDevices").once("value", function (snap) {
                       lastRemovedSnap = snap;
                       var remote = snap.val() || {};
@@ -621,6 +618,7 @@
         }
         function isDeviceRemoved(id, device) {
           if (getRemovedDeviceIds().has(id)) return true;
+          if (deviceSetting(id).removed === true) return true;
           var names = getRemovedDeviceNames();
           var d = device || {};
           var candidates = [
@@ -686,7 +684,10 @@
         function renderDevicesFromSnap(snap) {
           const data = snap.val();
           if (!data || typeof data !== "object") {
-            recoverDevicesFromHistory();
+            // Do not resurrect sensors the user removed.
+            if (getRemovedDeviceIds().size === 0) {
+              recoverDevicesFromHistory();
+            }
             devicesList.innerHTML =
               '<p class="devices-empty">' + devicesEmptyMessage() + "</p>";
             setSystemModeVisible(false);
@@ -767,7 +768,9 @@
             warningEl.style.display = "none";
           }
           if (devices.length === 0) {
-            recoverDevicesFromHistory();
+            if (getRemovedDeviceIds().size === 0) {
+              recoverDevicesFromHistory();
+            }
             devicesList.innerHTML =
               '<p class="devices-empty">' + devicesEmptyMessage() + "</p>";
             setSystemModeVisible(false);
@@ -948,21 +951,42 @@
             console.error("[dashboard] deviceSettings read failed:", err);
           }
         );
+        var removedDevicesListenerReady = false;
         db.ref(userPath + "/removedDevices").on(
           "value",
           function (snap) {
             lastRemovedSnap = snap;
-            // Mirror Firebase exactly — SoftAP re-setup deletes removedDevices,
-            // so localStorage must drop those ids or the card stays hidden.
             var remote = (snap && snap.val()) || {};
-            var nextLocal = {};
-            if (remote && typeof remote === "object") {
+            if (typeof remote !== "object" || remote === null) remote = {};
+
+            if (!removedDevicesListenerReady) {
+              // First snapshot: merge local + remote. If Firebase lost the
+              // tombstone (or write failed earlier), heal it from localStorage
+              // so Remove still sticks after re-login.
+              removedDevicesListenerReady = true;
+              Object.keys(remote).forEach(function (id) {
+                if (remote[id]) localRemovedIds[id] = true;
+              });
+              persistLocalRemoved();
+              Object.keys(localRemovedIds).forEach(function (id) {
+                if (!id || remote[id]) return;
+                db.ref(userPath + "/removedDevices/" + id).set({
+                  deviceName: id,
+                  removedAt: Date.now(),
+                  healedFromLocal: true,
+                });
+                db.ref(userPath + "/devices/" + id).remove();
+              });
+            } else {
+              // Later updates: trust Firebase (SoftAP re-setup deletes the id).
+              var nextLocal = {};
               Object.keys(remote).forEach(function (id) {
                 if (remote[id]) nextLocal[id] = true;
               });
+              localRemovedIds = nextLocal;
+              persistLocalRemoved();
             }
-            localRemovedIds = nextLocal;
-            persistLocalRemoved();
+
             if (lastDevicesSnap) {
               renderDevicesFromSnap(lastDevicesSnap);
             } else {
@@ -1102,22 +1126,30 @@
                   (lastDevicesSnap.val()[deviceId] ||
                     lastDevicesSnap.val()[safeId])) ||
                 {};
+              // Firebase rejects undefined — that made Remove look OK locally then
+              // vanish on the next login when RTDB never got the tombstone.
+              function scrub(v) {
+                return v === undefined ? null : v;
+              }
               var removedPayload = {
-                deviceName: deviceName,
+                deviceName: scrub(deviceName) || safeId,
                 removedAt: Date.now(),
-                lastStatus: live.status,
-                lastBattery: live.battery,
-                lastPowerSource: live.powerSource,
-                lastSeen: live.lastSeen,
-                displayName: live.displayName || deviceName || null,
-                displayIcon: live.displayIcon || null,
+                lastStatus: scrub(live.status),
+                lastBattery: scrub(live.battery),
+                lastPowerSource: scrub(live.powerSource),
+                lastSeen: scrub(live.lastSeen),
+                displayName: scrub(live.displayName) || scrub(deviceName) || null,
+                displayIcon: scrub(live.displayIcon),
               };
-              // set() + remove live card — survives re-login; sensor firmware skips recreating.
+              // set() tombstone first, then drop live card — must survive re-login.
               var removeOps = [
                 db
                   .ref(userPath + "/removedDevices/" + safeId)
                   .set(removedPayload),
                 db.ref(userPath + "/devices/" + safeId).remove(),
+                db
+                  .ref(userPath + "/deviceSettings/" + safeId + "/removed")
+                  .set(true),
               ];
               if (deviceId && deviceId !== safeId) {
                 removeOps.push(
@@ -1126,6 +1158,11 @@
                     .set(removedPayload)
                 );
                 removeOps.push(db.ref(userPath + "/devices/" + deviceId).remove());
+                removeOps.push(
+                  db
+                    .ref(userPath + "/deviceSettings/" + deviceId + "/removed")
+                    .set(true)
+                );
               }
               Promise.all(removeOps)
                 .then(function () {
@@ -1133,10 +1170,8 @@
                 })
                 .catch(function (err) {
                   console.error("[dashboard] remove failed", err);
-                  delete localRemovedIds[safeId];
-                  delete localRemovedIds[deviceId];
+                  // Keep local tombstone — better sticky hide than flash back.
                   persistLocalRemoved();
-                  if (lastDevicesSnap) renderDevicesFromSnap(lastDevicesSnap);
                   window.alert(
                     (authT("dashboard.removeSensorFailed") ||
                       "Could not remove the sensor.") +
@@ -1172,6 +1207,7 @@
                 db.ref(userPath + "/devices/" + deviceId).once("value", function (deviceSnap) {
                   var updates = {};
                   updates[userPath + "/removedDevices/" + deviceId] = null;
+                  updates[userPath + "/deviceSettings/" + deviceId + "/removed"] = null;
                   if (!deviceSnap.exists()) {
                     var restored = {
                       deviceName: name,

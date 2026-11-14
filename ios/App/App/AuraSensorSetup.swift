@@ -27,8 +27,10 @@ public class AuraSetupPlugin: CAPPlugin, CAPBridgedPlugin {
             }
             let setup = AuraSetupController(email: email)
             setup.modalPresentationStyle = .fullScreen
+            setup.onClose = {
+                call.resolve()
+            }
             presenter.present(setup, animated: true)
-            call.resolve()
         }
     }
 }
@@ -85,6 +87,7 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
     private var scanPass = 0
     private var lookingTimer: Timer?
     private var scanRefreshWork: DispatchWorkItem?
+    var onClose: (() -> Void)?
 
     init(email: String) {
         self.email = email
@@ -879,7 +882,11 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         stopLookingTick()
         if central.state == .poweredOn { central.stopScan() }
         if let peripheral = peripheral { central.cancelPeripheralConnection(peripheral) }
-        dismiss(animated: true)
+        let done = onClose
+        onClose = nil
+        dismiss(animated: true) {
+            done?()
+        }
     }
 
     private func caption(_ text: String) -> UILabel {

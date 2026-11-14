@@ -194,9 +194,15 @@ static bool deviceRemovedInApp(const String& userPath, const String& deviceID) {
 
 static void clearDeviceRemovedInApp(const String& userPath, const String& deviceID) {
     String path = userPath + "/removedDevices/" + deviceID;
-    if (Firebase.RTDB.deleteNode(&fbdo, path.c_str())) {
-        Serial.println("Cleared removedDevices — sensor visible in app again");
+    for (int i = 0; i < 3; i++) {
+        if (Firebase.RTDB.deleteNode(&fbdo, path.c_str())) {
+            Serial.println("Cleared removedDevices — sensor visible in app again");
+            return;
+        }
+        delay(400);
     }
+    Serial.print("clear removedDevices failed: ");
+    Serial.println(fbdo.errorReason());
 }
 static bool connectWifiFast() {
     WiFi.disconnect(false);
@@ -1601,7 +1607,7 @@ void setup() {
     String userPath = "/users/" + userKey;
     String deviceID = getDeviceIdFromName(device_name);
     String devicePath = userPath + "/devices/" + deviceID;
-    // Fresh SoftAP/BLE setup restores a previously removed sensor in the app.
+    // Fresh SoftAP/BLE setup always restores this sensor in the app.
     if (emailFromPortal) {
         clearDeviceRemovedInApp(userPath, deviceID);
     }
@@ -1613,7 +1619,8 @@ void setup() {
     }
     Serial.print("Device path: ");
     Serial.println(devicePath);
-    if (deviceRemovedInApp(userPath, deviceID)) {
+    // Only honor "removed in app" on normal wakes — never right after setup.
+    if (!emailFromPortal && deviceRemovedInApp(userPath, deviceID)) {
         Serial.println("Sensor removed in app — skip Firebase device/history write");
         Serial.flush();
         rtcCapturedClosed = -1;

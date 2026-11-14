@@ -279,7 +279,25 @@
                       ? cap.Plugins.AuraSetup
                       : null;
                 if (plugin && typeof plugin.open === "function") {
-                  plugin.open({ email: accountEmail });
+                  plugin.open({ email: accountEmail }).then(function () {
+                    // Setup closed — refresh removed list and devices from Firebase.
+                    try {
+                      window.localStorage.removeItem(removedStoreKey);
+                    } catch (e) {}
+                    localRemovedIds = {};
+                    db.ref(userPath + "/removedDevices").once("value", function (snap) {
+                      lastRemovedSnap = snap;
+                      var remote = snap.val() || {};
+                      Object.keys(remote).forEach(function (id) {
+                        if (remote[id]) localRemovedIds[id] = true;
+                      });
+                      persistLocalRemoved();
+                      db.ref(userPath + "/devices").once("value", function (devSnap) {
+                        lastDevicesSnap = devSnap;
+                        renderDevicesFromSnap(devSnap);
+                      });
+                    });
+                  });
                   return;
                 }
               } catch (err) {
@@ -934,14 +952,16 @@
           "value",
           function (snap) {
             lastRemovedSnap = snap;
-            // Merge Firebase into local cache. Never wipe local-only ids here —
-            // that made Remove look temporary when the write was slow.
+            // Mirror Firebase exactly — SoftAP re-setup deletes removedDevices,
+            // so localStorage must drop those ids or the card stays hidden.
             var remote = (snap && snap.val()) || {};
+            var nextLocal = {};
             if (remote && typeof remote === "object") {
               Object.keys(remote).forEach(function (id) {
-                if (remote[id]) localRemovedIds[id] = true;
+                if (remote[id]) nextLocal[id] = true;
               });
             }
+            localRemovedIds = nextLocal;
             persistLocalRemoved();
             if (lastDevicesSnap) {
               renderDevicesFromSnap(lastDevicesSnap);

@@ -80,7 +80,10 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
     private let form = UIStackView()
     private let refreshNetworksButton = UIButton(type: .system)
     private let connectButton = UIButton(type: .system)
+    /// Separate from Connect — only visible after progress hits 100%.
+    private let returnButton = UIButton(type: .system)
     private let closeButton = UIButton(type: .system)
+    private var connectingProgress = false
     private var scrollBottomConstraint: NSLayoutConstraint?
     private var looking = true
     private var lookingSince = Date()
@@ -168,6 +171,15 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         connectButton.addTarget(self, action: #selector(sendCredentials), for: .touchUpInside)
         connectButton.isHidden = true
 
+        returnButton.setTitle("Back to dashboard", for: .normal)
+        returnButton.setTitleColor(.white, for: .normal)
+        returnButton.backgroundColor = UIColor(red: 0.09, green: 0.64, blue: 0.29, alpha: 1)
+        returnButton.layer.cornerRadius = 12
+        returnButton.heightAnchor.constraint(equalToConstant: 48).isActive = true
+        returnButton.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
+        returnButton.isHidden = true
+        returnButton.isEnabled = false
+
         closeButton.setTitle("Close", for: .normal)
         closeButton.setTitleColor(UIColor(white: 0.7, alpha: 1), for: .normal)
         closeButton.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
@@ -180,7 +192,7 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         scrollView.backgroundColor = pageBg
         view.addSubview(scrollView)
 
-        let stack = UIStackView(arrangedSubviews: [brand, searchLogo, percent, headline, detail, magnets, form, connectButton])
+        let stack = UIStackView(arrangedSubviews: [brand, searchLogo, percent, headline, detail, magnets, form, connectButton, returnButton])
         stack.axis = .vertical
         stack.spacing = 14
         stack.alignment = .center
@@ -202,6 +214,7 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
             stack.bottomAnchor.constraint(equalTo: scrollView.contentLayoutGuide.bottomAnchor, constant: -28),
             form.widthAnchor.constraint(equalTo: stack.widthAnchor),
             connectButton.widthAnchor.constraint(equalTo: stack.widthAnchor),
+            returnButton.widthAnchor.constraint(equalTo: stack.widthAnchor),
             headline.widthAnchor.constraint(equalTo: stack.widthAnchor),
             detail.widthAnchor.constraint(equalTo: stack.widthAnchor)
         ])
@@ -596,10 +609,12 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
     private func postSoftApCredentials(ssid: String, pass: String, name: String) {
         credsSent = true
         finishedOk = false
+        connectingProgress = true
         dismissKeyboard()
         setSetupControlsEnabled(false)
         form.isHidden = true
         hideActionButton()
+        hideReturnButton()
         searchLogo.isHidden = true
         shownPct = 0
         magnets.pct = 0
@@ -609,6 +624,7 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         // Keep magnets approaching while SoftAP provision runs (same feel as Android).
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in
             guard let self = self, self.credsSent, !self.finishedOk else { return }
+            self.hideReturnButton()
             self.showProgress(70, title: "Connecting")
         }
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
@@ -669,9 +685,17 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         connectButton.setTitle("Connect", for: .normal)
         connectButton.removeTarget(nil, action: nil, for: .allEvents)
         connectButton.addTarget(self, action: #selector(sendCredentials), for: .touchUpInside)
+        hideReturnButton()
+    }
+
+    private func hideReturnButton() {
+        returnButton.isHidden = true
+        returnButton.isEnabled = false
     }
 
     private func showConnectButton() {
+        connectingProgress = false
+        hideReturnButton()
         connectButton.isHidden = false
         connectButton.isEnabled = true
         connectButton.setTitle("Connect", for: .normal)
@@ -681,11 +705,14 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
     }
 
     private func showDashboardReturnButton() {
-        connectButton.isHidden = false
-        connectButton.isEnabled = true
-        connectButton.setTitle("Back to dashboard", for: .normal)
-        connectButton.removeTarget(nil, action: nil, for: .allEvents)
-        connectButton.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
+        // Never show while Connecting % is still running.
+        guard finishedOk, !connectingProgress || shownPct >= 100 else { return }
+        guard shownPct >= 100 else { return }
+        connectingProgress = false
+        connectButton.isHidden = true
+        connectButton.isEnabled = false
+        returnButton.isHidden = false
+        returnButton.isEnabled = true
         closeButton.isEnabled = true
         closeButton.alpha = 1
     }
@@ -810,8 +837,10 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         guard let data = try? JSONSerialization.data(withJSONObject: body) else { return }
         credsSent = true
         finishedOk = false
+        connectingProgress = true
         form.isHidden = true
         hideActionButton()
+        hideReturnButton()
         searchLogo.isHidden = true
         shownPct = 0
         magnets.pct = 0
@@ -867,9 +896,11 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
     private func showProgress(_ pct: Int, title: String) {
         stopSearchSpinner(hideLogo: true)
         searchLogo.isHidden = true
-        // Never show Back to dashboard while % is still animating.
-        if !finishedOk || pct < 100 {
-            hideActionButton()
+        // Always hide both action buttons while % < 100.
+        hideActionButton()
+        hideReturnButton()
+        if pct < 100 {
+            connectingProgress = true
         }
         percent.isHidden = false
         magnets.isHidden = false
@@ -883,7 +914,8 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
             guard let self = self else { timer.invalidate(); return }
             if self.shownPct >= self.targetPct {
                 timer.invalidate()
-                if self.finishedOk && self.shownPct >= 100 {
+                if self.finishedOk && self.shownPct >= 100 && self.targetPct >= 100 {
+                    self.connectingProgress = false
                     self.showDashboardReturnButton()
                 }
                 return
@@ -896,15 +928,18 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
                 to: UIColor(red: 0.29, green: 0.87, blue: 0.5, alpha: 1),
                 t: CGFloat(self.shownPct) / 100
             )
-            if self.finishedOk && self.shownPct >= 100 {
+            // Keep return hidden for the whole animation.
+            self.hideReturnButton()
+            if self.finishedOk && self.shownPct >= 100 && self.targetPct >= 100 {
                 timer.invalidate()
+                self.connectingProgress = false
                 self.showDashboardReturnButton()
             }
         }
         magnetTimer = timer
         RunLoop.main.add(timer, forMode: .common)
-        // Already at 100% (no animation left) — show return immediately.
         if finishedOk && shownPct >= 100 && targetPct >= 100 {
+            connectingProgress = false
             showDashboardReturnButton()
         }
     }

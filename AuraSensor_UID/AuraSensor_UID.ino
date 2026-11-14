@@ -194,15 +194,25 @@ static bool deviceRemovedInApp(const String& userPath, const String& deviceID) {
 
 static void clearDeviceRemovedInApp(const String& userPath, const String& deviceID) {
     String path = userPath + "/removedDevices/" + deviceID;
-    for (int i = 0; i < 3; i++) {
+    String flagPath = userPath + "/deviceSettings/" + deviceID + "/removed";
+    bool tombstoneOk = false;
+    for (int i = 0; i < 3 && !tombstoneOk; i++) {
         if (Firebase.RTDB.deleteNode(&fbdo, path.c_str())) {
+            tombstoneOk = true;
             Serial.println("Cleared removedDevices — sensor visible in app again");
-            return;
+        } else {
+            delay(400);
         }
-        delay(400);
     }
-    Serial.print("clear removedDevices failed: ");
-    Serial.println(fbdo.errorReason());
+    if (!tombstoneOk) {
+        Serial.print("clear removedDevices failed: ");
+        Serial.println(fbdo.errorReason());
+    }
+    // Dashboard also sets deviceSettings/{id}/removed — clear for SoftAP restore.
+    for (int i = 0; i < 3; i++) {
+        if (Firebase.RTDB.deleteNode(&fbdo, flagPath.c_str())) return;
+        delay(200);
+    }
 }
 static bool connectWifiFast() {
     WiFi.disconnect(false);

@@ -5,7 +5,7 @@ import { getFunctions } from "firebase-admin/functions";
 import { getMessaging } from "firebase-admin/messaging";
 import { onRequest } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
-import { onValueCreated } from "firebase-functions/v2/database";
+import { onValueCreated, onValueWritten } from "firebase-functions/v2/database";
 import { onTaskDispatched } from "firebase-functions/v2/tasks";
 import { defineSecret } from "firebase-functions/params";
 import { Resend } from "resend";
@@ -282,9 +282,10 @@ async function claimAlarmGate(userKey, deviceKey, status, historyId) {
     const now = Date.now();
     const result = await ref.transaction((current) => {
         const prev = current || {};
-        const prevAt = Number(prev.at) || 0;
         const prevStatus = String(prev.status || "");
-        if (prevStatus === status && now - prevAt < ALARM_DEDUPE_MS) {
+        // Same status twice in a row is never a new alarm. Open, then Open,
+        // with no Closed between them must not push again.
+        if (prevStatus === status) {
             return;
         }
         return { status, at: now, historyId: historyId || "" };
@@ -575,8 +576,8 @@ async function processAlarmEmailFallback(userKey, eventTag) {
 
     const deliveryRef = rtdb.ref(`users/${key}/alarmDeliveries/${tag}`);
     let delivery = (await deliveryRef.get()).val();
-    if (!delivery || delivery.ackShownAt || delivery.emailSentAt) {
-        console.log("[sensor-alarm] email fallback cancelled by shown ACK", key, tag);
+    if (!delivery || delivery.ackShownAt || delivery.emailSentAt || pushWasAccepted(delivery)) {
+        console.log("[sensor-alarm] email fallback cancelled", key, tag);
         return false;
     }
 
@@ -593,9 +594,9 @@ async function processAlarmEmailFallback(userKey, eventTag) {
 
     try {
         delivery = (await deliveryRef.get()).val();
-        if (!delivery || delivery.ackShownAt || delivery.emailSentAt) {
+        if (!delivery || delivery.ackShownAt || delivery.emailSentAt || pushWasAccepted(delivery)) {
             await claimRef.remove();
-            console.log("[sensor-alarm] email fallback cancelled by late shown ACK", key, tag);
+            console.log("[sensor-alarm] email fallback cancelled late", key, tag);
             return false;
         }
         const sent = await sendAlarmFallbackEmail(
@@ -639,6 +640,33 @@ async function processAlarmEmailFallback(userKey, eventTag) {
     }
 }
 
+/**
+ * ESP firmware (database secret) can recreate /devices/{id} after the user taps
+ * Remove. If a tombstone exists under removedDevices (or deviceSettings.removed),
+ * delete the resurrected card immediately so Remove sticks after re-login.
+ */
+export const purgeRemovedDeviceWrites = onValueWritten(
+    {
+        ref: "/users/{userKey}/devices/{deviceId}",
+        instance: RTDB_INSTANCE,
+        region: "europe-west1",
+        timeoutSeconds: 30,
+    },
+    async (event) => {
+        if (!event.data.after.exists()) return;
+        const userKey = String(event.params.userKey || "").trim();
+        const deviceId = String(event.params.deviceId || "").trim();
+        if (!userKey || !deviceId) return;
+        const [removedSnap, settingsRemovedSnap] = await Promise.all([
+            rtdb.ref(`users/${userKey}/removedDevices/${deviceId}`).get(),
+            rtdb.ref(`users/${userKey}/deviceSettings/${deviceId}/removed`).get(),
+        ]);
+        if (!removedSnap.exists() && settingsRemovedSnap.val() !== true) return;
+        console.log("[purge-removed] drop resurrected device", userKey, deviceId);
+        await event.data.after.ref.remove();
+    }
+);
+
 export const onSensorHistoryAlarm = onValueCreated(
     {
         ref: "/users/{userKey}/history/{historyId}",
@@ -664,11 +692,12 @@ export const onSensorHistoryAlarm = onValueCreated(
         const eventTag = "cf-" + safeEventTagKey(historyId || deviceKey + "-" + status + "-" + eventCreatedAt);
 
         const safeDeviceId = String(deviceId || deviceName || "sensor").replace(/[.$#[\]/]/g, "_");
-        const [enabledSnap, removedSnap, deviceSnap, langSnap] = await Promise.all([
+        const [enabledSnap, removedSnap, deviceSnap, langSnap, savedNameSnap] = await Promise.all([
             rtdb.ref(`users/${userKey}/systemEnabled`).get(),
             rtdb.ref(`users/${userKey}/removedDevices/${safeDeviceId}`).get(),
             rtdb.ref(`users/${userKey}/devices/${safeDeviceId}`).get(),
             rtdb.ref(`users/${userKey}/settings/language`).get(),
+            rtdb.ref(`users/${userKey}/deviceSettings/${safeDeviceId}/displayName`).get(),
         ]);
         if (enabledSnap.val() !== true) {
             console.log("[sensor-alarm] skipped; system off", userKey, deviceName, status);
@@ -683,8 +712,12 @@ export const onSensorHistoryAlarm = onValueCreated(
             console.log("[sensor-alarm] skipped; device paused", userKey, deviceName, status);
             return;
         }
+        // The sensor rewrite of devices/{id} drops displayName. The rename lives in deviceSettings.
+        const savedName = String(savedNameSnap.val() || "").trim();
         const displayName =
-            (deviceVal && (deviceVal.displayName || deviceVal.deviceName)) || deviceName;
+            savedName ||
+            (deviceVal && (deviceVal.displayName || deviceVal.deviceName)) ||
+            deviceName;
         const alarmText = getAlarmTexts(langSnap.val(), displayName, isOpen);
         const title = alarmText.title;
         const bodyText = alarmText.body;
@@ -1168,6 +1201,13 @@ const SETTINGS_MAP_LIMIT = 40;
 const IN_FLIGHT_PROTECT_MS = 2 * 60 * 60 * 1000; // never prune active deliveries younger than 2h
 const STALE_PENDING_MS = 24 * 60 * 60 * 1000;
 
+function pushWasAccepted(delivery) {
+    if (!delivery) return false;
+    if (delivery.fcmAcceptedAt) return true;
+    const state = String(delivery.state || "");
+    return state === "fcm_accepted" || state === "fcm_retried" || state === "ack_shown";
+}
+
 function isTerminalDeliveryState(state) {
     const s = String(state || "");
     return s === "ack_shown" || s === "email_fallback";
@@ -1401,6 +1441,56 @@ async function pruneUserData(userKey) {
 }
 
 // Enforce limits immediately after every newly created sensor event.
+const OFFLINE_AFTER_MS = 2 * 60 * 60 * 1000;
+const OFFLINE_EMAIL_EVERY_MS = 60 * 60 * 1000;
+
+function offlineNoticeCopy(lang, deviceName) {
+    const name = deviceName || "Sensor";
+    const code = String(lang || "").toLowerCase();
+    if (code.startsWith("bg")) {
+        return {
+            subject: name + " няма интернет – Aura HomeSystems",
+            html:
+                "<p><strong>" + escapeHtml(name) + "</strong> не се е обадил повече от час.</p>" +
+                "<p>Докато у дома няма интернет, телефонът и сирената не получават отварянето. Сензорът пази събитието и го праща, когато връзката се върне.</p>" +
+                "<p>Ако още няма интернет, ще пишем пак след около час.</p>",
+        };
+    }
+    if (code.startsWith("de")) {
+        return {
+            subject: name + " hat kein Internet – Aura HomeSystems",
+            html:
+                "<p><strong>" + escapeHtml(name) + "</strong> hat sich seit über einer Stunde nicht gemeldet.</p>" +
+                "<p>Ohne Internet zu Hause erreichen Tür-Alarm und Sirene das Telefon nicht. Der Sensor merkt sich das Ereignis und sendet es, sobald die Verbindung zurück ist.</p>" +
+                "<p>Wenn weiter kein Internet da ist, schreiben wir in etwa einer Stunde wieder.</p>",
+        };
+    }
+    return {
+        subject: name + " has no internet – Aura HomeSystems",
+        html:
+            "<p><strong>" + escapeHtml(name) + "</strong> has not reached Aura for over an hour.</p>" +
+            "<p>While the home internet is down, the phone and the siren do not get the open alert. The sensor keeps the event and sends it when the connection returns.</p>" +
+            "<p>If it is still offline, we will write again in about an hour.</p>",
+    };
+}
+
+// The sensor cannot send mail without internet. This job notices a missed hourly
+// check-in and mails the account. It does not wake the board.
+export const emailSensorsWithoutInternet = onSchedule(
+    {
+        schedule: "every 60 minutes",
+        region: "europe-west1",
+        timeZone: "Europe/Sofia",
+        timeoutSeconds: 300,
+        secrets: [resendApiKey, resendFromEmail],
+    },
+    async () => {
+        // A missed hourly check-in is not a dead sensor. Door events still connect
+        // and send the push, so this mail was a false "no internet" alarm.
+        console.log("[offline-mail] disabled");
+    }
+);
+
 export const pruneHistoryOnCreate = onValueCreated(
     {
         ref: "/users/{userKey}/history/{historyId}",

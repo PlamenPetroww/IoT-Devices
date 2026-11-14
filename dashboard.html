@@ -442,6 +442,26 @@
         let lastSettingsSnap = null;
         // Always hide these ids even before Firebase removedDevices catches up.
         var localRemovedIds = {};
+        var removedStoreKey =
+          "aura_removed_" + getSafeEmail(user.email || "").replace(/[^\w.-]+/g, "_");
+        try {
+          var storedRemoved = JSON.parse(
+            window.localStorage.getItem(removedStoreKey) || "{}"
+          );
+          if (storedRemoved && typeof storedRemoved === "object") {
+            Object.keys(storedRemoved).forEach(function (id) {
+              if (storedRemoved[id]) localRemovedIds[id] = true;
+            });
+          }
+        } catch (e) {}
+        function persistLocalRemoved() {
+          try {
+            window.localStorage.setItem(
+              removedStoreKey,
+              JSON.stringify(localRemovedIds)
+            );
+          } catch (e) {}
+        }
         function deviceSetting(id) {
           var all = lastSettingsSnap && lastSettingsSnap.val();
           if (!all || !id) return {};
@@ -563,6 +583,42 @@
           }
           return ids;
         }
+        function getRemovedDeviceNames() {
+          const names = new Set();
+          Object.keys(localRemovedIds).forEach(function (id) {
+            if (id) names.add(String(id).trim().toLowerCase());
+          });
+          const removed = lastRemovedSnap && lastRemovedSnap.val();
+          if (removed && typeof removed === "object") {
+            Object.keys(removed).forEach(function (id) {
+              var info = removed[id] || {};
+              if (id) names.add(String(id).trim().toLowerCase());
+              var n = String(info.deviceName || info.displayName || "")
+                .trim()
+                .toLowerCase();
+              if (n) names.add(n);
+            });
+          }
+          return names;
+        }
+        function isDeviceRemoved(id, device) {
+          if (getRemovedDeviceIds().has(id)) return true;
+          var names = getRemovedDeviceNames();
+          var d = device || {};
+          var candidates = [
+            id,
+            d.deviceName,
+            d.displayName,
+            shownDeviceName(id, d),
+          ];
+          for (var i = 0; i < candidates.length; i++) {
+            var key = String(candidates[i] || "")
+              .trim()
+              .toLowerCase();
+            if (key && names.has(key)) return true;
+          }
+          return false;
+        }
         function renderRemovedDevices() {
           const removed = (lastRemovedSnap && lastRemovedSnap.val()) || {};
           const entries = Object.entries(removed);
@@ -611,7 +667,6 @@
         }
         function renderDevicesFromSnap(snap) {
           const data = snap.val();
-          const removedIds = getRemovedDeviceIds();
           if (!data || typeof data !== "object") {
             recoverDevicesFromHistory();
             devicesList.innerHTML =
@@ -622,7 +677,7 @@
           }
           const devices = Object.entries(data)
             .filter(function (pair) {
-              return !removedIds.has(pair[0]);
+              return !isDeviceRemoved(pair[0], pair[1]);
             })
             .map(function (pair) {
               var id = pair[0];
@@ -1002,49 +1057,43 @@
               ) {
                 return;
               }
-              // Hide immediately in the UI, then sync Firebase.
+              // Hide immediately, persist locally, then write Firebase (must survive re-login).
               localRemovedIds[deviceId] = true;
+              persistLocalRemoved();
               if (lastDevicesSnap) renderDevicesFromSnap(lastDevicesSnap);
               else renderRemovedDevices();
-              db.ref(userPath + "/devices/" + deviceId).once(
-                "value",
-                function (deviceSnap) {
-                  var d = deviceSnap.val() || {};
-                  var updates = {};
-                  updates[userPath + "/removedDevices/" + deviceId] = {
-                    deviceName: deviceName,
-                    removedAt: Date.now(),
-                    lastStatus: d.status,
-                    lastBattery: d.battery,
-                    lastPowerSource: d.powerSource,
-                    lastSeen: d.lastSeen,
-                    displayName: d.displayName || deviceName || null,
-                    displayIcon: d.displayIcon || null,
-                  };
-                  db.ref()
-                    .update(updates)
-                    .catch(function (err) {
-                      console.error("[dashboard] remove failed", err);
-                      delete localRemovedIds[deviceId];
-                      if (lastDevicesSnap) renderDevicesFromSnap(lastDevicesSnap);
-                      window.alert(
-                        (authT("dashboard.removeSensorFailed") ||
-                          "Could not remove the sensor.") +
-                          (err && err.message ? " (" + err.message + ")" : "")
-                      );
-                    });
-                },
-                function (err) {
-                  console.error("[dashboard] remove read failed", err);
+              var live =
+                (lastDevicesSnap &&
+                  lastDevicesSnap.val() &&
+                  lastDevicesSnap.val()[deviceId]) ||
+                {};
+              var updates = {};
+              updates[userPath + "/removedDevices/" + deviceId] = {
+                deviceName: deviceName,
+                removedAt: Date.now(),
+                lastStatus: live.status,
+                lastBattery: live.battery,
+                lastPowerSource: live.powerSource,
+                lastSeen: live.lastSeen,
+                displayName: live.displayName || deviceName || null,
+                displayIcon: live.displayIcon || null,
+              };
+              db.ref()
+                .update(updates)
+                .then(function () {
+                  persistLocalRemoved();
+                })
+                .catch(function (err) {
+                  console.error("[dashboard] remove failed", err);
                   delete localRemovedIds[deviceId];
+                  persistLocalRemoved();
                   if (lastDevicesSnap) renderDevicesFromSnap(lastDevicesSnap);
                   window.alert(
                     (authT("dashboard.removeSensorFailed") ||
                       "Could not remove the sensor.") +
                       (err && err.message ? " (" + err.message + ")" : "")
                   );
-                }
-              );
+                });
               return;
             }
             if (action === "delete-forever") {
@@ -1056,6 +1105,7 @@
                 return;
               }
               delete localRemovedIds[deviceId];
+              persistLocalRemoved();
               var forgetUpdates = {};
               forgetUpdates[userPath + "/removedDevices/" + deviceId] = null;
               forgetUpdates[userPath + "/devices/" + deviceId] = null;
@@ -1065,6 +1115,7 @@
             }
             if (action === "restore") {
               delete localRemovedIds[deviceId];
+              persistLocalRemoved();
               var removedRef = db.ref(userPath + "/removedDevices/" + deviceId);
               removedRef.once("value", function (removedSnap) {
                 var info = removedSnap.val() || {};
@@ -1121,12 +1172,18 @@
         }
         function recoverDevicesFromHistory() {
           if (recoveredDevicesFromHistory || !historyData.length) return;
-          var removedIds = getRemovedDeviceIds();
           var latestByDevice = {};
           historyData.forEach(function (entry) {
             var id = String(entry.deviceId || entry.deviceName || "").trim();
             if (!id) return;
-            if (removedIds.has(id)) return;
+            if (
+              isDeviceRemoved(id, {
+                deviceName: entry.deviceName || id,
+                displayName: entry.deviceName || id,
+              })
+            ) {
+              return;
+            }
             if (
               !latestByDevice[id] ||
               (entry.timestamp || 0) > (latestByDevice[id].timestamp || 0)

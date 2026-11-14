@@ -934,16 +934,14 @@
           "value",
           function (snap) {
             lastRemovedSnap = snap;
-            // Keep localStorage in sync with Firebase — drop stale hides that
-            // block a re-setup sensor while pushes still work.
+            // Merge Firebase into local cache. Never wipe local-only ids here —
+            // that made Remove look temporary when the write was slow.
             var remote = (snap && snap.val()) || {};
-            var nextLocal = {};
             if (remote && typeof remote === "object") {
               Object.keys(remote).forEach(function (id) {
-                if (remote[id]) nextLocal[id] = true;
+                if (remote[id]) localRemovedIds[id] = true;
               });
             }
-            localRemovedIds = nextLocal;
             persistLocalRemoved();
             if (lastDevicesSnap) {
               renderDevicesFromSnap(lastDevicesSnap);
@@ -1068,18 +1066,23 @@
               ) {
                 return;
               }
+              var safeId = String(deviceId || "")
+                .trim()
+                .replace(/[.$#[\]/]/g, "_");
+              if (!safeId) return;
               // Hide immediately, persist locally, then write Firebase (must survive re-login).
-              localRemovedIds[deviceId] = true;
+              localRemovedIds[safeId] = true;
+              if (safeId !== deviceId) localRemovedIds[deviceId] = true;
               persistLocalRemoved();
               if (lastDevicesSnap) renderDevicesFromSnap(lastDevicesSnap);
               else renderRemovedDevices();
               var live =
                 (lastDevicesSnap &&
                   lastDevicesSnap.val() &&
-                  lastDevicesSnap.val()[deviceId]) ||
+                  (lastDevicesSnap.val()[deviceId] ||
+                    lastDevicesSnap.val()[safeId])) ||
                 {};
-              var updates = {};
-              updates[userPath + "/removedDevices/" + deviceId] = {
+              var removedPayload = {
                 deviceName: deviceName,
                 removedAt: Date.now(),
                 lastStatus: live.status,
@@ -1089,13 +1092,28 @@
                 displayName: live.displayName || deviceName || null,
                 displayIcon: live.displayIcon || null,
               };
-              db.ref()
-                .update(updates)
+              // set() + remove live card — survives re-login; sensor firmware skips recreating.
+              var removeOps = [
+                db
+                  .ref(userPath + "/removedDevices/" + safeId)
+                  .set(removedPayload),
+                db.ref(userPath + "/devices/" + safeId).remove(),
+              ];
+              if (deviceId && deviceId !== safeId) {
+                removeOps.push(
+                  db
+                    .ref(userPath + "/removedDevices/" + deviceId)
+                    .set(removedPayload)
+                );
+                removeOps.push(db.ref(userPath + "/devices/" + deviceId).remove());
+              }
+              Promise.all(removeOps)
                 .then(function () {
                   persistLocalRemoved();
                 })
                 .catch(function (err) {
                   console.error("[dashboard] remove failed", err);
+                  delete localRemovedIds[safeId];
                   delete localRemovedIds[deviceId];
                   persistLocalRemoved();
                   if (lastDevicesSnap) renderDevicesFromSnap(lastDevicesSnap);

@@ -181,6 +181,23 @@ static String getSafeEmailKey(const char* email) {
     safe.replace("@", "_at_");
     return safe;
 }
+
+// App "Remove sensor" writes users/.../removedDevices/{id}. Do not recreate the card.
+static bool deviceRemovedInApp(const String& userPath, const String& deviceID) {
+    String path = userPath + "/removedDevices/" + deviceID;
+    if (!Firebase.RTDB.getJSON(&fbdo, path.c_str())) return false;
+    if (fbdo.dataTypeEnum() == fb_esp_rtdb_data_type_null) return false;
+    String raw = fbdo.to<String>();
+    if (raw.length() == 0 || raw == "null") return false;
+    return true;
+}
+
+static void clearDeviceRemovedInApp(const String& userPath, const String& deviceID) {
+    String path = userPath + "/removedDevices/" + deviceID;
+    if (Firebase.RTDB.deleteNode(&fbdo, path.c_str())) {
+        Serial.println("Cleared removedDevices — sensor visible in app again");
+    }
+}
 static bool connectWifiFast() {
     WiFi.disconnect(false);
     delay(150);
@@ -1582,16 +1599,31 @@ void setup() {
     // Path: /users/<email_key>/ ÔÇö same as the dashboard after registration
     String userKey = getSafeEmailKey(user_email);
     String userPath = "/users/" + userKey;
+    String deviceID = getDeviceIdFromName(device_name);
+    String devicePath = userPath + "/devices/" + deviceID;
+    // Fresh SoftAP/BLE setup restores a previously removed sensor in the app.
+    if (emailFromPortal) {
+        clearDeviceRemovedInApp(userPath, deviceID);
+    }
 #if USE_DEEP_SLEEP
     const esp_sleep_wakeup_cause_t wakeCause = esp_sleep_get_wakeup_cause();
     if (wakeCause != ESP_SLEEP_WAKEUP_UNDEFINED) {
         Serial.print("Wakeup cause: ");
         Serial.println((int)wakeCause);
     }
-    String deviceID = getDeviceIdFromName(device_name);
-    String devicePath = userPath + "/devices/" + deviceID;
     Serial.print("Device path: ");
     Serial.println(devicePath);
+    if (deviceRemovedInApp(userPath, deviceID)) {
+        Serial.println("Sensor removed in app — skip Firebase device/history write");
+        Serial.flush();
+        rtcCapturedClosed = -1;
+        armDeepSleepGpioWakeup(wakeLevelForClosed(readSensorClosedStable()));
+        esp_sleep_enable_timer_wakeup(DEEP_SLEEP_HEARTBEAT_SEC > 0
+            ? (uint64_t)DEEP_SLEEP_HEARTBEAT_SEC * 1000000ULL
+            : 3600ULL * 1000000ULL);
+        esp_deep_sleep_start();
+        return;
+    }
     syncClosedWhenLowFromFirebase(userPath, deviceID);
     adoptHistStatusOnce(userPath, deviceID);
     // After Wi-Fi + polarity sync the pin has had time to leave the held wake level.
@@ -1827,6 +1859,11 @@ void loop() {
     if (!shouldSend && BATTERY_ADC_PIN >= 0 && loopCount >= 30) {
         shouldSend = true;
         loopCount = 0;
+    }
+    if (shouldSend && deviceRemovedInApp(userPath, deviceID)) {
+        Serial.println("Sensor removed in app — skip update");
+        shouldSend = false;
+        if (statusChanged) lastStatus = currentStatus;
     }
     if (shouldSend) {
         Serial.print("Sensor ");

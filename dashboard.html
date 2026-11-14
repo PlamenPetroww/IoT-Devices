@@ -934,6 +934,17 @@
           "value",
           function (snap) {
             lastRemovedSnap = snap;
+            // Keep localStorage in sync with Firebase — drop stale hides that
+            // block a re-setup sensor while pushes still work.
+            var remote = (snap && snap.val()) || {};
+            var nextLocal = {};
+            if (remote && typeof remote === "object") {
+              Object.keys(remote).forEach(function (id) {
+                if (remote[id]) nextLocal[id] = true;
+              });
+            }
+            localRemovedIds = nextLocal;
+            persistLocalRemoved();
             if (lastDevicesSnap) {
               renderDevicesFromSnap(lastDevicesSnap);
             } else {

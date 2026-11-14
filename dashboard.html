@@ -644,7 +644,16 @@
         }
         function renderRemovedDevices() {
           const removed = (lastRemovedSnap && lastRemovedSnap.val()) || {};
-          const entries = Object.entries(removed);
+          const byId = {};
+          Object.keys(removed).forEach(function (id) {
+            if (removed[id]) byId[id] = removed[id];
+          });
+          // Also show locally removed ids before Firebase tombstone arrives.
+          Object.keys(localRemovedIds).forEach(function (id) {
+            if (!id || !localRemovedIds[id] || byId[id]) return;
+            byId[id] = { deviceName: id, displayName: id };
+          });
+          const entries = Object.entries(byId);
           if (!removedDevicesSection || !removedDevicesList) return;
           if (entries.length === 0) {
             removedDevicesSection.hidden = true;
@@ -784,6 +793,7 @@
             renderRemovedDevices();
             return;
           }
+          waitingAfterRestore = false;
           setSystemModeVisible(true);
           devicesList.innerHTML = devices
             .map(function (dev, index) {
@@ -1009,14 +1019,20 @@
               Object.keys(remoteIds).forEach(function (id) {
                 localRemovedIds[id] = true;
               });
-              // Drop a local id ONLY when SoftAP cleared it (was in remote, now gone).
+              var liveDevices =
+                (lastDevicesSnap && lastDevicesSnap.val()) || {};
               Object.keys(localRemovedIds).forEach(function (id) {
                 if (remoteIds[id]) return;
-                if (prevRemoteRemovedIds[id]) {
+                // SoftAP re-setup: tombstone gone AND device card is back → allow show.
+                if (
+                  prevRemoteRemovedIds[id] &&
+                  liveDevices &&
+                  liveDevices[id]
+                ) {
                   delete localRemovedIds[id];
                   return;
                 }
-                // Still removed locally — re-write tombstone (do not wipe on empty snap).
+                // Tombstone missing but sensor not restored — keep hidden and heal.
                 healRemovedTombstone(id);
               });
               persistLocalRemoved();
@@ -1223,6 +1239,7 @@
               return;
             }
             if (action === "restore") {
+              waitingAfterRestore = true;
               delete localRemovedIds[deviceId];
               persistLocalRemoved();
               var removedRef = db.ref(userPath + "/removedDevices/" + deviceId);
@@ -1268,11 +1285,13 @@
         let historyLimit = 3;
         let historyData = [];
         let recoveredDevicesFromHistory = false;
+        var waitingAfterRestore = false;
         function devicesEmptyMessage() {
           if (getRemovedDeviceIds().size > 0) {
             return escapeHtml(authT("dashboard.noActiveSensors"));
           }
-          if (historyData.length > 0) {
+          // Only after Restore — never after Remove / Delete forever.
+          if (waitingAfterRestore && historyData.length > 0) {
             return escapeHtml(authT("dashboard.waitingForSensorUpdate"));
           }
           if (window.AuraAppMode && AuraAppMode.isPlayApp()) {

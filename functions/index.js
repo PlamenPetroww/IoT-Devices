@@ -642,8 +642,8 @@ async function processAlarmEmailFallback(userKey, eventTag) {
 
 /**
  * ESP firmware (database secret) can recreate /devices/{id} after the user taps
- * Remove. If a tombstone exists under removedDevices (or deviceSettings.removed),
- * delete the resurrected card immediately so Remove sticks after re-login.
+ * Remove. Tombstones live in removedDevices / deviceSettings.removed / settings/appRemoved
+ * (appRemoved is never cleared by firmware SoftAP).
  */
 export const purgeRemovedDeviceWrites = onValueWritten(
     {
@@ -657,11 +657,44 @@ export const purgeRemovedDeviceWrites = onValueWritten(
         const userKey = String(event.params.userKey || "").trim();
         const deviceId = String(event.params.deviceId || "").trim();
         if (!userKey || !deviceId) return;
-        const [removedSnap, settingsRemovedSnap] = await Promise.all([
-            rtdb.ref(`users/${userKey}/removedDevices/${deviceId}`).get(),
-            rtdb.ref(`users/${userKey}/deviceSettings/${deviceId}/removed`).get(),
-        ]);
-        if (!removedSnap.exists() && settingsRemovedSnap.val() !== true) return;
+        const afterVal = event.data.after.val() || {};
+        const deviceName = String(afterVal.deviceName || afterVal.displayName || "")
+            .trim()
+            .toLowerCase();
+        const [removedSnap, settingsRemovedSnap, appRemovedSnap, allRemovedSnap] =
+            await Promise.all([
+                rtdb.ref(`users/${userKey}/removedDevices/${deviceId}`).get(),
+                rtdb.ref(`users/${userKey}/deviceSettings/${deviceId}/removed`).get(),
+                rtdb.ref(`users/${userKey}/settings/appRemoved/${deviceId}`).get(),
+                rtdb.ref(`users/${userKey}/removedDevices`).get(),
+            ]);
+        let blocked =
+            removedSnap.exists() ||
+            settingsRemovedSnap.val() === true ||
+            appRemovedSnap.val() === true;
+        if (!blocked && allRemovedSnap.exists()) {
+            const all = allRemovedSnap.val() || {};
+            for (const [rid, info] of Object.entries(all)) {
+                if (!info) continue;
+                if (String(rid).trim() === deviceId) {
+                    blocked = true;
+                    break;
+                }
+                const n = String(
+                    (info && (info.deviceName || info.displayName)) || ""
+                )
+                    .trim()
+                    .toLowerCase();
+                if (deviceName && n && n === deviceName) {
+                    blocked = true;
+                    break;
+                }
+            }
+        }
+        if (!blocked) {
+            console.log("[purge-removed] allow", userKey, deviceId);
+            return;
+        }
         console.log("[purge-removed] drop resurrected device", userKey, deviceId);
         await event.data.after.ref.remove();
     }

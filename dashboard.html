@@ -279,7 +279,20 @@
                       ? cap.Plugins.AuraSetup
                       : null;
                 if (plugin && typeof plugin.open === "function") {
-                  plugin.open({ email: accountEmail }).then(function () {
+                  plugin.open({ email: accountEmail }).then(function (result) {
+                    // Intentional SoftAP re-add — clear Remove tombstones for that name.
+                    var paired = result && result.paired;
+                    var pairedName = result && result.name ? String(result.name).trim() : "";
+                    if (paired && pairedName) {
+                      var pairedId = auraDeviceIdFromName(pairedName);
+                      delete localRemovedIds[pairedId];
+                      persistLocalRemoved();
+                      var clearPair = {};
+                      clearPair[userPath + "/removedDevices/" + pairedId] = null;
+                      clearPair[userPath + "/deviceSettings/" + pairedId + "/removed"] = null;
+                      clearPair[userPath + "/settings/appRemoved/" + pairedId] = null;
+                      db.ref().update(clearPair);
+                    }
                     // Setup closed — refresh often so Open/Closed appears as soon
                     // as the sensor writes its first status after SoftAP.
                     function refreshAfterSetup() {
@@ -464,6 +477,7 @@
         let lastSettingsSnap = null;
         // Always hide these ids even before Firebase removedDevices catches up.
         var localRemovedIds = {};
+        var appRemovedIds = {};
         var removedStoreKey =
           "aura_removed_" + getSafeEmail(user.email || "").replace(/[^\w.-]+/g, "_");
         try {
@@ -483,6 +497,15 @@
               JSON.stringify(localRemovedIds)
             );
           } catch (e) {}
+        }
+        // Match firmware getDeviceIdFromName (spaces → _).
+        function auraDeviceIdFromName(name) {
+          var id = String(name || "")
+            .trim()
+            .replace(/[.$#[\]/@]/g, "_")
+            .replace(/\s+/g, "_")
+            .replace(/-+/g, "_");
+          return id || "sensor";
         }
         function deviceSetting(id) {
           var all = lastSettingsSnap && lastSettingsSnap.val();
@@ -597,6 +620,9 @@
         }
         function getRemovedDeviceIds() {
           const ids = new Set(Object.keys(localRemovedIds));
+          Object.keys(appRemovedIds).forEach(function (id) {
+            if (appRemovedIds[id]) ids.add(id);
+          });
           const removed = lastRemovedSnap && lastRemovedSnap.val();
           if (removed && typeof removed === "object") {
             Object.keys(removed).forEach(function (id) {
@@ -625,6 +651,7 @@
         }
         function isDeviceRemoved(id, device) {
           if (getRemovedDeviceIds().has(id)) return true;
+          if (appRemovedIds[id]) return true;
           if (deviceSetting(id).removed === true) return true;
           var names = getRemovedDeviceNames();
           var d = device || {};
@@ -986,13 +1013,37 @@
           // Old firmware keeps recreating /devices/{id}. Keep deleting until
           // SoftAP re-setup clears the tombstone (id disappears from remote).
           var live = devicesVal && typeof devicesVal === "object" ? devicesVal : {};
+          var blocked = {};
           Object.keys(localRemovedIds).forEach(function (id) {
-            if (!id || !localRemovedIds[id]) return;
-            if (live[id]) {
-              db.ref(userPath + "/devices/" + id).remove();
-            }
+            if (localRemovedIds[id]) blocked[id] = true;
+          });
+          Object.keys(appRemovedIds).forEach(function (id) {
+            if (appRemovedIds[id]) blocked[id] = true;
+          });
+          Object.keys(blocked).forEach(function (id) {
+            if (!id || !live[id]) return;
+            db.ref(userPath + "/devices/" + id).remove();
           });
         }
+        db.ref(userPath + "/settings/appRemoved").on(
+          "value",
+          function (snap) {
+            var val = (snap && snap.val()) || {};
+            appRemovedIds = {};
+            if (val && typeof val === "object") {
+              Object.keys(val).forEach(function (id) {
+                if (val[id]) appRemovedIds[id] = true;
+              });
+            }
+            if (lastDevicesSnap) {
+              enforceRemovedDevices(lastDevicesSnap.val());
+              renderDevicesFromSnap(lastDevicesSnap);
+            }
+          },
+          function (err) {
+            console.error("[dashboard] appRemoved read failed:", err);
+          }
+        );
         db.ref(userPath + "/removedDevices").on(
           "value",
           function (snap) {
@@ -1194,24 +1245,41 @@
                 displayName: scrub(live.displayName) || scrub(deviceName) || null,
                 displayIcon: scrub(live.displayIcon),
               };
-              // One atomic update — survives re-login even if the app is killed mid-write.
+              // appRemoved is never cleared by ESP SoftAP — that was why Remove failed.
+              appRemovedIds[safeId] = true;
+              if (deviceId && deviceId !== safeId) appRemovedIds[deviceId] = true;
               var removeUpdates = {};
               removeUpdates[userPath + "/removedDevices/" + safeId] = removedPayload;
               removeUpdates[userPath + "/devices/" + safeId] = null;
               removeUpdates[userPath + "/deviceSettings/" + safeId + "/removed"] = true;
+              removeUpdates[userPath + "/settings/appRemoved/" + safeId] = true;
               if (deviceId && deviceId !== safeId) {
                 removeUpdates[userPath + "/removedDevices/" + deviceId] = removedPayload;
                 removeUpdates[userPath + "/devices/" + deviceId] = null;
                 removeUpdates[userPath + "/deviceSettings/" + deviceId + "/removed"] = true;
+                removeUpdates[userPath + "/settings/appRemoved/" + deviceId] = true;
               }
+              // Also tombstone by display name id (firmware key).
+              var nameId = auraDeviceIdFromName(deviceName);
+              if (nameId && nameId !== safeId && nameId !== deviceId) {
+                localRemovedIds[nameId] = true;
+                appRemovedIds[nameId] = true;
+                removeUpdates[userPath + "/removedDevices/" + nameId] = removedPayload;
+                removeUpdates[userPath + "/devices/" + nameId] = null;
+                removeUpdates[userPath + "/deviceSettings/" + nameId + "/removed"] = true;
+                removeUpdates[userPath + "/settings/appRemoved/" + nameId] = true;
+              }
+              persistLocalRemoved();
               db.ref()
                 .update(removeUpdates)
                 .then(function () {
                   persistLocalRemoved();
+                  enforceRemovedDevices(
+                    (lastDevicesSnap && lastDevicesSnap.val()) || {}
+                  );
                 })
                 .catch(function (err) {
                   console.error("[dashboard] remove failed", err);
-                  // Keep local tombstone — better sticky hide than flash back.
                   persistLocalRemoved();
                   window.alert(
                     (authT("dashboard.removeSensorFailed") ||
@@ -1230,17 +1298,20 @@
                 return;
               }
               delete localRemovedIds[deviceId];
+              delete appRemovedIds[deviceId];
               persistLocalRemoved();
               var forgetUpdates = {};
               forgetUpdates[userPath + "/removedDevices/" + deviceId] = null;
               forgetUpdates[userPath + "/devices/" + deviceId] = null;
               forgetUpdates[userPath + "/deviceSettings/" + deviceId] = null;
+              forgetUpdates[userPath + "/settings/appRemoved/" + deviceId] = null;
               db.ref().update(forgetUpdates);
               return;
             }
             if (action === "restore") {
               waitingAfterRestore = true;
               delete localRemovedIds[deviceId];
+              delete appRemovedIds[deviceId];
               persistLocalRemoved();
               var removedRef = db.ref(userPath + "/removedDevices/" + deviceId);
               removedRef.once("value", function (removedSnap) {
@@ -1250,6 +1321,7 @@
                   var updates = {};
                   updates[userPath + "/removedDevices/" + deviceId] = null;
                   updates[userPath + "/deviceSettings/" + deviceId + "/removed"] = null;
+                  updates[userPath + "/settings/appRemoved/" + deviceId] = null;
                   if (!deviceSnap.exists()) {
                     var restored = {
                       deviceName: name,

@@ -192,9 +192,13 @@ static bool deviceRemovedInApp(const String& userPath, const String& deviceID) {
     return true;
 }
 
+// Set true only when the app POSTs clearRemoved on SoftAP/BLE (intentional re-add).
+static bool portalClearRemoved = false;
+
 static void clearDeviceRemovedInApp(const String& userPath, const String& deviceID) {
     String path = userPath + "/removedDevices/" + deviceID;
     String flagPath = userPath + "/deviceSettings/" + deviceID + "/removed";
+    String appPath = userPath + "/settings/appRemoved/" + deviceID;
     bool tombstoneOk = false;
     for (int i = 0; i < 3 && !tombstoneOk; i++) {
         if (Firebase.RTDB.deleteNode(&fbdo, path.c_str())) {
@@ -208,11 +212,8 @@ static void clearDeviceRemovedInApp(const String& userPath, const String& device
         Serial.print("clear removedDevices failed: ");
         Serial.println(fbdo.errorReason());
     }
-    // Dashboard also sets deviceSettings/{id}/removed — clear for SoftAP restore.
-    for (int i = 0; i < 3; i++) {
-        if (Firebase.RTDB.deleteNode(&fbdo, flagPath.c_str())) return;
-        delay(200);
-    }
+    Firebase.RTDB.deleteNode(&fbdo, flagPath.c_str());
+    Firebase.RTDB.deleteNode(&fbdo, appPath.c_str());
 }
 static bool connectWifiFast() {
     WiFi.disconnect(false);
@@ -1149,6 +1150,13 @@ static bool runSoftApSetup() {
             const char* pass = doc["pass"] | "";
             const char* email = doc["email"] | "";
             const char* name = doc["name"] | "";
+            // App sends clearRemoved on intentional SoftAP re-add after Remove.
+            if (doc["clearRemoved"].is<bool>()) {
+                portalClearRemoved = doc["clearRemoved"].as<bool>();
+            } else {
+                const char* cr = doc["clearRemoved"] | "";
+                portalClearRemoved = (cr[0] == '1' || cr[0] == 't' || cr[0] == 'T');
+            }
             if (ssid[0] == '\0' || !emailLooksValid(email)) {
                 Serial.println("SoftAP bad ssid/email");
                 softApBody = "";
@@ -1353,6 +1361,12 @@ static bool runBleSetup() {
             const char* pass = doc["pass"] | "";
             const char* email = doc["email"] | "";
             const char* name = doc["name"] | "";
+            if (doc["clearRemoved"].is<bool>()) {
+                portalClearRemoved = doc["clearRemoved"].as<bool>();
+            } else {
+                const char* cr = doc["clearRemoved"] | "";
+                portalClearRemoved = (cr[0] == '1' || cr[0] == 't' || cr[0] == 'T');
+            }
             if (ssid[0] == '\0' || !emailLooksValid(email)) {
                 provNotify("0 bademail");
                 BLEDevice::startAdvertising();
@@ -1617,11 +1631,12 @@ void setup() {
     String userPath = "/users/" + userKey;
     String deviceID = getDeviceIdFromName(device_name);
     String devicePath = userPath + "/devices/" + deviceID;
-    // Fresh SoftAP/BLE setup always restores this sensor in the app.
-    if (emailFromPortal) {
+    // Only clear Remove tombstones when the app explicitly asked (clearRemoved).
+    if (emailFromPortal && portalClearRemoved) {
         clearDeviceRemovedInApp(userPath, deviceID);
-        // Show live Open/Closed on the card right after pairing — do not keep
-        // a stale rtc/history status from a previous install of this board.
+    }
+    if (emailFromPortal) {
+        // Show live Open/Closed on the card right after pairing.
         rtcLastSentStatus = -1;
     }
 #if USE_DEEP_SLEEP

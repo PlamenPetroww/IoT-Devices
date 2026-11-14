@@ -27,8 +27,11 @@ public class AuraSetupPlugin: CAPPlugin, CAPBridgedPlugin {
             }
             let setup = AuraSetupController(email: email)
             setup.modalPresentationStyle = .fullScreen
-            setup.onClose = {
-                call.resolve()
+            setup.onClose = { paired, name in
+                call.resolve([
+                    "paired": paired,
+                    "name": name
+                ])
             }
             presenter.present(setup, animated: true)
         }
@@ -84,13 +87,15 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
     private let returnButton = UIButton(type: .system)
     private let closeButton = UIButton(type: .system)
     private var connectingProgress = false
+    private var lastProvisionedName = ""
     private var scrollBottomConstraint: NSLayoutConstraint?
     private var looking = true
     private var lookingSince = Date()
     private var scanPass = 0
     private var lookingTimer: Timer?
     private var scanRefreshWork: DispatchWorkItem?
-    var onClose: (() -> Void)?
+    /// paired + sensor name when Connect finished OK (for dashboard to clear Remove tombstones).
+    var onClose: ((_ paired: Bool, _ name: String) -> Void)?
 
     init(email: String) {
         self.email = email
@@ -610,6 +615,7 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         credsSent = true
         finishedOk = false
         connectingProgress = true
+        lastProvisionedName = name
         dismissKeyboard()
         setSetupControlsEnabled(false)
         form.isHidden = true
@@ -645,7 +651,13 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
                 guard let self = self, self.credsSent, !self.finishedOk else { return }
                 self.showProgress(85, title: "Connecting")
             }
-            let body: [String: String] = ["ssid": ssid, "pass": pass, "email": self.email, "name": name]
+            let body: [String: String] = [
+                "ssid": ssid,
+                "pass": pass,
+                "email": self.email,
+                "name": name,
+                "clearRemoved": "1",
+            ]
             guard let data = try? JSONSerialization.data(withJSONObject: body) else { return }
             var request = URLRequest(url: self.provUrl)
             request.httpMethod = "POST"
@@ -833,11 +845,18 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         guard let peripheral = peripheral,
               let service = peripheral.services?.first(where: { $0.uuid == self.service }),
               let cred = service.characteristics?.first(where: { $0.uuid == credId }) else { return }
-        let body: [String: String] = ["ssid": ssid, "pass": pass, "email": email, "name": name]
+        let body: [String: String] = [
+            "ssid": ssid,
+            "pass": pass,
+            "email": email,
+            "name": name,
+            "clearRemoved": "1",
+        ]
         guard let data = try? JSONSerialization.data(withJSONObject: body) else { return }
         credsSent = true
         finishedOk = false
         connectingProgress = true
+        lastProvisionedName = name
         form.isHidden = true
         hideActionButton()
         hideReturnButton()
@@ -960,8 +979,10 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         if let peripheral = peripheral { central.cancelPeripheralConnection(peripheral) }
         let done = onClose
         onClose = nil
+        let paired = finishedOk
+        let name = lastProvisionedName
         dismiss(animated: true) {
-            done?()
+            done?(paired, name)
         }
     }
 

@@ -280,19 +280,26 @@
                       : null;
                 if (plugin && typeof plugin.open === "function") {
                   plugin.open({ email: accountEmail }).then(function () {
-                    // Setup closed — refresh from Firebase; keep local tombstones
-                    // (SoftAP re-setup clears removedDevices in RTDB when needed).
-                    db.ref(userPath + "/removedDevices").once("value", function (snap) {
-                      lastRemovedSnap = snap;
-                      var remote = snap.val() || {};
-                      Object.keys(remote).forEach(function (id) {
-                        if (remote[id]) localRemovedIds[id] = true;
+                    // Setup closed — refresh often so Open/Closed appears as soon
+                    // as the sensor writes its first status after SoftAP.
+                    function refreshAfterSetup() {
+                      db.ref(userPath + "/removedDevices").once("value", function (snap) {
+                        lastRemovedSnap = snap;
+                        var remote = snap.val() || {};
+                        Object.keys(remote).forEach(function (id) {
+                          if (remote[id]) localRemovedIds[id] = true;
+                        });
+                        persistLocalRemoved();
+                        db.ref(userPath + "/devices").once("value", function (devSnap) {
+                          lastDevicesSnap = devSnap;
+                          enforceRemovedDevices(devSnap.val());
+                          renderDevicesFromSnap(devSnap);
+                        });
                       });
-                      persistLocalRemoved();
-                      db.ref(userPath + "/devices").once("value", function (devSnap) {
-                        lastDevicesSnap = devSnap;
-                        renderDevicesFromSnap(devSnap);
-                      });
+                    }
+                    refreshAfterSetup();
+                    [800, 2000, 4000, 8000, 12000].forEach(function (ms) {
+                      setTimeout(refreshAfterSetup, ms);
                     });
                   });
                   return;
@@ -931,6 +938,7 @@
           "value",
           (snap) => {
           lastDevicesSnap = snap;
+          enforceRemovedDevices(snap.val());
           renderDevicesFromSnap(snap);
           renderHistory();
         },
@@ -952,42 +960,71 @@
           }
         );
         var removedDevicesListenerReady = false;
+        var prevRemoteRemovedIds = {};
+        function healRemovedTombstone(id, meta) {
+          if (!id) return;
+          var payload = meta && typeof meta === "object" ? meta : {
+            deviceName: id,
+            removedAt: Date.now(),
+            healedFromLocal: true,
+          };
+          db.ref(userPath + "/removedDevices/" + id).set(payload);
+          db.ref(userPath + "/deviceSettings/" + id + "/removed").set(true);
+          db.ref(userPath + "/devices/" + id).remove();
+        }
+        function enforceRemovedDevices(devicesVal) {
+          // Old firmware keeps recreating /devices/{id}. Keep deleting until
+          // SoftAP re-setup clears the tombstone (id disappears from remote).
+          var live = devicesVal && typeof devicesVal === "object" ? devicesVal : {};
+          Object.keys(localRemovedIds).forEach(function (id) {
+            if (!id || !localRemovedIds[id]) return;
+            if (live[id]) {
+              db.ref(userPath + "/devices/" + id).remove();
+            }
+          });
+        }
         db.ref(userPath + "/removedDevices").on(
           "value",
           function (snap) {
             lastRemovedSnap = snap;
             var remote = (snap && snap.val()) || {};
             if (typeof remote !== "object" || remote === null) remote = {};
+            var remoteIds = {};
+            Object.keys(remote).forEach(function (id) {
+              if (remote[id]) remoteIds[id] = true;
+            });
 
             if (!removedDevicesListenerReady) {
-              // First snapshot: merge local + remote. If Firebase lost the
-              // tombstone (or write failed earlier), heal it from localStorage
-              // so Remove still sticks after re-login.
               removedDevicesListenerReady = true;
-              Object.keys(remote).forEach(function (id) {
-                if (remote[id]) localRemovedIds[id] = true;
+              Object.keys(remoteIds).forEach(function (id) {
+                localRemovedIds[id] = true;
               });
               persistLocalRemoved();
               Object.keys(localRemovedIds).forEach(function (id) {
-                if (!id || remote[id]) return;
-                db.ref(userPath + "/removedDevices/" + id).set({
-                  deviceName: id,
-                  removedAt: Date.now(),
-                  healedFromLocal: true,
-                });
-                db.ref(userPath + "/devices/" + id).remove();
+                if (!id || remoteIds[id]) return;
+                healRemovedTombstone(id);
               });
             } else {
-              // Later updates: trust Firebase (SoftAP re-setup deletes the id).
-              var nextLocal = {};
-              Object.keys(remote).forEach(function (id) {
-                if (remote[id]) nextLocal[id] = true;
+              // Add anything Firebase still has.
+              Object.keys(remoteIds).forEach(function (id) {
+                localRemovedIds[id] = true;
               });
-              localRemovedIds = nextLocal;
+              // Drop a local id ONLY when SoftAP cleared it (was in remote, now gone).
+              Object.keys(localRemovedIds).forEach(function (id) {
+                if (remoteIds[id]) return;
+                if (prevRemoteRemovedIds[id]) {
+                  delete localRemovedIds[id];
+                  return;
+                }
+                // Still removed locally — re-write tombstone (do not wipe on empty snap).
+                healRemovedTombstone(id);
+              });
               persistLocalRemoved();
             }
+            prevRemoteRemovedIds = remoteIds;
 
             if (lastDevicesSnap) {
+              enforceRemovedDevices(lastDevicesSnap.val());
               renderDevicesFromSnap(lastDevicesSnap);
             } else {
               renderRemovedDevices();
@@ -1141,30 +1178,18 @@
                 displayName: scrub(live.displayName) || scrub(deviceName) || null,
                 displayIcon: scrub(live.displayIcon),
               };
-              // set() tombstone first, then drop live card — must survive re-login.
-              var removeOps = [
-                db
-                  .ref(userPath + "/removedDevices/" + safeId)
-                  .set(removedPayload),
-                db.ref(userPath + "/devices/" + safeId).remove(),
-                db
-                  .ref(userPath + "/deviceSettings/" + safeId + "/removed")
-                  .set(true),
-              ];
+              // One atomic update — survives re-login even if the app is killed mid-write.
+              var removeUpdates = {};
+              removeUpdates[userPath + "/removedDevices/" + safeId] = removedPayload;
+              removeUpdates[userPath + "/devices/" + safeId] = null;
+              removeUpdates[userPath + "/deviceSettings/" + safeId + "/removed"] = true;
               if (deviceId && deviceId !== safeId) {
-                removeOps.push(
-                  db
-                    .ref(userPath + "/removedDevices/" + deviceId)
-                    .set(removedPayload)
-                );
-                removeOps.push(db.ref(userPath + "/devices/" + deviceId).remove());
-                removeOps.push(
-                  db
-                    .ref(userPath + "/deviceSettings/" + deviceId + "/removed")
-                    .set(true)
-                );
+                removeUpdates[userPath + "/removedDevices/" + deviceId] = removedPayload;
+                removeUpdates[userPath + "/devices/" + deviceId] = null;
+                removeUpdates[userPath + "/deviceSettings/" + deviceId + "/removed"] = true;
               }
-              Promise.all(removeOps)
+              db.ref()
+                .update(removeUpdates)
                 .then(function () {
                   persistLocalRemoved();
                 })

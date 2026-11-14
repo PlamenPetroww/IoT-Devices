@@ -1610,6 +1610,9 @@ void setup() {
     // Fresh SoftAP/BLE setup always restores this sensor in the app.
     if (emailFromPortal) {
         clearDeviceRemovedInApp(userPath, deviceID);
+        // Show live Open/Closed on the card right after pairing — do not keep
+        // a stale rtc/history status from a previous install of this board.
+        rtcLastSentStatus = -1;
     }
 #if USE_DEEP_SLEEP
     const esp_sleep_wakeup_cause_t wakeCause = esp_sleep_get_wakeup_cause();
@@ -1665,11 +1668,12 @@ void setup() {
     Serial.print("% → ");
     Serial.println(strcmp(battStatus, "low") == 0 ? "Battery Low" : "Battery OK");
     FirebaseJson json;
-    // Never show a new Open/Closed on the card until that event is in history.
-    // Using the live pin here left Closed on the card with no Closed history and no push.
-    const bool statusForDevice = (rtcLastSentStatus >= 0)
-        ? (rtcLastSentStatus == 1)
-        : currentStatus;
+    // After SoftAP/BLE setup always publish the live magnet so the app shows
+    // Open/Closed immediately. Otherwise keep last history-acked status on the
+    // card until a real event is written (avoids card/history mismatch).
+    const bool statusForDevice = emailFromPortal
+        ? currentStatus
+        : ((rtcLastSentStatus >= 0) ? (rtcLastSentStatus == 1) : currentStatus);
     json.set("status", statusForDevice);
     json.set("deviceName", String(device_name));
 #if RTDB_USE_SV_TIMESTAMP
@@ -1690,6 +1694,27 @@ void setup() {
     bool historyWriteOk = !shouldSendEvent;
     if (deviceWriteOk) {
         Serial.println("Firebase: OK");
+        // After pairing, seed history with the live magnet so the app shows
+        // Open/Closed immediately (not only after the next door move).
+        if (emailFromPortal) {
+            unsigned long histTs = timestampMsNow();
+            String historyKey = buildHistoryKey(deviceID, currentStatus, (unsigned long)histTs);
+            String historyPath = userPath + "/history/" + historyKey;
+            FirebaseJson jsonHist;
+            jsonHist.set("deviceId", deviceID);
+            jsonHist.set("deviceName", String(device_name));
+            jsonHist.set("status", currentStatus ? "closed" : "open");
+#if RTDB_USE_SV_TIMESTAMP
+            jsonHist.set("timestamp/.sv", "timestamp");
+#else
+            jsonHist.set("timestamp", histTs);
+#endif
+            if (Firebase.RTDB.setJSON(&fbdo, historyPath.c_str(), &jsonHist)) {
+                historyWriteOk = true;
+                rememberAcknowledged(curSt);
+                Serial.println("Seeded first Open/Closed after setup");
+            }
+        }
     } else {
         Serial.print("Firebase FAIL: ");
         Serial.println(fbdo.errorReason());

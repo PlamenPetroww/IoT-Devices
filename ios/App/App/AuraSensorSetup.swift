@@ -80,6 +80,11 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
     private let connectButton = UIButton(type: .system)
     private let closeButton = UIButton(type: .system)
     private var scrollBottomConstraint: NSLayoutConstraint?
+    private var looking = true
+    private var lookingSince = Date()
+    private var scanPass = 0
+    private var lookingTimer: Timer?
+    private var scanRefreshWork: DispatchWorkItem?
 
     init(email: String) {
         self.email = email
@@ -93,6 +98,8 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
     deinit {
         NotificationCenter.default.removeObserver(self)
         magnetTimer?.invalidate()
+        lookingTimer?.invalidate()
+        scanRefreshWork?.cancel()
     }
 
     override func viewDidLoad() {
@@ -212,13 +219,63 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillHide(_:)), name: UIResponder.keyboardWillHideNotification, object: nil)
 
         headline.text = "Looking for the sensor"
-        detail.text = "Turn the sensor on and stay next to it for about a minute."
+        looking = true
+        lookingSince = Date()
+        scanPass = 0
+        updateLookingDetail()
         startSearchSpinner()
+        startLookingTick()
         central = CBCentralManager(delegate: self, queue: nil)
         // Board opens SoftAP after ~8s BLE; wait a bit longer so the AP is up.
         let work = DispatchWorkItem { [weak self] in self?.startSoftApSetup() }
         softApFallbackWork = work
         DispatchQueue.main.asyncAfter(deadline: .now() + 12, execute: work)
+    }
+
+    private func startLookingTick() {
+        lookingTimer?.invalidate()
+        let timer = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
+            self?.updateLookingDetail()
+        }
+        lookingTimer = timer
+        RunLoop.main.add(timer, forMode: .common)
+    }
+
+    private func stopLookingTick() {
+        looking = false
+        lookingTimer?.invalidate()
+        lookingTimer = nil
+        scanRefreshWork?.cancel()
+        scanRefreshWork = nil
+    }
+
+    private func updateLookingDetail() {
+        guard looking, !softApMode, peripheral == nil, !finishedOk else { return }
+        let sec = max(0, Int(Date().timeIntervalSince(lookingSince)))
+        var text = "Searching… \(sec)s · Scan #\(max(scanPass, 1))"
+        if sec >= 90 {
+            text += " — If nothing: phone Wi-Fi → AuraHomeSystems_Setup → 192.168.4.1"
+        } else {
+            text += " — keep the sensor next to you"
+        }
+        detail.text = text
+    }
+
+    private func beginBleScanPass() {
+        guard looking, !softApMode, !finishedOk, peripheral == nil else { return }
+        guard central.state == .poweredOn else { return }
+        central.stopScan()
+        scanPass += 1
+        central.scanForPeripherals(withServices: [service], options: [
+            CBCentralManagerScanOptionAllowDuplicatesKey: true
+        ])
+        updateLookingDetail()
+        scanRefreshWork?.cancel()
+        let refresh = DispatchWorkItem { [weak self] in
+            self?.beginBleScanPass()
+        }
+        scanRefreshWork = refresh
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.5, execute: refresh)
     }
 
     @objc private func dismissKeyboard() {
@@ -298,6 +355,7 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
     private func startSoftApSetup() {
         if finishedOk || softApMode || peripheral != nil { return }
         softApMode = true
+        stopLookingTick()
         if central.state == .poweredOn { central.stopScan() }
         stopSearchSpinner(hideLogo: false)
         headline.text = "Sensor Wi-Fi"
@@ -609,8 +667,9 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
         if softApMode || finishedOk { return }
         if central.state == .poweredOn {
+            looking = true
             startSearchSpinner()
-            central.scanForPeripherals(withServices: [service], options: nil)
+            beginBleScanPass()
         } else if central.state == .poweredOff {
             // SoftAP path still works without Bluetooth.
             detail.text = "Bluetooth is off — joining sensor Wi-Fi shortly…"
@@ -624,6 +683,7 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
             return
         }
         softApFallbackWork?.cancel()
+        stopLookingTick()
         self.peripheral = peripheral
         peripheral.delegate = self
         central.stopScan()
@@ -644,8 +704,13 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
             credsSent = false
         }
         self.peripheral = nil
+        looking = true
+        lookingSince = Date()
+        startLookingTick()
+        startSearchSpinner()
+        headline.text = "Looking for the sensor"
         if central.state == .poweredOn {
-            central.scanForPeripherals(withServices: [service], options: nil)
+            beginBleScanPass()
         }
     }
 
@@ -811,6 +876,7 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
 
     @objc private func closeTapped() {
         softApFallbackWork?.cancel()
+        stopLookingTick()
         if central.state == .poweredOn { central.stopScan() }
         if let peripheral = peripheral { central.cancelPeripheralConnection(peripheral) }
         dismiss(animated: true)

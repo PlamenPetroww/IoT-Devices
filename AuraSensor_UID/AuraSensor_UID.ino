@@ -39,8 +39,8 @@
 // Tools → Partition Scheme → Minimal SPIFFS (1.9MB APP with OTA/190KB SPIFFS).
 #define FW_VERSION "1.1.35"
 #define SETUP_AP_SSID "AuraHomeSystems_Setup"
-// The app fills this in. WPA2 only — WPA3/PMF makes iPhone show "Unable to join".
-#define SETUP_AP_PASS "AuraSetup"
+// The setup network is open (no password). Android joins it from the app, iPhone users
+// tap it once in Settings → Wi-Fi.
 #define FW_CHANNEL_PATH "/firmware/aura-sensor"
 // 0 = disabled. If >0: only when powerSource is "battery" and % is below the threshold.
 #define LOW_BATT_SKIP_WIFI_PCT 0
@@ -1141,16 +1141,9 @@ static bool startSetupAp() {
     }
     WiFi.setSleep(false);
     WiFi.mode(WIFI_AP);
-    if (!WiFi.softAP(SETUP_AP_SSID, SETUP_AP_PASS, 1, 0, 4)) return false;
-    wifi_config_t conf;
-    if (esp_wifi_get_config(WIFI_IF_AP, &conf) == ESP_OK) {
-        conf.ap.authmode = WIFI_AUTH_WPA2_PSK;
-        // iOS 14+ can refuse a WPA2 AP that does not advertise PMF support.
-        // Capable (not required) works with every phone.
-        conf.ap.pmf_cfg.capable = true;
-        conf.ap.pmf_cfg.required = false;
-        esp_wifi_set_config(WIFI_IF_AP, &conf);
-    }
+    // Open network: Android joins it without a password (WifiNetworkSpecifier), and the iPhone
+    // customer only taps the name in Settings. Wi-Fi password of the home network is sent after.
+    if (!WiFi.softAP(SETUP_AP_SSID, NULL, 1, 0, 4)) return false;
     return true;
 }
 

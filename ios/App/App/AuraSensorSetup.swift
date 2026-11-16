@@ -58,6 +58,8 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
     private var softApReady = false
     private var softApFallbackWork: DispatchWorkItem?
     private var lastJoinErrorInfo = ""
+    private var softApPollTimer: Timer?
+    private var softApGuideNote = ""
     /// SoftAP has no internet — block cellular so requests hit 192.168.4.1 on Wi‑Fi.
     private lazy var softApSession: URLSession = {
         let config = URLSessionConfiguration.ephemeral
@@ -257,7 +259,7 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         // The sensor now opens its SoftAP right at boot (no Bluetooth wait).
         let work = DispatchWorkItem { [weak self] in self?.startSoftApSetup() }
         softApFallbackWork = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3, execute: work)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5, execute: work)
     }
 
     private func startLookingTick() {
@@ -386,15 +388,40 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         stopLookingTick()
         if central.state == .poweredOn { central.stopScan() }
         stopSearchSpinner(hideLogo: false)
-        headline.text = "Sensor Wi-Fi"
-        detail.text = "Confirm the Wi-Fi connection to the sensor (AuraHomeSystems_Setup)."
-        form.isHidden = false
-        connectButton.isHidden = false
-        connectButton.setTitle("Waiting…", for: .normal)
-        connectButton.removeTarget(nil, action: nil, for: .allEvents)
-        connectButton.addTarget(self, action: #selector(sendCredentials), for: .touchUpInside)
-        setSetupControlsEnabled(false)
+        // Drop any copy of the setup network this app saved in older builds.
+        clearStaleSetupConfigs {}
+        showSoftApGuide()
         requestSoftApNetwork(attempt: 1)
+    }
+
+    /// iOS refuses the automatic join on many iPhones ("Unable to join", error 11), so the
+    /// customer taps the sensor network once in Settings. The app continues by itself.
+    private func showSoftApGuide(note: String = "") {
+        headline.text = "Connect to the sensor"
+        detail.text = note + "1. Open Settings → Wi-Fi\n2. Tap AuraHomeSystems_Setup\n3. Come back to Aura. It continues by itself."
+        form.isHidden = true
+        connectButton.isHidden = false
+        setSetupControlsEnabled(true)
+        connectButton.setTitle("I'm connected", for: .normal)
+        connectButton.removeTarget(nil, action: nil, for: .allEvents)
+        connectButton.addTarget(self, action: #selector(retrySoftApSetup), for: .touchUpInside)
+        startSoftApPolling()
+    }
+
+    private func startSoftApPolling() {
+        softApPollTimer?.invalidate()
+        let timer = Timer(timeInterval: 2, repeats: true) { [weak self] _ in
+            guard let self = self, self.softApMode, !self.softApReady, !self.finishedOk else { return }
+            DispatchQueue.global(qos: .userInitiated).async {
+                if self.pingSoftAp(timeout: 1.5) {
+                    DispatchQueue.main.async {
+                        if !self.softApReady && !self.finishedOk { self.onSoftApNetworkAvailable() }
+                    }
+                }
+            }
+        }
+        softApPollTimer = timer
+        RunLoop.main.add(timer, forMode: .common)
     }
 
     /// While Waiting / linking — lock Close, fields, Refresh, Connect.
@@ -427,21 +454,24 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
     }
 
     @objc private func retrySoftApSetup() {
+        softApGuideNote = "Not connected to the sensor yet.\n\n"
         softApMode = false
         softApReady = false
         startSoftApSetup()
     }
 
     private func requestSoftApNetwork(attempt: Int) {
-        // Already on SoftAP? Skip the system dialog.
+        // Already on the sensor Wi-Fi? Go straight on, otherwise keep showing the guide.
+        let note = softApGuideNote
+        softApGuideNote = ""
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
             if self.pingSoftAp() {
                 DispatchQueue.main.async { self.onSoftApNetworkAvailable() }
                 return
             }
-            DispatchQueue.main.async {
-                self.applySoftApJoin(attempt: attempt)
+            if !note.isEmpty {
+                DispatchQueue.main.async { self.showSoftApGuide(note: note) }
             }
         }
     }
@@ -459,93 +489,9 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         }
     }
 
-    private func applySoftApJoin(attempt: Int) {
-        detail.text = "Connecting to the sensor…"
-        // Clean first, wait until the removal is done, then join once.
-        clearStaleSetupConfigs { [weak self] in
-            self?.applySoftApJoinNow(attempt: attempt)
-        }
-    }
-
-    private func applySoftApJoinNow(attempt: Int) {
-        let config = NEHotspotConfiguration(ssidPrefix: setupApSsid, passphrase: setupApPass, isWEP: false)
-        // joinOnce = true is a known cause of iOS "Unable to join" (error 11). The saved
-        // setup network is removed again as soon as pairing finishes or the screen closes.
-        config.joinOnce = false
-        detail.text = "Confirm the Wi-Fi connection to the sensor."
-        let watchdog = UUID()
-        softApJoinWatchdog = watchdog
-        NEHotspotConfigurationManager.shared.apply(config) { [weak self] error in
-            DispatchQueue.main.async {
-                guard let self = self, !self.finishedOk, self.softApJoinWatchdog == watchdog else { return }
-                self.softApJoinWatchdog = nil
-                if let error = error as NSError? {
-                    if error.domain == NEHotspotConfigurationErrorDomain,
-                       error.code == NEHotspotConfigurationError.alreadyAssociated.rawValue {
-                        self.waitForSoftApLink()
-                        return
-                    }
-                    if error.domain == NEHotspotConfigurationErrorDomain,
-                       error.code == NEHotspotConfigurationError.userDenied.rawValue {
-                        self.detail.text = "Tap Join to connect to the sensor."
-                        self.showSoftApTryAgain()
-                        return
-                    }
-                    // iOS already showed its own alert. Stay on the sensor Wi-Fi
-                    // if it finishes joining, and do not raise another error.
-                    self.lastJoinErrorInfo = "iOS \(error.code)"
-                    self.detail.text = "Connecting to the sensor…"
-                    self.waitForSoftApLink()
-                    return
-                }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
-                    self?.waitForSoftApLink()
-                }
-            }
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 25) { [weak self] in
-            guard let self = self, self.softApJoinWatchdog == watchdog, !self.finishedOk else { return }
-            self.softApJoinWatchdog = nil
-            self.detail.text = "Connecting to the sensor…"
-            self.waitForSoftApLink()
-        }
-    }
-
-    /// Poll the sensor. Do not call apply() again — a second join shows another iOS error.
-    private func waitForSoftApLink() {
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            guard let self = self else { return }
-            Thread.sleep(forTimeInterval: 2)
-            var ok = false
-            for _ in 1...12 {
-                if self.finishedOk { return }
-                DispatchQueue.main.async {
-                    self.detail.text = "Connecting to the sensor…"
-                }
-                if self.pingSoftAp(timeout: 1.5) { ok = true; break }
-            }
-            DispatchQueue.main.async {
-                if ok {
-                    self.onSoftApNetworkAvailable()
-                    return
-                }
-                self.headline.text = "Sensor Wi-Fi"
-                let code = self.lastJoinErrorInfo.isEmpty ? "" : " (\(self.lastJoinErrorInfo))"
-                self.detail.text = "Could not connect automatically\(code). Open Settings → Wi-Fi, join AuraHomeSystems_Setup (password AuraSetup), come back here and tap Try again."
-                self.showSoftApTryAgain()
-            }
-        }
-    }
-
-    private func showSoftApTryAgain() {
-        setSetupControlsEnabled(true)
-        connectButton.isEnabled = true
-        connectButton.setTitle("Try again", for: .normal)
-        connectButton.removeTarget(nil, action: nil, for: .allEvents)
-        connectButton.addTarget(self, action: #selector(retrySoftApSetup), for: .touchUpInside)
-    }
-
     private func onSoftApNetworkAvailable() {
+        softApPollTimer?.invalidate()
+        softApPollTimer = nil
         softApReady = true
         headline.text = "Home Wi-Fi"
         detail.text = "Linked to the sensor. Loading Wi-Fi list…"
@@ -1020,6 +966,8 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
 
     @objc private func closeTapped() {
         softApFallbackWork?.cancel()
+        softApPollTimer?.invalidate()
+        softApPollTimer = nil
         stopLookingTick()
         if central.state == .poweredOn { central.stopScan() }
         if let peripheral = peripheral { central.cancelPeripheralConnection(peripheral) }

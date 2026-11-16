@@ -310,8 +310,11 @@
                         });
                       });
                     }
+                    // Back on the dashboard: show "Loading… looking for your sensors".
+                    waitingAfterPairUntil = Date.now() + (paired ? 60000 : 4000);
+                    if (lastDevicesSnap) renderDevicesFromSnap(lastDevicesSnap);
                     refreshAfterSetup();
-                    [800, 2000, 4000, 8000, 12000].forEach(function (ms) {
+                    [800, 2000, 4000, 8000, 12000, 20000, 40000, 61000].forEach(function (ms) {
                       setTimeout(refreshAfterSetup, ms);
                     });
                   });
@@ -1357,7 +1360,12 @@
         let historyData = [];
         let recoveredDevicesFromHistory = false;
         var waitingAfterRestore = false;
+        var waitingAfterPairUntil = 0;
         function devicesEmptyMessage() {
+          // Just back from sensor setup: show a loading hint instead of an empty page.
+          if (Date.now() < waitingAfterPairUntil) {
+            return escapeHtml(authT("dashboard.searchingSensors"));
+          }
           if (getRemovedDeviceIds().size > 0) {
             return escapeHtml(authT("dashboard.noActiveSensors"));
           }

@@ -1432,7 +1432,12 @@ static bool runBleSetup() {
                 const char* cr = doc["clearRemoved"] | "";
                 portalClearRemoved = (cr[0] == '1' || cr[0] == 't' || cr[0] == 'T');
             }
+            Serial.print("BLE creds parsed: ssid_len=");
+            Serial.print(strlen(ssid));
+            Serial.print(" email_ok=");
+            Serial.println(emailLooksValid(email) ? 1 : 0);
             if (ssid[0] == '\0' || !emailLooksValid(email)) {
+                Serial.println("BLE creds rejected (empty ssid or bad email)");
                 provNotify("0 bademail");
                 BLEDevice::startAdvertising();
                 continue;
@@ -1449,7 +1454,9 @@ static bool runBleSetup() {
             emailCopy[sizeof(emailCopy) - 1] = '\0';
             strncpy(nameCopy, name, sizeof(nameCopy) - 1);
             nameCopy[sizeof(nameCopy) - 1] = '\0';
+            Serial.println("BLE notify 45 join");
             provNotify("45 join");
+            Serial.println("BLE joining home Wi-Fi");
             bool joined = provJoinWifi(ssidCopy, passCopy);
             if (!joined) {
                 Serial.println("BLE Wi-Fi rejected");

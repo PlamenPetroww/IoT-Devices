@@ -1109,7 +1109,35 @@ static void softApHandleNotFound() {
 }
 
 // iPhone rejects ESP SoftAP when the AP offers WPA3 or requires PMF.
+static void onSetupApEvent(arduino_event_id_t event, arduino_event_info_t info) {
+    switch (event) {
+        case ARDUINO_EVENT_WIFI_AP_START:
+            Serial.println("AP event: started");
+            break;
+        case ARDUINO_EVENT_WIFI_AP_STACONNECTED:
+            Serial.print("AP event: phone associated ");
+            Serial.printf("%02X:%02X:%02X:%02X:%02X:%02X\n",
+                          info.wifi_ap_staconnected.mac[0], info.wifi_ap_staconnected.mac[1],
+                          info.wifi_ap_staconnected.mac[2], info.wifi_ap_staconnected.mac[3],
+                          info.wifi_ap_staconnected.mac[4], info.wifi_ap_staconnected.mac[5]);
+            break;
+        case ARDUINO_EVENT_WIFI_AP_STADISCONNECTED:
+            Serial.println("AP event: phone disconnected");
+            break;
+        case ARDUINO_EVENT_WIFI_AP_STAIPASSIGNED:
+            Serial.println("AP event: phone got IP (join OK)");
+            break;
+        default:
+            break;
+    }
+}
+
 static bool startSetupAp() {
+    static bool apEventsRegistered = false;
+    if (!apEventsRegistered) {
+        WiFi.onEvent(onSetupApEvent);
+        apEventsRegistered = true;
+    }
     WiFi.setSleep(false);
     WiFi.mode(WIFI_AP);
     if (!WiFi.softAP(SETUP_AP_SSID, SETUP_AP_PASS, 1, 0, 4)) return false;

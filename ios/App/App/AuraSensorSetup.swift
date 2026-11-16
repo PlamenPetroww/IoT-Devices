@@ -485,7 +485,7 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
             guard let self = self else { return }
             Thread.sleep(forTimeInterval: 2)
             var ok = false
-            for _ in 1...40 {
+            for _ in 1...12 {
                 if self.finishedOk { return }
                 DispatchQueue.main.async {
                     self.detail.text = "Connecting to the sensor…"
@@ -497,7 +497,8 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
                     self.onSoftApNetworkAvailable()
                     return
                 }
-                self.detail.text = "Connecting to the sensor…"
+                self.headline.text = "Sensor Wi-Fi"
+                self.detail.text = "Could not connect to the sensor yet. Keep it next to the phone and tap Try again."
                 self.showSoftApTryAgain()
             }
         }
@@ -506,7 +507,7 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
     private func showSoftApTryAgain() {
         setSetupControlsEnabled(true)
         connectButton.isEnabled = true
-        connectButton.setTitle("Connect", for: .normal)
+        connectButton.setTitle("Try again", for: .normal)
         connectButton.removeTarget(nil, action: nil, for: .allEvents)
         connectButton.addTarget(self, action: #selector(retrySoftApSetup), for: .touchUpInside)
     }

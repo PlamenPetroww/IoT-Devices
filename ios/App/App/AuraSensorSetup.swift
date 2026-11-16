@@ -40,8 +40,6 @@ public class AuraSetupPlugin: CAPPlugin, CAPBridgedPlugin {
 
 final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBPeripheralDelegate, UITextFieldDelegate {
     private let setupApSsid = "AuraHomeSystems_Setup"
-    /// Same as SETUP_AP_PASS in the sensor sketch. The user never types it.
-    private let setupApPass = "AuraSetup"
     private let pingUrl = URL(string: "http://192.168.4.1/ping")!
     private let wifiUrl = URL(string: "http://192.168.4.1/wifi")!
     private let provUrl = URL(string: "http://192.168.4.1/prov")!
@@ -430,18 +428,16 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
     }
 
     private func applySoftApJoin(attempt: Int) {
-        // A saved failed network makes every later Join show "Unable to join".
-        NEHotspotConfigurationManager.shared.removeConfiguration(forSSID: setupApSsid)
-        // iOS shows "Unable to join" if apply() runs while the old network is still being removed.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
-            self?.applySoftApJoinNow(attempt: attempt)
-        }
+        // Never remove the network and apply() in the same moment.
+        // That race is what makes iOS show "Unable to join".
+        detail.text = "Connecting to the sensor…"
+        applySoftApJoinNow(attempt: attempt)
     }
 
     private func applySoftApJoinNow(attempt: Int) {
-        let config = NEHotspotConfiguration(ssid: setupApSsid, passphrase: setupApPass, isWEP: false)
+        let config = NEHotspotConfiguration(ssid: setupApSsid)
         config.joinOnce = true
-        detail.text = "Confirm the Wi-Fi connection to the sensor (AuraHomeSystems_Setup)."
+        detail.text = "Confirm the Wi-Fi connection to the sensor."
         let watchdog = UUID()
         softApJoinWatchdog = watchdog
         NEHotspotConfigurationManager.shared.apply(config) { [weak self] error in
@@ -456,13 +452,13 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
                     }
                     if error.domain == NEHotspotConfigurationErrorDomain,
                        error.code == NEHotspotConfigurationError.userDenied.rawValue {
-                        self.detail.text = "Tap Join on the Wi-Fi popup, then Try again. Sensor must be on."
+                        self.detail.text = "Tap Join to connect to the sensor."
                         self.showSoftApTryAgain()
                         return
                     }
-                    // Leave the configuration in place. iOS often finishes joining
-                    // after this alert. Calling apply() again hangs the phone.
-                    self.detail.text = "iPhone is still joining AuraHomeSystems_Setup…"
+                    // iOS already showed its own alert. Stay on the sensor Wi-Fi
+                    // if it finishes joining, and do not raise another error.
+                    self.detail.text = "Connecting to the sensor…"
                     self.waitForSoftApLink()
                     return
                 }
@@ -474,30 +470,30 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         DispatchQueue.main.asyncAfter(deadline: .now() + 25) { [weak self] in
             guard let self = self, self.softApJoinWatchdog == watchdog, !self.finishedOk else { return }
             self.softApJoinWatchdog = nil
-            self.detail.text = "No response from iPhone Wi-Fi. Tap Try again."
-            self.showSoftApTryAgain()
+            self.detail.text = "Connecting to the sensor…"
+            self.waitForSoftApLink()
         }
     }
 
-    /// Poll the sensor. Do not call apply() or removeConfiguration here.
+    /// Poll the sensor. Do not call apply() again — a second join shows another iOS error.
     private func waitForSoftApLink() {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
             Thread.sleep(forTimeInterval: 2)
             var ok = false
-            for i in 1...15 {
+            for _ in 1...40 {
                 if self.finishedOk { return }
                 DispatchQueue.main.async {
-                    self.detail.text = "Linking to the sensor… \(i)"
+                    self.detail.text = "Connecting to the sensor…"
                 }
-                if self.pingSoftAp(timeout: 1.2) { ok = true; break }
+                if self.pingSoftAp(timeout: 1.5) { ok = true; break }
             }
             DispatchQueue.main.async {
                 if ok {
                     self.onSoftApNetworkAvailable()
                     return
                 }
-                self.detail.text = "Could not reach the sensor Wi-Fi. Tap Try again. Keep the sensor close."
+                self.detail.text = "Connecting to the sensor…"
                 self.showSoftApTryAgain()
             }
         }
@@ -506,7 +502,7 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
     private func showSoftApTryAgain() {
         setSetupControlsEnabled(true)
         connectButton.isEnabled = true
-        connectButton.setTitle("Try again", for: .normal)
+        connectButton.setTitle("Connect", for: .normal)
         connectButton.removeTarget(nil, action: nil, for: .allEvents)
         connectButton.addTarget(self, action: #selector(retrySoftApSetup), for: .touchUpInside)
     }

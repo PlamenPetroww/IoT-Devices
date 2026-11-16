@@ -39,6 +39,10 @@
 // Tools → Partition Scheme → Minimal SPIFFS (1.9MB APP with OTA/190KB SPIFFS).
 #define FW_VERSION "1.1.35"
 #define SETUP_AP_SSID "AuraHomeSystems_Setup"
+// Setup alternates: Bluetooth window (iPhone, no Wi-Fi switching), then Wi-Fi window (Android).
+#define BLE_SETUP_WINDOW_MS 15000UL
+#define SOFTAP_SETUP_WINDOW_MS 30000UL
+#define SETUP_ROUNDS 12
 // The setup network is open (no password). Android joins it from the app, iPhone users
 // tap it once in Settings → Wi-Fi.
 #define FW_CHANNEL_PATH "/firmware/aura-sensor"
@@ -112,7 +116,7 @@ static void provNotify(const char* msg);
 static String provScanWifi();
 static void provSleepRetry();
 static bool runBleSetup();
-static bool runSoftApSetup();
+static bool runSoftApSetup(unsigned long windowMs = 600000UL);
 static bool isPowerOnReset();
 void setup();
 void loop();
@@ -1148,7 +1152,7 @@ static bool startSetupAp() {
 }
 
 // In-app setup: phone joins this SoftAP and POSTs JSON to /prov (no browser).
-static bool runSoftApSetup() {
+static bool runSoftApSetup(unsigned long windowMs) {
     Serial.println("SoftAP setup — ");
     Serial.println(SETUP_AP_SSID);
     if (!startSetupAp()) {
@@ -1177,7 +1181,11 @@ static bool runSoftApSetup() {
     Serial.println("SoftAP /ping /wifi /prov ready — waiting for app (no browser portal)");
 
     unsigned long started = millis();
-    while (millis() - started < 600000UL) {
+    unsigned long lastStation = started;
+    while (true) {
+        // Window over — but never cut off a phone that is still connected to the AP.
+        if (WiFi.softAPgetStationNum() > 0) lastStation = millis();
+        if (millis() - started >= windowMs && millis() - lastStation > 20000UL) break;
         server.handleClient();
         if (softApGotPost) {
             softApGotPost = false;
@@ -1357,9 +1365,9 @@ static bool runBleSetup() {
                 Serial.print("BLE still waiting for phone, uptime_s=");
                 Serial.println(millis() / 1000UL);
             }
-            // Short BLE window — app joins SoftAP in-app soon after.
-            if (millis() - idleSince > 8000UL) {
-                Serial.println("BLE no phone in 8s — SoftAP for in-app setup");
+            // BLE window (iPhone path). Then the Wi-Fi setup network opens for Android.
+            if (millis() - idleSince > BLE_SETUP_WINDOW_MS) {
+                Serial.println("BLE no phone in window — SoftAP for in-app setup");
                 Serial.flush();
                 BLEDevice::deinit(true);
                 WiFi.mode(WIFI_OFF);
@@ -1374,12 +1382,28 @@ static bool runBleSetup() {
                 provSleepRetry();
             }
             if (!announced) {
-                Serial.println("BLE notify 15 found + wifi list");
-                provNotify("15 found");
-                if (provListChar) {
-                    provListChar->notify();
-                }
                 announced = true;
+                // Scan only now, with the phone already connected. Scanning before advertising
+                // made the phone miss the sensor. The app reads the list again on "15 found".
+                String nets = "";
+                int found = 0;
+                WiFi.mode(WIFI_STA);
+                int n = WiFi.scanNetworks(/*async=*/false, /*show_hidden=*/false, /*passive=*/false, /*max_ms_per_chan=*/110);
+                for (int i = 0; i < n && found < 8; i++) {
+                    String s = WiFi.SSID(i);
+                    s.trim();
+                    if (s.length() == 0 || s.length() > 32 || s.equals(SETUP_AP_SSID)) continue;
+                    if (nets.indexOf(s + "\n") >= 0) continue;
+                    if (nets.length() + s.length() + 1 > 200) break;
+                    nets += s + "\n";
+                    found++;
+                }
+                WiFi.scanDelete();
+                if (nets.length() == 0) nets = "\n";
+                if (provListChar) provListChar->setValue(nets.c_str());
+                Serial.print("BLE wifi list networks=");
+                Serial.println(found);
+                provNotify("15 found");
             }
         }
         if (provCredLen > 0) {
@@ -1600,22 +1624,26 @@ void setup() {
 #endif
         bool bleReady = false;
         if (!emailLooksValid(user_email)) {
-            // SoftAP opens right away. The old 8 s Bluetooth window delayed the AP, so the
-            // phone's first join attempt hit an AP that was not up yet ("Unable to join").
-            Serial.println("No email — SoftAP setup (no Bluetooth wait)");
+            // Alternate Bluetooth (iPhone: no Wi-Fi switching) and the open setup Wi-Fi (Android).
+            // A phone that is already connected is never cut off by either window.
+            Serial.println("No email — setup: Bluetooth window, then Wi-Fi window, repeated");
+            for (int round = 0; round < SETUP_ROUNDS; round++) {
+                Serial.print("Setup round ");
+                Serial.println(round + 1);
+                if (runBleSetup() || emailLooksValid(user_email)) {
+                    bleReady = true;
+                    break;
+                }
+                if (runSoftApSetup(SOFTAP_SETUP_WINDOW_MS) || emailLooksValid(user_email)) {
+                    bleReady = true;
+                    break;
+                }
+            }
         }
         if (bleReady) {
             emailFromPortal = true;
-        } else if (!emailLooksValid(user_email) && runSoftApSetup()) {
-            emailFromPortal = true;
-            bleReady = true;
         } else if (!emailLooksValid(user_email)) {
-            // Never open WiFiManager browser portal — SoftAP + app only. Retry SoftAP once.
-            Serial.println("SoftAP not finished — retry SoftAP (no WiFiManager portal)");
-            if (runSoftApSetup()) {
-                emailFromPortal = true;
-                bleReady = true;
-            } else {
+            {
                 Serial.println("Setup still incomplete — deep sleep 2 min, then retry SoftAP");
                 Serial.flush();
 #if USE_DEEP_SLEEP

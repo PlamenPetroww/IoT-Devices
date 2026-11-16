@@ -256,10 +256,11 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         central = CBCentralManager(delegate: self, queue: nil)
         // Drop a broken saved network now, long before the join, so apply() is not racing it.
         clearStaleSetupConfigs {}
-        // The sensor now opens its SoftAP right at boot (no Bluetooth wait).
+        // The sensor offers Bluetooth for 15 s, then Wi-Fi for 30 s, in turns. Bluetooth is the
+        // normal way (no Wi-Fi switching). The manual Wi-Fi guide is only the last resort.
         let work = DispatchWorkItem { [weak self] in self?.startSoftApSetup() }
         softApFallbackWork = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5, execute: work)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 90, execute: work)
     }
 
     private func startLookingTick() {
@@ -729,7 +730,7 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
             beginBleScanPass()
         } else if central.state == .poweredOff {
             // SoftAP path still works without Bluetooth.
-            detail.text = "Bluetooth is off — joining sensor Wi-Fi shortly…"
+            detail.text = "Please turn Bluetooth on to find the sensor."
         }
     }
 
@@ -799,10 +800,13 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
     private func showNetworks(_ raw: String) {
         if credsSent { return }
         stopSearchSpinner(hideLogo: true)
+        percent.isHidden = true
+        magnets.isHidden = true
         form.isHidden = false
         connectButton.isHidden = false
+        setSetupControlsEnabled(true)
         headline.text = "Home Wi-Fi"
-        detail.text = "Enter the password and a name."
+        detail.text = "Choose your home Wi-Fi, enter the password and a name."
         networks.arrangedSubviews.forEach {
             networks.removeArrangedSubview($0)
             $0.removeFromSuperview()
@@ -865,6 +869,14 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         let parts = text.split(separator: " ", maxSplits: 1).map(String.init)
         let pct = Int(parts.first ?? "") ?? 0
         let stage = parts.count > 1 ? parts[1] : text
+        if stage == "found" {
+            // The sensor has scanned the home networks: read the list again.
+            if let service = peripheral?.services?.first(where: { $0.uuid == self.service }),
+               let list = service.characteristics?.first(where: { $0.uuid == listId }) {
+                peripheral?.readValue(for: list)
+            }
+            return
+        }
         if stage == "badwifi" {
             credsSent = false
             shownPct = 0

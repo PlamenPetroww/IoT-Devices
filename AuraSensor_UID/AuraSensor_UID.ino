@@ -1109,8 +1109,11 @@ static void softApHandleNotFound() {
 static bool runSoftApSetup() {
     Serial.println("SoftAP setup — ");
     Serial.println(SETUP_AP_SSID);
+    WiFi.persistent(false);
+    WiFi.setSleep(false);
     WiFi.mode(WIFI_AP);
-    if (!WiFi.softAP(SETUP_AP_SSID)) {
+    // Channel 6: iPhone often fails to join an ESP open AP on channel 1.
+    if (!WiFi.softAP(SETUP_AP_SSID, NULL, 6)) {
         Serial.println("SoftAP start failed");
         return false;
     }
@@ -1197,7 +1200,7 @@ static bool runSoftApSetup() {
                 WiFi.disconnect(true, true);
                 delay(200);
                 WiFi.mode(WIFI_AP);
-                WiFi.softAP(SETUP_AP_SSID);
+                WiFi.softAP(SETUP_AP_SSID, NULL, 6);
                 delay(200);
                 server.begin();
                 softApBody = "";
@@ -1222,7 +1225,7 @@ static bool runSoftApSetup() {
                 WiFi.disconnect(true, true);
                 delay(200);
                 WiFi.mode(WIFI_AP);
-                WiFi.softAP(SETUP_AP_SSID);
+                WiFi.softAP(SETUP_AP_SSID, NULL, 6);
                 delay(200);
                 server.begin();
                 softApBody = "";

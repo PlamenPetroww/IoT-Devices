@@ -427,8 +427,18 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
     }
 
     private func applySoftApJoin(attempt: Int) {
+        // A saved failed network makes every later Join show "Unable to join".
+        NEHotspotConfigurationManager.shared.removeConfiguration(forSSID: setupApSsid)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) { [weak self] in
+            self?.applySoftApJoinNow(attempt: attempt)
+        }
+    }
+
+    private func applySoftApJoinNow(attempt: Int) {
         let config = NEHotspotConfiguration(ssid: setupApSsid)
-        config.joinOnce = false
+        // Temporary join. Saving an open ESP network (joinOnce = false) is what
+        // makes iOS show "Unable to join" on the first tries.
+        config.joinOnce = true
         detail.text = "Confirm the Wi-Fi connection to the sensor (AuraHomeSystems_Setup)."
         NEHotspotConfigurationManager.shared.apply(config) { [weak self] error in
             DispatchQueue.main.async {

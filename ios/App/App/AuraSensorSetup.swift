@@ -252,10 +252,10 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         central = CBCentralManager(delegate: self, queue: nil)
         // Drop a broken saved network now, long before the join, so apply() is not racing it.
         NEHotspotConfigurationManager.shared.removeConfiguration(forSSID: setupApSsid)
-        // Board opens SoftAP after ~8s BLE; wait a bit longer so the AP is up.
+        // The sensor now opens its SoftAP right at boot (no Bluetooth wait).
         let work = DispatchWorkItem { [weak self] in self?.startSoftApSetup() }
         softApFallbackWork = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 12, execute: work)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3, execute: work)
     }
 
     private func startLookingTick() {

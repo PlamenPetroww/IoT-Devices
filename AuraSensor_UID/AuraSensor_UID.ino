@@ -1604,8 +1604,9 @@ void setup() {
 #endif
         bool bleReady = false;
         if (!emailLooksValid(user_email)) {
-            Serial.println("No email — BLE setup");
-            bleReady = runBleSetup();
+            // SoftAP opens right away. The old 8 s Bluetooth window delayed the AP, so the
+            // phone's first join attempt hit an AP that was not up yet ("Unable to join").
+            Serial.println("No email — SoftAP setup (no Bluetooth wait)");
         }
         if (bleReady) {
             emailFromPortal = true;

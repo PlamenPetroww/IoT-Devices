@@ -62,6 +62,7 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
     private var softApGuideNote = ""
     /// True once the sensor has finished scanning Wi-Fi (Connect stays disabled before).
     private var bleListReady = false
+    private var returnCountdown: Timer?
     /// SoftAP has no internet — block cellular so requests hit 192.168.4.1 on Wi‑Fi.
     private lazy var softApSession: URLSession = {
         let config = URLSessionConfiguration.ephemeral
@@ -679,7 +680,7 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
                     self.finishedOk = true
                     self.hideActionButton()
                     self.showProgress(100, title: "Connected")
-                    self.detail.text = "Sensor is connected. Tap below to return to the dashboard."
+                    self.detail.text = "Sensor is connected."
                     NEHotspotConfigurationManager.shared.removeConfiguration(forSSID: self.setupApSsid)
                 } else {
                     self.credsSent = false
@@ -726,10 +727,33 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         connectingProgress = false
         connectButton.isHidden = true
         connectButton.isEnabled = false
-        returnButton.isHidden = false
-        returnButton.isEnabled = true
+        // No button: count 3, 2, 1 and go back to the dashboard by itself.
+        hideReturnButton()
         closeButton.isEnabled = true
         closeButton.alpha = 1
+        startReturnCountdown()
+    }
+
+    private func startReturnCountdown() {
+        guard returnCountdown == nil else { return }
+        var left = 3
+        headline.text = "Connected"
+        percent.text = "\(left)"
+        detail.text = "Your sensor is ready. Taking you to the dashboard in \(left)…"
+        let timer = Timer(timeInterval: 1, repeats: true) { [weak self] timer in
+            guard let self = self else { timer.invalidate(); return }
+            left -= 1
+            if left <= 0 {
+                timer.invalidate()
+                self.returnCountdown = nil
+                self.closeTapped()
+                return
+            }
+            self.percent.text = "\(left)"
+            self.detail.text = "Your sensor is ready. Taking you to the dashboard in \(left)…"
+        }
+        returnCountdown = timer
+        RunLoop.main.add(timer, forMode: .common)
     }
 
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
@@ -888,6 +912,8 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
     }
 
     private func applyStatus(_ raw: String) {
+        // Already counting down to the dashboard: ignore late status messages.
+        if returnCountdown != nil { return }
         let text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         let parts = text.split(separator: " ", maxSplits: 1).map(String.init)
         let pct = Int(parts.first ?? "") ?? 0
@@ -931,7 +957,7 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
             finishedOk = true
             hideActionButton()
             showProgress(100, title: "Connected")
-            detail.text = "Sensor is connected. Tap below to return to the dashboard."
+            detail.text = "Sensor is connected."
             return
         }
         if pct > 0 {
@@ -1004,6 +1030,8 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         softApFallbackWork?.cancel()
         softApPollTimer?.invalidate()
         softApPollTimer = nil
+        returnCountdown?.invalidate()
+        returnCountdown = nil
         stopLookingTick()
         if central.state == .poweredOn { central.stopScan() }
         if let peripheral = peripheral { central.cancelPeripheralConnection(peripheral) }

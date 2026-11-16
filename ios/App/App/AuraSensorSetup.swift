@@ -60,6 +60,8 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
     private var lastJoinErrorInfo = ""
     private var softApPollTimer: Timer?
     private var softApGuideNote = ""
+    /// True once the sensor has finished scanning Wi-Fi (Connect stays disabled before).
+    private var bleListReady = false
     /// SoftAP has no internet — block cellular so requests hit 192.168.4.1 on Wi‑Fi.
     private lazy var softApSession: URLSession = {
         let config = URLSessionConfiguration.ephemeral
@@ -358,6 +360,8 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
     @objc private func refreshNetworksTapped() {
         dismissKeyboard()
         detail.text = "Loading Wi-Fi list…"
+        connectButton.setTitle("Searching…", for: .normal)
+        connectButton.isEnabled = false
         refreshNetworksButton.isEnabled = false
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             self?.fetchWifiList(retries: 4)
@@ -499,9 +503,12 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         form.isHidden = false
         connectButton.isHidden = false
         setSetupControlsEnabled(true)
-        connectButton.setTitle("Connect", for: .normal)
+        refreshNetworksButton.isHidden = false
+        // Connect stays off while the sensor's Wi-Fi networks are being loaded.
+        connectButton.setTitle("Searching…", for: .normal)
         connectButton.removeTarget(nil, action: nil, for: .allEvents)
         connectButton.addTarget(self, action: #selector(sendCredentials), for: .touchUpInside)
+        connectButton.isEnabled = false
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             self?.waitForPingThenFetchWifi()
         }
@@ -548,6 +555,9 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         }
         DispatchQueue.main.async { [weak self] in
             guard let self = self, !self.finishedOk else { return }
+            self.refreshNetworksButton.isEnabled = true
+            self.connectButton.setTitle("Connect", for: .normal)
+            self.connectButton.isEnabled = true
             if lastFailed {
                 self.detail.text = "Wi-Fi list unavailable — type the name, then Connect. Or tap Refresh networks."
             } else {
@@ -762,6 +772,7 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
             credsSent = false
         }
         self.peripheral = nil
+        bleListReady = false
         looking = true
         lookingSince = Date()
         startLookingTick()
@@ -805,7 +816,19 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         form.isHidden = false
         connectButton.isHidden = false
         setSetupControlsEnabled(true)
+        // Over Bluetooth the sensor scans once, so there is nothing to refresh.
+        refreshNetworksButton.isHidden = true
         headline.text = "Home Wi-Fi"
+        let hasNetworks = !raw.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        if !bleListReady && !hasNetworks {
+            // The sensor is still scanning for Wi-Fi networks: Connect stays off until it is done.
+            detail.text = "Searching for Wi-Fi networks…"
+            connectButton.setTitle("Searching…", for: .normal)
+            connectButton.isEnabled = false
+            return
+        }
+        connectButton.setTitle("Connect", for: .normal)
+        connectButton.isEnabled = true
         detail.text = "Choose your home Wi-Fi, enter the password and a name."
         networks.arrangedSubviews.forEach {
             networks.removeArrangedSubview($0)
@@ -871,6 +894,7 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         let stage = parts.count > 1 ? parts[1] : text
         if stage == "found" {
             // The sensor has scanned the home networks: read the list again.
+            bleListReady = true
             if let service = peripheral?.services?.first(where: { $0.uuid == self.service }),
                let list = service.characteristics?.first(where: { $0.uuid == listId }) {
                 peripheral?.readValue(for: list)
@@ -883,7 +907,7 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
             targetPct = 0
             magnetTimer?.invalidate()
             form.isHidden = false
-            connectButton.isHidden = false
+            showConnectButton()
             percent.isHidden = true
             magnets.isHidden = true
             headline.text = "Home Wi-Fi"
@@ -896,7 +920,7 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
             targetPct = 0
             magnetTimer?.invalidate()
             form.isHidden = false
-            connectButton.isHidden = false
+            showConnectButton()
             percent.isHidden = true
             magnets.isHidden = true
             headline.text = "Home Wi-Fi"

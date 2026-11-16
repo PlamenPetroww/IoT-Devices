@@ -469,7 +469,9 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
 
     private func applySoftApJoinNow(attempt: Int) {
         let config = NEHotspotConfiguration(ssidPrefix: setupApSsid, passphrase: setupApPass, isWEP: false)
-        config.joinOnce = true
+        // joinOnce = true is a known cause of iOS "Unable to join" (error 11). The saved
+        // setup network is removed again as soon as pairing finishes or the screen closes.
+        config.joinOnce = false
         detail.text = "Confirm the Wi-Fi connection to the sensor."
         let watchdog = UUID()
         softApJoinWatchdog = watchdog
@@ -1025,6 +1027,10 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         onClose = nil
         let paired = finishedOk
         let name = lastProvisionedName
+        // Do not leave the setup network saved on the phone.
+        for saved in [setupApSsid] {
+            NEHotspotConfigurationManager.shared.removeConfiguration(forSSID: saved)
+        }
         dismiss(animated: true) {
             done?(paired, name)
         }

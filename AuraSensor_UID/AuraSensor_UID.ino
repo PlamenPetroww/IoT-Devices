@@ -1145,7 +1145,9 @@ static bool startSetupAp() {
     wifi_config_t conf;
     if (esp_wifi_get_config(WIFI_IF_AP, &conf) == ESP_OK) {
         conf.ap.authmode = WIFI_AUTH_WPA2_PSK;
-        conf.ap.pmf_cfg.capable = false;
+        // iOS 14+ can refuse a WPA2 AP that does not advertise PMF support.
+        // Capable (not required) works with every phone.
+        conf.ap.pmf_cfg.capable = true;
         conf.ap.pmf_cfg.required = false;
         esp_wifi_set_config(WIFI_IF_AP, &conf);
     }

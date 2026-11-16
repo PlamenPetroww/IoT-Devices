@@ -1020,6 +1020,7 @@ static WebServer* softApHttp = nullptr;
 
 static void softApHandlePing() {
     if (!softApHttp) return;
+    Serial.println("SoftAP /ping from phone");
     softApHttp->sendHeader("Access-Control-Allow-Origin", "*");
     softApHttp->send(200, "text/plain", "aura");
 }

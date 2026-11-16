@@ -40,6 +40,8 @@ public class AuraSetupPlugin: CAPPlugin, CAPBridgedPlugin {
 
 final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBPeripheralDelegate, UITextFieldDelegate {
     private let setupApSsid = "AuraHomeSystems_Setup"
+    /// Same as SETUP_AP_PASS in the sensor sketch. The user never types it.
+    private let setupApPass = "AuraSetup"
     private let pingUrl = URL(string: "http://192.168.4.1/ping")!
     private let wifiUrl = URL(string: "http://192.168.4.1/wifi")!
     private let provUrl = URL(string: "http://192.168.4.1/prov")!
@@ -430,16 +432,15 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
     private func applySoftApJoin(attempt: Int) {
         // A saved failed network makes every later Join show "Unable to join".
         NEHotspotConfigurationManager.shared.removeConfiguration(forSSID: setupApSsid)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) { [weak self] in
+        // iOS shows "Unable to join" if apply() runs while the old network is still being removed.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
             self?.applySoftApJoinNow(attempt: attempt)
         }
     }
 
     private func applySoftApJoinNow(attempt: Int) {
-        let config = NEHotspotConfiguration(ssid: setupApSsid)
-        // Keep the network after the dialog. A second apply() is what freezes
-        // iOS for minutes after "Unable to join".
-        config.joinOnce = false
+        let config = NEHotspotConfiguration(ssid: setupApSsid, passphrase: setupApPass, isWEP: false)
+        config.joinOnce = true
         detail.text = "Confirm the Wi-Fi connection to the sensor (AuraHomeSystems_Setup)."
         let watchdog = UUID()
         softApJoinWatchdog = watchdog

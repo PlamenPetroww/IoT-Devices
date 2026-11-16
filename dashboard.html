@@ -279,7 +279,18 @@
                       ? cap.Plugins.AuraSetup
                       : null;
                 if (plugin && typeof plugin.open === "function") {
-                  plugin.open({ email: accountEmail }).then(function (result) {
+                  // Names in use: a second sensor with the same name would replace the first.
+                  var existingIds = [];
+                  try {
+                    var currentDevices = (lastDevicesSnap && lastDevicesSnap.val()) || {};
+                    Object.keys(currentDevices).forEach(function (id) {
+                      var d = currentDevices[id] || {};
+                      var label = d.deviceName || d.displayName || id;
+                      if (isDeviceRemoved(id, { deviceName: label, displayName: label })) return;
+                      existingIds.push(id);
+                    });
+                  } catch (e) {}
+                  plugin.open({ email: accountEmail, existingIds: existingIds }).then(function (result) {
                     // Intentional SoftAP re-add — clear Remove tombstones for that name.
                     var paired = result && result.paired;
                     var pairedName = result && result.name ? String(result.name).trim() : "";

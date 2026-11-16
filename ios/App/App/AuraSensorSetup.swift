@@ -26,6 +26,10 @@ public class AuraSetupPlugin: CAPPlugin, CAPBridgedPlugin {
                 return
             }
             let setup = AuraSetupController(email: email)
+            // Sensors already on the account. The sensor id comes from its name, so a second
+            // sensor with the same name would replace the first one.
+            let existing = (call.getArray("existingIds") as? [String]) ?? []
+            setup.setExistingSensorIds(existing)
             setup.modalPresentationStyle = .fullScreen
             setup.onClose = { paired, name in
                 call.resolve([
@@ -77,7 +81,16 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         let hasNetwork = !(ssidField.text ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         let hasPass = !(passField.text ?? "").isEmpty
         let nameOpen = networksReady && hasNetwork && hasPass
-        let canConnect = nameOpen
+        // A name that is already used would replace that sensor: do not allow it.
+        let taken = nameOpen && sensorNameTaken()
+        let canConnect = nameOpen && !taken
+        if taken {
+            detail.text = "You already have a sensor named “\(effectiveSensorName())”. Please choose a different name."
+            nameWarningShown = true
+        } else if nameWarningShown {
+            nameWarningShown = false
+            detail.text = "1. Choose your home Wi-Fi  2. Enter its password  3. Name the sensor"
+        }
         passField.isEnabled = networksReady && hasNetwork
         passField.alpha = passField.isEnabled ? 1 : 0.45
         nameField.isEnabled = nameOpen
@@ -136,6 +149,42 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
 
     required init?(coder: NSCoder) {
         return nil
+    }
+
+    private var existingSensorKeys = Set<String>()
+    private var nameWarningShown = false
+
+    /// Same rule as the sensor and dashboard: the id is the name with a few characters replaced.
+    private static func sensorKey(_ name: String) -> String {
+        var s = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        for ch in [".", "$", "#", "[", "]", "/", "@"] {
+            s = s.replacingOccurrences(of: ch, with: "_")
+        }
+        s = s.replacingOccurrences(of: "\\s+", with: "_", options: .regularExpression)
+        s = s.replacingOccurrences(of: "-+", with: "_", options: .regularExpression)
+        return s.lowercased()
+    }
+
+    func setExistingSensorIds(_ ids: [String]) {
+        existingSensorKeys = Set(ids.map { Self.sensorKey($0) })
+    }
+
+    private func effectiveSensorName() -> String {
+        let name = (nameField.text ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        return name.isEmpty ? "Front Door" : name
+    }
+
+    private func sensorNameTaken() -> Bool {
+        existingSensorKeys.contains(Self.sensorKey(effectiveSensorName()))
+    }
+
+    /// Suggest a free name ("Front Door 2") when the default name is already used.
+    private func suggestFreeSensorName() {
+        guard sensorNameTaken() else { return }
+        let base = effectiveSensorName()
+        var n = 2
+        while existingSensorKeys.contains(Self.sensorKey("\(base) \(n)")) { n += 1 }
+        nameField.text = "\(base) \(n)"
     }
 
     deinit {
@@ -273,6 +322,7 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         NotificationCenter.default.addObserver(self, selector: #selector(appBecameActive), name: UIApplication.didBecomeActiveNotification, object: nil)
         ssidField.addTarget(self, action: #selector(formFieldChanged), for: .editingChanged)
         passField.addTarget(self, action: #selector(formFieldChanged), for: .editingChanged)
+        nameField.addTarget(self, action: #selector(formFieldChanged), for: .editingChanged)
 
         headline.text = "Looking for the sensor"
         looking = true
@@ -589,6 +639,7 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
             guard let self = self, !self.finishedOk else { return }
             self.refreshNetworksButton.isEnabled = true
             self.networksReady = true
+            self.suggestFreeSensorName()
             self.updateFormState()
             if lastFailed {
                 self.detail.text = "Wi-Fi list unavailable — type the name, then Connect. Or tap Refresh networks."
@@ -882,6 +933,7 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
             return
         }
         networksReady = true
+        suggestFreeSensorName()
         detail.text = "1. Choose your home Wi-Fi  2. Enter its password  3. Name the sensor"
         networks.arrangedSubviews.forEach {
             networks.removeArrangedSubview($0)
@@ -913,6 +965,10 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
             return
         }
         if name.isEmpty { name = "Front Door" }
+        if existingSensorKeys.contains(Self.sensorKey(name)) {
+            detail.text = "You already have a sensor named “\(name)”. Please choose a different name."
+            return
+        }
         if softApMode {
             postSoftApCredentials(ssid: ssid, pass: pass, name: name)
             return

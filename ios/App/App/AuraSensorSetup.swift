@@ -57,6 +57,7 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
     private var softApMode = false
     private var softApReady = false
     private var softApFallbackWork: DispatchWorkItem?
+    private var lastJoinErrorInfo = ""
     /// SoftAP has no internet — block cellular so requests hit 192.168.4.1 on Wi‑Fi.
     private lazy var softApSession: URLSession = {
         let config = URLSessionConfiguration.ephemeral
@@ -241,6 +242,7 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         view.addGestureRecognizer(tap)
         NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillChange(_:)), name: UIResponder.keyboardWillChangeFrameNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillHide(_:)), name: UIResponder.keyboardWillHideNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(appBecameActive), name: UIApplication.didBecomeActiveNotification, object: nil)
 
         headline.text = "Looking for the sensor"
         looking = true
@@ -411,6 +413,19 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         }
     }
 
+    /// Back from Settings after joining the sensor Wi-Fi by hand: continue automatically.
+    @objc private func appBecameActive() {
+        guard softApMode, !softApReady, !finishedOk else { return }
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
+            if self.pingSoftAp(timeout: 2) {
+                DispatchQueue.main.async {
+                    if !self.softApReady && !self.finishedOk { self.onSoftApNetworkAvailable() }
+                }
+            }
+        }
+    }
+
     @objc private func retrySoftApSetup() {
         softApMode = false
         softApReady = false
@@ -476,6 +491,7 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
                     }
                     // iOS already showed its own alert. Stay on the sensor Wi-Fi
                     // if it finishes joining, and do not raise another error.
+                    self.lastJoinErrorInfo = "iOS \(error.code)"
                     self.detail.text = "Connecting to the sensor…"
                     self.waitForSoftApLink()
                     return
@@ -512,7 +528,8 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
                     return
                 }
                 self.headline.text = "Sensor Wi-Fi"
-                self.detail.text = "Could not connect to the sensor yet. Keep it next to the phone and tap Try again."
+                let code = self.lastJoinErrorInfo.isEmpty ? "" : " (\(self.lastJoinErrorInfo))"
+                self.detail.text = "Could not connect automatically\(code). Open Settings → Wi-Fi, join AuraHomeSystems_Setup (password AuraSetup), come back here and tap Try again."
                 self.showSoftApTryAgain()
             }
         }

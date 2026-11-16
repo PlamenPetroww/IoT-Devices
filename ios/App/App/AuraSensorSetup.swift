@@ -87,6 +87,7 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
     private let returnButton = UIButton(type: .system)
     private let closeButton = UIButton(type: .system)
     private var connectingProgress = false
+    private var softApJoinWatchdog: UUID?
     private var lastProvisionedName = ""
     private var scrollBottomConstraint: NSLayoutConstraint?
     private var looking = true
@@ -436,63 +437,66 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
 
     private func applySoftApJoinNow(attempt: Int) {
         let config = NEHotspotConfiguration(ssid: setupApSsid)
-        // Temporary join. Saving an open ESP network (joinOnce = false) is what
-        // makes iOS show "Unable to join" on the first tries.
-        config.joinOnce = true
+        // Keep the network after the dialog. A second apply() is what freezes
+        // iOS for minutes after "Unable to join".
+        config.joinOnce = false
         detail.text = "Confirm the Wi-Fi connection to the sensor (AuraHomeSystems_Setup)."
+        let watchdog = UUID()
+        softApJoinWatchdog = watchdog
         NEHotspotConfigurationManager.shared.apply(config) { [weak self] error in
             DispatchQueue.main.async {
-                guard let self = self, !self.finishedOk else { return }
+                guard let self = self, !self.finishedOk, self.softApJoinWatchdog == watchdog else { return }
+                self.softApJoinWatchdog = nil
                 if let error = error as NSError? {
                     if error.domain == NEHotspotConfigurationErrorDomain,
                        error.code == NEHotspotConfigurationError.alreadyAssociated.rawValue {
-                        self.verifySoftApOrRetry(attempt: attempt)
+                        self.waitForSoftApLink()
                         return
                     }
-                    // User cancelled the system Join dialog.
                     if error.domain == NEHotspotConfigurationErrorDomain,
                        error.code == NEHotspotConfigurationError.userDenied.rawValue {
                         self.detail.text = "Tap Join on the Wi-Fi popup, then Try again. Sensor must be on."
                         self.showSoftApTryAgain()
                         return
                     }
-                    // iOS often shows "Unable to join" and then associates a moment later.
-                    // Ping before applying again — a second apply in the same moment fails.
-                    self.detail.text = "Linking to AuraHomeSystems_Setup…"
-                    self.verifySoftApOrRetry(attempt: attempt)
+                    // Leave the configuration in place. iOS often finishes joining
+                    // after this alert. Calling apply() again hangs the phone.
+                    self.detail.text = "iPhone is still joining AuraHomeSystems_Setup…"
+                    self.waitForSoftApLink()
                     return
                 }
-                // Give iOS a moment to finish associating, then ping.
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
-                    self?.verifySoftApOrRetry(attempt: attempt)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+                    self?.waitForSoftApLink()
                 }
             }
         }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 25) { [weak self] in
+            guard let self = self, self.softApJoinWatchdog == watchdog, !self.finishedOk else { return }
+            self.softApJoinWatchdog = nil
+            self.detail.text = "No response from iPhone Wi-Fi. Tap Try again."
+            self.showSoftApTryAgain()
+        }
     }
 
-    private func verifySoftApOrRetry(attempt: Int) {
+    /// Poll the sensor. Do not call apply() or removeConfiguration here.
+    private func waitForSoftApLink() {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
+            Thread.sleep(forTimeInterval: 2)
             var ok = false
-            for _ in 0..<24 {
+            for i in 1...15 {
                 if self.finishedOk { return }
-                if self.pingSoftAp() { ok = true; break }
-                Thread.sleep(forTimeInterval: 0.5)
+                DispatchQueue.main.async {
+                    self.detail.text = "Linking to the sensor… \(i)"
+                }
+                if self.pingSoftAp(timeout: 1.2) { ok = true; break }
             }
             DispatchQueue.main.async {
                 if ok {
                     self.onSoftApNetworkAvailable()
                     return
                 }
-                if attempt < 3 {
-                    self.detail.text = "Still linking to AuraHomeSystems_Setup…"
-                    NEHotspotConfigurationManager.shared.removeConfiguration(forSSID: self.setupApSsid)
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in
-                        self?.applySoftApJoin(attempt: attempt + 1)
-                    }
-                    return
-                }
-                self.detail.text = "Sensor Wi-Fi not confirmed. Restart the sensor and try again."
+                self.detail.text = "Could not reach the sensor Wi-Fi. Tap Try again. Keep the sensor close."
                 self.showSoftApTryAgain()
             }
         }
@@ -530,10 +534,10 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         fetchWifiList(retries: 5)
     }
 
-    private func pingSoftAp() -> Bool {
+    private func pingSoftAp(timeout: TimeInterval = 3) -> Bool {
         var request = URLRequest(url: pingUrl)
         request.httpMethod = "GET"
-        request.timeoutInterval = 3
+        request.timeoutInterval = timeout
         let sem = DispatchSemaphore(value: 0)
         var ok = false
         softApSession.dataTask(with: request) { data, response, _ in
@@ -542,7 +546,7 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
             let body = String(data: data ?? Data(), encoding: .utf8) ?? ""
             ok = code == 200 && body.contains("aura")
         }.resume()
-        _ = sem.wait(timeout: .now() + 4)
+        _ = sem.wait(timeout: .now() + timeout + 0.4)
         return ok
     }
 

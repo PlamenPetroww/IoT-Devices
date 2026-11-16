@@ -13,6 +13,7 @@
 #include <time.h>
 #include "esp_sleep.h"
 #include "esp_system.h"
+#include "esp_wifi.h"
 #if CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32S3
 #include "driver/rtc_io.h"
 #endif
@@ -38,6 +39,8 @@
 // Tools → Partition Scheme → Minimal SPIFFS (1.9MB APP with OTA/190KB SPIFFS).
 #define FW_VERSION "1.1.35"
 #define SETUP_AP_SSID "AuraHomeSystems_Setup"
+// The app fills this in. WPA2 only — WPA3/PMF makes iPhone show "Unable to join".
+#define SETUP_AP_PASS "AuraSetup"
 #define FW_CHANNEL_PATH "/firmware/aura-sensor"
 // 0 = disabled. If >0: only when powerSource is "battery" and % is below the threshold.
 #define LOW_BATT_SKIP_WIFI_PCT 0
@@ -1105,14 +1108,26 @@ static void softApHandleNotFound() {
     softApHttp->send(200, "text/plain", "aura");
 }
 
+// iPhone rejects ESP SoftAP when the AP offers WPA3 or requires PMF.
+static bool startSetupAp() {
+    WiFi.setSleep(false);
+    WiFi.mode(WIFI_AP);
+    if (!WiFi.softAP(SETUP_AP_SSID, SETUP_AP_PASS, 1, 0, 4)) return false;
+    wifi_config_t conf;
+    if (esp_wifi_get_config(WIFI_IF_AP, &conf) == ESP_OK) {
+        conf.ap.authmode = WIFI_AUTH_WPA2_PSK;
+        conf.ap.pmf_cfg.capable = false;
+        conf.ap.pmf_cfg.required = false;
+        esp_wifi_set_config(WIFI_IF_AP, &conf);
+    }
+    return true;
+}
+
 // In-app setup: phone joins this SoftAP and POSTs JSON to /prov (no browser).
 static bool runSoftApSetup() {
     Serial.println("SoftAP setup — ");
     Serial.println(SETUP_AP_SSID);
-    WiFi.setSleep(false);
-    WiFi.mode(WIFI_AP);
-    // Open AP on channel 1. A password or channel 6 makes iPhone show "Unable to join".
-    if (!WiFi.softAP(SETUP_AP_SSID)) {
+    if (!startSetupAp()) {
         Serial.println("SoftAP start failed");
         return false;
     }
@@ -1199,7 +1214,7 @@ static bool runSoftApSetup() {
                 WiFi.disconnect(true, true);
                 delay(200);
                 WiFi.mode(WIFI_AP);
-                WiFi.softAP(SETUP_AP_SSID);
+                startSetupAp();
                 delay(200);
                 server.begin();
                 softApBody = "";
@@ -1224,7 +1239,7 @@ static bool runSoftApSetup() {
                 WiFi.disconnect(true, true);
                 delay(200);
                 WiFi.mode(WIFI_AP);
-                WiFi.softAP(SETUP_AP_SSID);
+                startSetupAp();
                 delay(200);
                 server.begin();
                 softApBody = "";

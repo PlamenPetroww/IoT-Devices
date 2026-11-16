@@ -40,6 +40,8 @@ public class AuraSetupPlugin: CAPPlugin, CAPBridgedPlugin {
 
 final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBPeripheralDelegate, UITextFieldDelegate {
     private let setupApSsid = "AuraHomeSystems_Setup"
+    /// Same as SETUP_AP_PASS on the sensor. The customer never types it.
+    private let setupApPass = "AuraSetup"
     private let pingUrl = URL(string: "http://192.168.4.1/ping")!
     private let wifiUrl = URL(string: "http://192.168.4.1/wifi")!
     private let provUrl = URL(string: "http://192.168.4.1/prov")!
@@ -248,6 +250,8 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         startSearchSpinner()
         startLookingTick()
         central = CBCentralManager(delegate: self, queue: nil)
+        // Drop a broken saved network now, long before the join, so apply() is not racing it.
+        NEHotspotConfigurationManager.shared.removeConfiguration(forSSID: setupApSsid)
         // Board opens SoftAP after ~8s BLE; wait a bit longer so the AP is up.
         let work = DispatchWorkItem { [weak self] in self?.startSoftApSetup() }
         softApFallbackWork = work
@@ -435,7 +439,7 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
     }
 
     private func applySoftApJoinNow(attempt: Int) {
-        let config = NEHotspotConfiguration(ssid: setupApSsid)
+        let config = NEHotspotConfiguration(ssid: setupApSsid, passphrase: setupApPass, isWEP: false)
         config.joinOnce = true
         detail.text = "Confirm the Wi-Fi connection to the sensor."
         let watchdog = UUID()

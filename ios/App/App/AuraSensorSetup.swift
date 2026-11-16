@@ -251,7 +251,7 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         startLookingTick()
         central = CBCentralManager(delegate: self, queue: nil)
         // Drop a broken saved network now, long before the join, so apply() is not racing it.
-        NEHotspotConfigurationManager.shared.removeConfiguration(forSSID: setupApSsid)
+        clearStaleSetupConfigs {}
         // The sensor now opens its SoftAP right at boot (no Bluetooth wait).
         let work = DispatchWorkItem { [weak self] in self?.startSoftApSetup() }
         softApFallbackWork = work
@@ -431,15 +431,29 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         }
     }
 
+    /// Remove every Aura setup network this app saved earlier (old builds left saved
+    /// copies with other settings; iOS then fails the join with "Unable to join").
+    private func clearStaleSetupConfigs(_ done: @escaping () -> Void) {
+        NEHotspotConfigurationManager.shared.getConfiguredSSIDs { ssids in
+            var names = Set(ssids.filter { $0.hasPrefix("AuraHomeSystems") })
+            names.insert(self.setupApSsid)
+            for name in names {
+                NEHotspotConfigurationManager.shared.removeConfiguration(forSSID: name)
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { done() }
+        }
+    }
+
     private func applySoftApJoin(attempt: Int) {
-        // Never remove the network and apply() in the same moment.
-        // That race is what makes iOS show "Unable to join".
         detail.text = "Connecting to the sensor…"
-        applySoftApJoinNow(attempt: attempt)
+        // Clean first, wait until the removal is done, then join once.
+        clearStaleSetupConfigs { [weak self] in
+            self?.applySoftApJoinNow(attempt: attempt)
+        }
     }
 
     private func applySoftApJoinNow(attempt: Int) {
-        let config = NEHotspotConfiguration(ssid: setupApSsid, passphrase: setupApPass, isWEP: false)
+        let config = NEHotspotConfiguration(ssidPrefix: setupApSsid, passphrase: setupApPass, isWEP: false)
         config.joinOnce = true
         detail.text = "Confirm the Wi-Fi connection to the sensor."
         let watchdog = UUID()

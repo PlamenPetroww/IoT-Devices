@@ -446,14 +446,10 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
                         self.showSoftApTryAgain()
                         return
                     }
-                    if attempt < 6 {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in
-                            self?.requestSoftApNetwork(attempt: attempt + 1)
-                        }
-                        return
-                    }
-                    self.detail.text = "Sensor Wi-Fi not confirmed. Restart the sensor and try again."
-                    self.showSoftApTryAgain()
+                    // iOS often shows "Unable to join" and then associates a moment later.
+                    // Ping before applying again — a second apply in the same moment fails.
+                    self.detail.text = "Linking to AuraHomeSystems_Setup…"
+                    self.verifySoftApOrRetry(attempt: attempt)
                     return
                 }
                 // Give iOS a moment to finish associating, then ping.
@@ -468,20 +464,21 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
             var ok = false
-            for _ in 0..<16 {
+            for _ in 0..<24 {
                 if self.finishedOk { return }
                 if self.pingSoftAp() { ok = true; break }
-                Thread.sleep(forTimeInterval: 0.4)
+                Thread.sleep(forTimeInterval: 0.5)
             }
             DispatchQueue.main.async {
                 if ok {
                     self.onSoftApNetworkAvailable()
                     return
                 }
-                if attempt < 6 {
+                if attempt < 3 {
                     self.detail.text = "Still linking to AuraHomeSystems_Setup…"
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
-                        self?.requestSoftApNetwork(attempt: attempt + 1)
+                    NEHotspotConfigurationManager.shared.removeConfiguration(forSSID: self.setupApSsid)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in
+                        self?.applySoftApJoin(attempt: attempt + 1)
                     }
                     return
                 }

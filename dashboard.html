@@ -1232,19 +1232,16 @@
                 {};
               // Firebase rejects undefined — that made Remove look OK locally then
               // vanish on the next login when RTDB never got the tombstone.
-              function scrub(v) {
-                return v === undefined ? null : v;
+              // Nested nulls make RTDB reject the whole update, so Remove never sticks.
+              var removedPayload = { deviceName: deviceName || safeId, removedAt: Date.now() };
+              if (typeof live.status === "boolean") removedPayload.lastStatus = live.status;
+              if (typeof live.battery === "number") removedPayload.lastBattery = live.battery;
+              if (live.powerSource) removedPayload.lastPowerSource = live.powerSource;
+              if (live.lastSeen != null) removedPayload.lastSeen = live.lastSeen;
+              if (live.displayName || deviceName) {
+                removedPayload.displayName = live.displayName || deviceName;
               }
-              var removedPayload = {
-                deviceName: scrub(deviceName) || safeId,
-                removedAt: Date.now(),
-                lastStatus: scrub(live.status),
-                lastBattery: scrub(live.battery),
-                lastPowerSource: scrub(live.powerSource),
-                lastSeen: scrub(live.lastSeen),
-                displayName: scrub(live.displayName) || scrub(deviceName) || null,
-                displayIcon: scrub(live.displayIcon),
-              };
+              if (live.displayIcon) removedPayload.displayIcon = live.displayIcon;
               // appRemoved is never cleared by ESP SoftAP — that was why Remove failed.
               appRemovedIds[safeId] = true;
               if (deviceId && deviceId !== safeId) appRemovedIds[deviceId] = true;
@@ -1270,6 +1267,8 @@
                 removeUpdates[userPath + "/settings/appRemoved/" + nameId] = true;
               }
               persistLocalRemoved();
+              // Flag first — survives even if the bigger update fails.
+              db.ref(userPath + "/settings/appRemoved/" + safeId).set(true);
               db.ref()
                 .update(removeUpdates)
                 .then(function () {
@@ -1372,6 +1371,8 @@
           return authT("dashboard.noSensorsHtml", { email: user.email || "" });
         }
         function recoverDevicesFromHistory() {
+          // Never recreate a card from history. That put removed sensors back after login.
+          return;
           if (recoveredDevicesFromHistory || !historyData.length) return;
           var latestByDevice = {};
           historyData.forEach(function (entry) {

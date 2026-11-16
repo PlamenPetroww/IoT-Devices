@@ -92,7 +92,8 @@
             .toLowerCase()
             .replace(/\./g, "-")
             .replace(/@/g, "_at_");
-          var dashTarget = "dashboard.html?aura_user_key=" + encodeURIComponent(emailKey);
+          var dashTarget =
+            "dashboard.html?rv=20261116b&aura_user_key=" + encodeURIComponent(emailKey);
           try {
             var storedDid = localStorage.getItem("auraDeviceId");
             if (storedDid) {
@@ -269,7 +270,7 @@
             next && allowedNext.includes(next) ? next : "dashboard.html";
           const sep = target.indexOf("?") === -1 ? "?" : "&";
           let loginTarget =
-            target + sep + "aura_user_key=" + encodeURIComponent(emailKey);
+            target + sep + "rv=20261116b&aura_user_key=" + encodeURIComponent(emailKey);
           try {
             const storedDid = localStorage.getItem("auraDeviceId");
             if (storedDid) {

@@ -63,6 +63,29 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
     /// True once the sensor has finished scanning Wi-Fi (Connect stays disabled before).
     private var bleListReady = false
     private var returnCountdown: Timer?
+    /// False while the sensor is still searching for Wi-Fi networks.
+    private var networksReady = false
+
+    /// Step by step: network first, then its password, then the sensor name and Connect.
+    @objc private func formFieldChanged() {
+        updateFormState()
+    }
+
+    private func updateFormState() {
+        // Only while the Wi-Fi form is on screen (not during search, progress or the guide).
+        guard !form.isHidden, !credsSent else { return }
+        let hasNetwork = !(ssidField.text ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let hasPass = !(passField.text ?? "").isEmpty
+        let nameOpen = networksReady && hasNetwork && hasPass
+        let canConnect = nameOpen
+        passField.isEnabled = networksReady && hasNetwork
+        passField.alpha = passField.isEnabled ? 1 : 0.45
+        nameField.isEnabled = nameOpen
+        nameField.alpha = nameOpen ? 1 : 0.45
+        connectButton.setTitle(networksReady ? "Connect" : "Searching…", for: .normal)
+        connectButton.isEnabled = canConnect
+        connectButton.alpha = canConnect ? 1 : 0.45
+    }
     /// SoftAP has no internet — block cellular so requests hit 192.168.4.1 on Wi‑Fi.
     private lazy var softApSession: URLSession = {
         let config = URLSessionConfiguration.ephemeral
@@ -248,6 +271,8 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillChange(_:)), name: UIResponder.keyboardWillChangeFrameNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillHide(_:)), name: UIResponder.keyboardWillHideNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(appBecameActive), name: UIApplication.didBecomeActiveNotification, object: nil)
+        ssidField.addTarget(self, action: #selector(formFieldChanged), for: .editingChanged)
+        passField.addTarget(self, action: #selector(formFieldChanged), for: .editingChanged)
 
         headline.text = "Looking for the sensor"
         looking = true
@@ -361,8 +386,8 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
     @objc private func refreshNetworksTapped() {
         dismissKeyboard()
         detail.text = "Loading Wi-Fi list…"
-        connectButton.setTitle("Searching…", for: .normal)
-        connectButton.isEnabled = false
+        networksReady = false
+        updateFormState()
         refreshNetworksButton.isEnabled = false
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             self?.fetchWifiList(retries: 4)
@@ -441,8 +466,14 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         refreshNetworksButton.alpha = enabled ? 1 : 0.35
         networks.isUserInteractionEnabled = enabled
         connectButton.isEnabled = enabled
+        connectButton.alpha = 1
+        passField.alpha = 1
+        nameField.alpha = 1
         if !enabled {
             view.endEditing(true)
+        } else {
+            // Step by step: network, then password, then name and Connect.
+            updateFormState()
         }
     }
 
@@ -506,10 +537,10 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         setSetupControlsEnabled(true)
         refreshNetworksButton.isHidden = false
         // Connect stays off while the sensor's Wi-Fi networks are being loaded.
-        connectButton.setTitle("Searching…", for: .normal)
         connectButton.removeTarget(nil, action: nil, for: .allEvents)
         connectButton.addTarget(self, action: #selector(sendCredentials), for: .touchUpInside)
-        connectButton.isEnabled = false
+        networksReady = false
+        updateFormState()
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             self?.waitForPingThenFetchWifi()
         }
@@ -557,8 +588,8 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         DispatchQueue.main.async { [weak self] in
             guard let self = self, !self.finishedOk else { return }
             self.refreshNetworksButton.isEnabled = true
-            self.connectButton.setTitle("Connect", for: .normal)
-            self.connectButton.isEnabled = true
+            self.networksReady = true
+            self.updateFormState()
             if lastFailed {
                 self.detail.text = "Wi-Fi list unavailable — type the name, then Connect. Or tap Refresh networks."
             } else {
@@ -602,15 +633,15 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
             $0.removeFromSuperview()
         }
         if ssids.isEmpty { return }
-        if (ssidField.text ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            ssidField.text = ssids[0]
-        }
         for ssid in ssids {
             let pick = UIButton(type: .system)
             pick.setTitle(ssid, for: .normal)
             pick.setTitleColor(.white, for: .normal)
             pick.contentHorizontalAlignment = .leading
-            pick.addAction(UIAction { [weak self] _ in self?.ssidField.text = ssid }, for: .touchUpInside)
+            pick.addAction(UIAction { [weak self] _ in
+                self?.ssidField.text = ssid
+                self?.updateFormState()
+            }, for: .touchUpInside)
             networks.addArrangedSubview(pick)
         }
     }
@@ -713,8 +744,7 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         connectingProgress = false
         hideReturnButton()
         connectButton.isHidden = false
-        connectButton.isEnabled = true
-        connectButton.setTitle("Connect", for: .normal)
+        networksReady = true
         connectButton.removeTarget(nil, action: nil, for: .allEvents)
         connectButton.addTarget(self, action: #selector(sendCredentials), for: .touchUpInside)
         setSetupControlsEnabled(true)
@@ -847,13 +877,12 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         if !bleListReady && !hasNetworks {
             // The sensor is still scanning for Wi-Fi networks: Connect stays off until it is done.
             detail.text = "Searching for Wi-Fi networks…"
-            connectButton.setTitle("Searching…", for: .normal)
-            connectButton.isEnabled = false
+            networksReady = false
+            updateFormState()
             return
         }
-        connectButton.setTitle("Connect", for: .normal)
-        connectButton.isEnabled = true
-        detail.text = "Choose your home Wi-Fi, enter the password and a name."
+        networksReady = true
+        detail.text = "1. Choose your home Wi-Fi  2. Enter its password  3. Name the sensor"
         networks.arrangedSubviews.forEach {
             networks.removeArrangedSubview($0)
             $0.removeFromSuperview()
@@ -861,14 +890,17 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
         for part in raw.split(separator: "\n") {
             let ssid = String(part).trimmingCharacters(in: .whitespacesAndNewlines)
             if ssid.isEmpty { continue }
-            if (ssidField.text ?? "").isEmpty { ssidField.text = ssid }
             let pick = UIButton(type: .system)
             pick.setTitle(ssid, for: .normal)
             pick.setTitleColor(.white, for: .normal)
             pick.contentHorizontalAlignment = .leading
-            pick.addAction(UIAction { [weak self] _ in self?.ssidField.text = ssid }, for: .touchUpInside)
+            pick.addAction(UIAction { [weak self] _ in
+                self?.ssidField.text = ssid
+                self?.updateFormState()
+            }, for: .touchUpInside)
             networks.addArrangedSubview(pick)
         }
+        updateFormState()
     }
 
     @objc private func sendCredentials() {

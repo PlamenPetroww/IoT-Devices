@@ -343,15 +343,12 @@ public class SensorSetupActivity extends android.app.Activity {
         main.postDelayed(stillLooking, 180000);
         main.removeCallbacks(lookingTick);
         main.postDelayed(lookingTick, 1000);
-        // No Companion Device Manager — its system "Looking for device" dialog
-        // stays on top in the phone language and blocks the Wi-Fi form.
-        if (Build.VERSION.SDK_INT <= 30 && getPackageManager().hasSystemFeature(PackageManager.FEATURE_COMPANION_DEVICE_SETUP)) {
-            // Android 11 and older: plain BLE scans need location permission; the system
-            // pairing picker does not.
-            startCompanionAssociate();
-        } else {
-            startScan(false);
-        }
+        // Same as the build that worked: the system device picker finds the sensor (and on
+        // Android 11 and older it is the only way without location permission). On Android 12+
+        // a plain BLE scan runs in parallel as a second chance.
+        boolean cdm = getPackageManager().hasSystemFeature(PackageManager.FEATURE_COMPANION_DEVICE_SETUP);
+        if (cdm) startCompanionAssociate();
+        if (!cdm || Build.VERSION.SDK_INT >= 31) startScan(false);
         // SoftAP in-app path quickly (BLE alone is unreliable on many phones).
         main.removeCallbacks(softApFallback);
         // Board opens SoftAP after ~8s BLE; wait a bit longer so the AP exists.

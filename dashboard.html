@@ -280,17 +280,7 @@
                       : null;
                 if (plugin && typeof plugin.open === "function") {
                   // Names in use: a second sensor with the same name would replace the first.
-                  var existingIds = [];
-                  try {
-                    var currentDevices = (lastDevicesSnap && lastDevicesSnap.val()) || {};
-                    Object.keys(currentDevices).forEach(function (id) {
-                      var d = currentDevices[id] || {};
-                      var label = d.deviceName || d.displayName || id;
-                      if (isDeviceRemoved(id, { deviceName: label, displayName: label })) return;
-                      existingIds.push(id);
-                    });
-                  } catch (e) {}
-                  plugin.open({ email: accountEmail, existingIds: existingIds }).then(function (result) {
+                  plugin.open({ email: accountEmail, existingIds: auraExistingSensorIds() }).then(function (result) {
                     // Intentional SoftAP re-add — clear Remove tombstones for that name.
                     var paired = result && result.paired;
                     var pairedName = result && result.name ? String(result.name).trim() : "";
@@ -342,6 +332,11 @@
               encodeURIComponent(accountEmail) +
               "&lang=" +
               lang +
+              auraExistingSensorIds()
+                .map(function (id) {
+                  return "&existing=" + encodeURIComponent(id);
+                })
+                .join("") +
               "#Intent;scheme=aurahomesystems;package=com.aurahomesystems.app;end";
           });
         }
@@ -513,6 +508,21 @@
           } catch (e) {}
         }
         // Match firmware getDeviceIdFromName (spaces → _).
+        // Sensors already on the account (not removed). A new sensor with the same name
+        // would replace the old one, so the setup screens block those names.
+        function auraExistingSensorIds() {
+          var ids = [];
+          try {
+            var currentDevices = (lastDevicesSnap && lastDevicesSnap.val()) || {};
+            Object.keys(currentDevices).forEach(function (id) {
+              var d = currentDevices[id] || {};
+              var label = d.deviceName || d.displayName || id;
+              if (isDeviceRemoved(id, { deviceName: label, displayName: label })) return;
+              ids.push(id);
+            });
+          } catch (e) {}
+          return ids;
+        }
         function auraDeviceIdFromName(name) {
           var id = String(name || "")
             .trim()

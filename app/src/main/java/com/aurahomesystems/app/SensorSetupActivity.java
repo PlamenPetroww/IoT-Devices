@@ -304,9 +304,6 @@ public class SensorSetupActivity extends android.app.Activity {
             if (!granted(Manifest.permission.BLUETOOTH_SCAN)) need.add(Manifest.permission.BLUETOOTH_SCAN);
             if (!granted(Manifest.permission.BLUETOOTH_CONNECT)) need.add(Manifest.permission.BLUETOOTH_CONNECT);
         }
-        if (Build.VERSION.SDK_INT < 33 && !granted(Manifest.permission.ACCESS_FINE_LOCATION)) {
-            need.add(Manifest.permission.ACCESS_FINE_LOCATION);
-        }
         if (Build.VERSION.SDK_INT >= 33
                 && !granted(Manifest.permission.NEARBY_WIFI_DEVICES)) {
             need.add(Manifest.permission.NEARBY_WIFI_DEVICES);

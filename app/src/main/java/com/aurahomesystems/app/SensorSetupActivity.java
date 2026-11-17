@@ -108,6 +108,7 @@ public class SensorSetupActivity extends android.app.Activity {
     private boolean finishedOk;
     private boolean softApMode;
     private boolean softApReady;
+    private int softApAttempts;
     private int negotiatedMtu = 23;
     private int scanPass;
     private long lookingSinceElapsed;
@@ -360,6 +361,7 @@ public class SensorSetupActivity extends android.app.Activity {
     };
 
     private void startSoftApSetup() {
+        softApAttempts = 0;
         softApMode = true;
         looking = false;
         stopScanOnly();
@@ -431,6 +433,23 @@ public class SensorSetupActivity extends android.app.Activity {
             @Override
             public void onUnavailable() {
                 Log.w(TAG, "SoftAP network unavailable");
+                // The sensor alternates Bluetooth and Wi-Fi windows, so its setup
+                // network is not always on air. Keep asking quietly before giving up.
+                if (softApMode && !finishedOk && !isFinishing() && softApAttempts < 8) {
+                    softApAttempts++;
+                    main.post(() -> {
+                        detail.setText(german
+                                ? "Sensor-WLAN wird gesucht… Sensor eingeschaltet lassen und in der Nähe bleiben."
+                                : "Searching for the sensor Wi-Fi… keep the sensor powered and nearby.");
+                        main.postDelayed(() -> {
+                            if (softApMode && !softApReady && !finishedOk && !isFinishing()) {
+                                requestSoftApNetwork();
+                            }
+                        }, 1000);
+                    });
+                    return;
+                }
+                softApAttempts = 0;
                 main.post(() -> {
                     detail.setText(german
                             ? "Sensor-WLAN nicht bestätigt. Sensor neu starten und nochmal versuchen."

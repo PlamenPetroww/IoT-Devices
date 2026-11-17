@@ -64,8 +64,8 @@ android {
         applicationId "com.aurahomesystems.app"
         minSdkVersion 24
         targetSdkVersion 36
-        versionCode 83
-        versionName "83"
+        versionCode 84
+        versionName "84"
 
         // The name for the application
         resValue "string", "appName", twaManifest.name

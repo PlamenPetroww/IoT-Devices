@@ -109,6 +109,7 @@ public class SensorSetupActivity extends android.app.Activity {
     private boolean softApMode;
     private boolean softApReady;
     private int softApAttempts;
+    private int scanSeen;
     private int negotiatedMtu = 23;
     private int scanPass;
     private long lookingSinceElapsed;
@@ -302,6 +303,9 @@ public class SensorSetupActivity extends android.app.Activity {
         if (Build.VERSION.SDK_INT >= 31) {
             if (!granted(Manifest.permission.BLUETOOTH_SCAN)) need.add(Manifest.permission.BLUETOOTH_SCAN);
             if (!granted(Manifest.permission.BLUETOOTH_CONNECT)) need.add(Manifest.permission.BLUETOOTH_CONNECT);
+        }
+        if (Build.VERSION.SDK_INT < 33 && !granted(Manifest.permission.ACCESS_FINE_LOCATION)) {
+            need.add(Manifest.permission.ACCESS_FINE_LOCATION);
         }
         if (Build.VERSION.SDK_INT >= 33
                 && !granted(Manifest.permission.NEARBY_WIFI_DEVICES)) {
@@ -854,8 +858,8 @@ public class SensorSetupActivity extends android.app.Activity {
         if (!looking || detail == null || connecting) return;
         long sec = Math.max(0L, (SystemClock.elapsedRealtime() - lookingSinceElapsed) / 1000L);
         String base = german
-                ? ("Suche… " + sec + "s · Scan #" + scanPass)
-                : ("Searching… " + sec + "s · Scan #" + scanPass);
+                ? ("Suche… " + sec + "s · Scan #" + scanPass + " · Treffer " + scanSeen + " · Android " + Build.VERSION.SDK_INT)
+                : ("Searching… " + sec + "s · Scan #" + scanPass + " · hits " + scanSeen + " · Android " + Build.VERSION.SDK_INT);
         if (sec >= 90) {
             base += german
                     ? " — Falls nichts kommt: Telefon-WLAN → AuraHomeSystems_Setup → 192.168.4.1"
@@ -952,6 +956,7 @@ public class SensorSetupActivity extends android.app.Activity {
     private final ScanCallback scanCallback = new ScanCallback() {
         @Override
         public void onScanResult(int callbackType, ScanResult result) {
+            scanSeen++;
             String name = result.getScanRecord() != null ? result.getScanRecord().getDeviceName() : null;
             if (name == null && result.getDevice() != null) name = result.getDevice().getName();
             if (name != null) Log.d(TAG, "seen ble name=" + name);

@@ -425,6 +425,61 @@
     }
   }
 
+  // Android: on logout this phone must stop receiving the account's alerts.
+  // Remove this device's link/token from the account and tell the native app to
+  // forget the user (it otherwise keeps polling and re-linking itself).
+  async function unlinkDeviceOnLogout() {
+    if (!isAuraAndroidTwa()) return;
+    var userKey = (state.userPath || "").replace(/^users\//, "");
+    var deviceId = null;
+    try {
+      deviceId = localStorage.getItem("auraDeviceId");
+    } catch (_) {}
+    try {
+      if (state.db && userKey && deviceId) {
+        var devRef = state.db.ref("nativeDeviceTokens/" + deviceId);
+        var devSnap = await devRef.once("value");
+        var devRow = devSnap.val() || {};
+        var token = devRow.token ? String(devRow.token) : "";
+        if (devRow.userKey === userKey) {
+          await devRef.child("userKey").remove();
+        }
+        if (token) {
+          var tokSnap = await state.db.ref(state.userPath + "/pushTokens").once("value");
+          var tokens = tokSnap.val() || {};
+          var removals = [];
+          Object.keys(tokens).forEach(function (k) {
+            var row = tokens[k];
+            if (row && String(row.token || "") === token) {
+              removals.push(state.db.ref(state.userPath + "/pushTokens/" + k).remove());
+            }
+          });
+          await Promise.all(removals);
+        }
+        var idRef = state.db.ref(state.userPath + "/settings/nativeDeviceId");
+        var idSnap = await idRef.once("value");
+        if (idSnap.val() === deviceId) await idRef.remove();
+      }
+    } catch (err) {
+      console.warn("[push] unlink on logout failed:", err);
+    }
+    try {
+      sessionStorage.removeItem("auraNativeUserKey");
+    } catch (_) {}
+    try {
+      var iframe = global.document.createElement("iframe");
+      iframe.style.display = "none";
+      iframe.src =
+        "intent://native-push?logout=1" +
+        "#Intent;scheme=aurahomesystems;package=com.aurahomesystems.app;end";
+      global.document.body.appendChild(iframe);
+      await sleep(1200);
+      try {
+        iframe.remove();
+      } catch (_) {}
+    } catch (_) {}
+  }
+
   function syncNativeUserKeyToApp(userKey) {
     if (!isAuraAndroidTwa() || !userKey) return false;
     var shouldNotifyNative = true;
@@ -1065,6 +1120,7 @@
     registerPush: registerPush,
     requestAwayModeWithPush: requestAwayModeWithPush,
     syncNativeUserKeyToApp: syncNativeUserKeyToApp,
+    unlinkDeviceOnLogout: unlinkDeviceOnLogout,
     getState: function () {
       return state;
     },

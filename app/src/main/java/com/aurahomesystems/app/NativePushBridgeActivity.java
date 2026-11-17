@@ -26,6 +26,13 @@ public class NativePushBridgeActivity extends Activity {
         Uri uri = getIntent() != null ? getIntent().getData() : null;
         final String nonce = uri != null ? uri.getQueryParameter("nonce") : null;
         final String userKey = uri != null ? uri.getQueryParameter("userKey") : null;
+        if (uri != null && "1".equals(uri.getQueryParameter("logout"))) {
+            NativePushRegistrar.clearUserKey(this);
+            stopService(new android.content.Intent(this, AlarmMonitorService.class));
+            Log.i(TAG, "logout: user key cleared, monitor stopped");
+            finish();
+            return;
+        }
         if (userKey != null && !userKey.trim().isEmpty()) {
             NativePushRegistrar.rememberUserKey(this, userKey.trim());
             AlarmMonitorService.startIfConfigured(this);

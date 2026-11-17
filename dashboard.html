@@ -369,8 +369,16 @@
         }
         document.getElementById("logoutBtn").addEventListener("click", (e) => {
           closeHeaderMenu();
-          auth
-            .signOut()
+          var unlinkPush =
+            window.AuraPush && window.AuraPush.unlinkDeviceOnLogout
+              ? Promise.race([
+                  window.AuraPush.unlinkDeviceOnLogout(),
+                  new Promise(function (r) { setTimeout(r, 5000); }),
+                ])
+              : Promise.resolve();
+          unlinkPush
+            .catch(() => {})
+            .then(() => auth.signOut())
             .catch(() => {})
             .finally(() => {
               window.location.href = "login.html";

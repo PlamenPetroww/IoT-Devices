@@ -47,6 +47,15 @@ final class NativePushRegistrar {
         }).start();
     }
 
+    /** Logout: forget the account so this phone stops polling/linking for it. */
+    static void clearUserKey(Context context) {
+        context.getSharedPreferences("aura_app", Context.MODE_PRIVATE)
+                .edit()
+                .remove("user_key")
+                .remove("rtdb_user_key")
+                .apply();
+    }
+
     static void rememberUserKey(Context context, String userKey) {
         String normalized = normalizeUserKey(userKey);
         if (normalized == null) {

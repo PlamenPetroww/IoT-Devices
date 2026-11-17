@@ -348,7 +348,7 @@ public class SensorSetupActivity extends android.app.Activity {
         // SoftAP in-app path quickly (BLE alone is unreliable on many phones).
         main.removeCallbacks(softApFallback);
         // Board opens SoftAP after ~8s BLE; wait a bit longer so the AP exists.
-        main.postDelayed(softApFallback, 10000);
+        main.postDelayed(softApFallback, 75000);
     }
 
     private final Runnable softApFallback = new Runnable() {
@@ -819,7 +819,7 @@ public class SensorSetupActivity extends android.app.Activity {
         main.postDelayed(lookingTick, 1000);
         main.postDelayed(() -> beginScanPass(adapter), 150);
         main.removeCallbacks(scanRefresh);
-        main.postDelayed(scanRefresh, 3500);
+        main.postDelayed(scanRefresh, 8000);
     }
 
     private void beginScanPass(BluetoothAdapter adapter) {
@@ -978,7 +978,7 @@ public class SensorSetupActivity extends android.app.Activity {
             main.post(() -> {
                 if (looking && gatt == null && !connecting) {
                     main.removeCallbacks(scanRefresh);
-                    main.postDelayed(scanRefresh, 1200);
+                    main.postDelayed(scanRefresh, 8000);
                 }
             });
         }

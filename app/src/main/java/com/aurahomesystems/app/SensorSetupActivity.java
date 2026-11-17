@@ -110,6 +110,7 @@ public class SensorSetupActivity extends android.app.Activity {
     private boolean softApReady;
     private int softApAttempts;
     private int scanSeen;
+    private final java.util.concurrent.CopyOnWriteArrayList<String> scanNames = new java.util.concurrent.CopyOnWriteArrayList<>();
     private int negotiatedMtu = 23;
     private int scanPass;
     private long lookingSinceElapsed;
@@ -866,8 +867,8 @@ public class SensorSetupActivity extends android.app.Activity {
         if (!looking || detail == null || connecting) return;
         long sec = Math.max(0L, (SystemClock.elapsedRealtime() - lookingSinceElapsed) / 1000L);
         String base = german
-                ? ("Suche… " + sec + "s · Scan #" + scanPass + " · Treffer " + scanSeen + " · Android " + Build.VERSION.SDK_INT)
-                : ("Searching… " + sec + "s · Scan #" + scanPass + " · hits " + scanSeen + " · Android " + Build.VERSION.SDK_INT);
+                ? ("Suche… " + sec + "s · Scan #" + scanPass + " · Treffer " + scanSeen + " · Android " + Build.VERSION.SDK_INT + (scanNames.isEmpty() ? "" : " · " + scanNames))
+                : ("Searching… " + sec + "s · Scan #" + scanPass + " · hits " + scanSeen + " · Android " + Build.VERSION.SDK_INT + (scanNames.isEmpty() ? "" : " · " + scanNames));
         if (sec >= 90) {
             base += german
                     ? " — Falls nichts kommt: Telefon-WLAN → AuraHomeSystems_Setup → 192.168.4.1"
@@ -967,7 +968,10 @@ public class SensorSetupActivity extends android.app.Activity {
             scanSeen++;
             String name = result.getScanRecord() != null ? result.getScanRecord().getDeviceName() : null;
             if (name == null && result.getDevice() != null) name = result.getDevice().getName();
-            if (name != null) Log.d(TAG, "seen ble name=" + name);
+            if (name != null) {
+                Log.d(TAG, "seen ble name=" + name);
+                if (scanNames.size() < 5 && !scanNames.contains(name)) scanNames.add(name);
+            }
             if (!isAura(result)) return;
             Log.i(TAG, "scan hit aura " + (result.getDevice() != null ? result.getDevice().getAddress() : "?"));
             main.post(() -> connect(result.getDevice()));

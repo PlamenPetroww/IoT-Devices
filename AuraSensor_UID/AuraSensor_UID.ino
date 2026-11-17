@@ -40,8 +40,8 @@
 #define FW_VERSION "1.1.35"
 #define SETUP_AP_SSID "AuraHomeSystems_Setup"
 // Setup alternates: Bluetooth window (iPhone, no Wi-Fi switching), then Wi-Fi window (Android).
-#define BLE_SETUP_WINDOW_MS 15000UL
-#define SOFTAP_SETUP_WINDOW_MS 30000UL
+#define BLE_SETUP_WINDOW_MS 40000UL
+#define SOFTAP_SETUP_WINDOW_MS 25000UL
 #define SETUP_ROUNDS 12
 // The setup network is open (no password). Android joins it from the app, iPhone users
 // tap it once in Settings → Wi-Fi.

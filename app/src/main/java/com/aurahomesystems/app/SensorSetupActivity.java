@@ -345,7 +345,13 @@ public class SensorSetupActivity extends android.app.Activity {
         main.postDelayed(lookingTick, 1000);
         // No Companion Device Manager — its system "Looking for device" dialog
         // stays on top in the phone language and blocks the Wi-Fi form.
-        startScan(false);
+        if (Build.VERSION.SDK_INT <= 30 && getPackageManager().hasSystemFeature(PackageManager.FEATURE_COMPANION_DEVICE_SETUP)) {
+            // Android 11 and older: plain BLE scans need location permission; the system
+            // pairing picker does not.
+            startCompanionAssociate();
+        } else {
+            startScan(false);
+        }
         // SoftAP in-app path quickly (BLE alone is unreliable on many phones).
         main.removeCallbacks(softApFallback);
         // Board opens SoftAP after ~8s BLE; wait a bit longer so the AP exists.
@@ -754,6 +760,7 @@ public class SensorSetupActivity extends android.app.Activity {
                 Log.w(TAG, "CDM failure: " + error);
                 main.post(() -> {
                     if (!looking || gatt != null) return;
+                    startScan(false);
                     detail.setText(german
                             ? "Suche weiter per Bluetooth… Nach ~75s öffnet der Sensor WLAN AuraHomeSystems_Setup."
                             : "Still searching over Bluetooth… After ~75s the sensor opens Wi-Fi AuraHomeSystems_Setup.");
@@ -782,7 +789,9 @@ public class SensorSetupActivity extends android.app.Activity {
         }
         if (device == null && Build.VERSION.SDK_INT < 33) {
             // EXTRA_DEVICE removed from the CDM result path on API 33+.
-            device = data.getParcelableExtra(CompanionDeviceManager.EXTRA_DEVICE);
+            android.os.Parcelable extra = data.getParcelableExtra(CompanionDeviceManager.EXTRA_DEVICE);
+            if (extra instanceof ScanResult) device = ((ScanResult) extra).getDevice();
+            else if (extra instanceof BluetoothDevice) device = (BluetoothDevice) extra;
         }
         if (device != null) {
             Log.i(TAG, "CDM picked " + device.getAddress());
@@ -842,7 +851,8 @@ public class SensorSetupActivity extends android.app.Activity {
         filters.add(new ScanFilter.Builder().setDeviceName("Aura").build());
         filters.add(new ScanFilter.Builder().setDeviceName("Aura Sensor").build());
         try {
-            scanner.startScan(filters, settings, scanCallback);
+            // Android 12+: hardware name filters are unreliable on some phones; match in software.
+            scanner.startScan(Build.VERSION.SDK_INT >= 31 ? null : filters, settings, scanCallback);
             Log.i(TAG, "scan start pass=" + scanPass + " filtered");
             updateLookingDetail();
         } catch (RuntimeException e) {

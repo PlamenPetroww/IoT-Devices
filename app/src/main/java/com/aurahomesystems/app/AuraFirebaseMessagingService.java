@@ -260,22 +260,6 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
                 intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
-        Intent wakeIntent = new Intent(context, AlarmWakeActivity.class);
-        wakeIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        wakeIntent.putExtra(EXTRA_ALERT_TITLE, title);
-        wakeIntent.putExtra(EXTRA_ALERT_BODY, body);
-        if (eventTag != null && !eventTag.isEmpty()) {
-            wakeIntent.putExtra(EXTRA_EVENT_TAG, eventTag);
-        }
-        if (userKey != null && !userKey.isEmpty()) {
-            wakeIntent.putExtra(EXTRA_USER_KEY, userKey);
-        }
-        PendingIntent fullScreenIntent = PendingIntent.getActivity(
-                context,
-                notificationRequestCode(eventTag) + 2,
-                wakeIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-
         Intent dismissIntent = new Intent(context, NotificationDismissReceiver.class);
         if (eventTag != null && !eventTag.isEmpty()) {
             dismissIntent.putExtra(NotificationDismissReceiver.EXTRA_EVENT_TAG, eventTag);
@@ -302,7 +286,6 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
                 .setPriority(NotificationCompat.PRIORITY_MAX)
                 .setCategory(NotificationCompat.CATEGORY_ALARM)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-                .setFullScreenIntent(fullScreenIntent, true)
                 .setVibrate(new long[]{0, 600, 200, 600, 200, 600});
         Bitmap statusIcon = statusLargeIcon(context, title, body);
         if (statusIcon != null) {
@@ -322,15 +305,6 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
             nm.notify(notifyTag, notificationId, builder.build());
         } else {
             nm.notify(notificationId, builder.build());
-        }
-        try {
-            PowerManager powerManager =
-                    (PowerManager) context.getSystemService(Context.POWER_SERVICE);
-            if (powerManager != null && !powerManager.isInteractive()) {
-                context.startActivity(wakeIntent);
-            }
-        } catch (Exception e) {
-            android.util.Log.w("AuraFCM", "wake activity start failed", e);
         }
         if (!isNotificationActive(nm, notificationId)) {
             android.util.Log.w("AuraFCM", "notification not active after notify " + eventTag);

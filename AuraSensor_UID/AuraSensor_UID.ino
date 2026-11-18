@@ -62,11 +62,11 @@ FirebaseAuth auth;
 FirebaseConfig config;
 // Reed to GND when "active": INPUT_PULLUP. For lower sleep current use an external 100kÔÇô1M pull-up to 3V3.
 const int sensorPin = 4;
-// Rev A PCB + reed mount: magnet near (door/window closed) → GPIO4 HIGH → CLOSED.
-// Set to 1 only if your reed pulls LOW when closed instead.
-#define SENSOR_CLOSED_WHEN_LOW 0
+// Rev A schematic: R5 10k to 3V3, reed SW1 to GND → magnet near (closed) = GPIO4 LOW.
+// Set to 0 only if your build pulls HIGH when closed instead.
+#define SENSOR_CLOSED_WHEN_LOW 1
 // One-time NVS polarity migrate to Rev A default; Firebase can still override per device.
-#define POLARITY_REV 2
+#define POLARITY_REV 3
 // Battery ADC: Rev A uses GPIO0 with 1M / 1M divider from VBAT (pin sees VBAT/2).
 // Classic ESP32 breadboard often uses GPIO34. Without a divider the reading is invalid.
 #if CONFIG_IDF_TARGET_ESP32C3
@@ -1958,14 +1958,35 @@ void setup() {
             liveStatus = rtcLastSentStatus == 1;
         }
     }
-    // Right after pairing, stay awake briefly so open/close is tested before deep sleep.
-    // Many "sensor does not react" reports are just deep sleep armed on the wrong level.
+    // Right after pairing, stay awake and print the raw reed level every second.
+    // If GPIO4 never flips while you move the magnet, the wire/reed is wrong — not the app.
     if (emailFromPortal) {
-        Serial.println("Post-setup: watching magnet 45s — open and close the door now");
-        const unsigned long watchUntil = millis() + 45000UL;
+        Serial.println("Post-setup: watching magnet 60s — move magnet on GPIO4/D2 now");
+        Serial.print("Polarity closedWhenLow=");
+        Serial.println(closedWhenLow ? 1 : 0);
+        const unsigned long watchUntil = millis() + 60000UL;
         bool watchClosed = readSensorClosedStable();
+        int lastRaw = (digitalRead(sensorPin) == HIGH) ? 1 : 0;
+        unsigned long lastBeat = 0;
+        int flips = 0;
         while ((long)(millis() - watchUntil) < 0) {
-            delay(60);
+            delay(40);
+            const int rawHigh = (digitalRead(sensorPin) == HIGH) ? 1 : 0;
+            if (rawHigh != lastRaw) {
+                lastRaw = rawHigh;
+                flips++;
+                Serial.print("Reed RAW → ");
+                Serial.println(rawHigh ? "HIGH" : "LOW");
+            }
+            if (millis() - lastBeat >= 1000UL) {
+                lastBeat = millis();
+                Serial.print("Reed tick raw=");
+                Serial.print(rawHigh ? "HIGH" : "LOW");
+                Serial.print(" → ");
+                Serial.println(closedWhenLow
+                    ? (rawHigh ? "OPEN" : "CLOSED")
+                    : (rawHigh ? "CLOSED" : "OPEN"));
+            }
             bool nowClosed = readSensorClosedDebounced();
             if (nowClosed == watchClosed) continue;
             watchClosed = nowClosed;
@@ -2004,6 +2025,12 @@ void setup() {
                 Serial.print("Post-setup Firebase FAIL: ");
                 Serial.println(fbdo.errorReason());
             }
+        }
+        if (flips == 0) {
+            Serial.println("WARN: GPIO4 never changed in 60s — check reed on D2/GPIO4 to GND");
+        } else {
+            Serial.print("Reed flips during watch: ");
+            Serial.println(flips);
         }
         Serial.println("Post-setup watch done — entering deep sleep");
     }
@@ -2103,7 +2130,14 @@ void loop() {
         Serial.print("Sensor ");
         Serial.print(device_name);
         Serial.print(" -> ");
-        Serial.println(currentStatus ? "CLOSED" : "OPEN");
+        Serial.print(currentStatus ? "CLOSED" : "OPEN");
+        Serial.print(" (raw GPIO");
+        Serial.print(sensorPin);
+        Serial.print("=");
+        Serial.print(digitalRead(sensorPin) == HIGH ? "HIGH" : "LOW");
+        Serial.print(" cwl=");
+        Serial.print(closedWhenLow ? 1 : 0);
+        Serial.println(")");
         char powerSource[16];
         int batteryPct = readBatteryPercent(powerSource, sizeof(powerSource));
         const char* battStatus = batteryStatusLabel(powerSource, batteryPct);
@@ -2152,4 +2186,4 @@ void loop() {
 #endif
 }
 
-// Aura build marker: lines=2155 updated=2026-11-18T19:40 clearRemoved+fastPoll
+// Aura build marker: lines=2189 updated=2026-11-18T19:45 cwl1+reedRawTick

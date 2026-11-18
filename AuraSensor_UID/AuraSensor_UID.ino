@@ -62,11 +62,12 @@ FirebaseAuth auth;
 FirebaseConfig config;
 // Reed to GND when "active": INPUT_PULLUP. For lower sleep current use an external 100kÔÇô1M pull-up to 3V3.
 const int sensorPin = 4;
-// Rev A schematic: R5 10k to 3V3, reed SW1 to GND → magnet near (closed) = GPIO4 LOW.
-// Set to 0 only if your build pulls HIGH when closed instead.
-#define SENSOR_CLOSED_WHEN_LOW 1
-// One-time NVS polarity migrate to Rev A default; Firebase can still override per device.
-#define POLARITY_REV 3
+// Production default that already pushed Open/Closed correctly on your units:
+// magnet near (closed) → GPIO4 HIGH → CLOSED. Firebase closedWhenLow can still override.
+// (KiCad notes a GND reed + pull-up; assembled boards matched HIGH=closed in the field.)
+#define SENSOR_CLOSED_WHEN_LOW 0
+// Bump forces NVS back if a test build wrote the inverted polarity.
+#define POLARITY_REV 4
 // Battery ADC: Rev A uses GPIO0 with 1M / 1M divider from VBAT (pin sees VBAT/2).
 // Classic ESP32 breadboard often uses GPIO34. Without a divider the reading is invalid.
 #if CONFIG_IDF_TARGET_ESP32C3
@@ -2186,4 +2187,4 @@ void loop() {
 #endif
 }
 
-// Aura build marker: lines=2189 updated=2026-11-18T19:45 cwl1+reedRawTick
+// Aura build marker: lines=2190 updated=2026-11-18T19:48 restore-cwl0

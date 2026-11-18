@@ -110,6 +110,7 @@ public class SensorSetupActivity extends android.app.Activity {
     private boolean softApReady;
     private int softApAttempts;
     private int scanSeen;
+    private boolean bleListReady;
     private final java.util.concurrent.CopyOnWriteArrayList<String> scanNames = new java.util.concurrent.CopyOnWriteArrayList<>();
     private int negotiatedMtu = 23;
     private int scanPass;
@@ -1148,6 +1149,17 @@ public class SensorSetupActivity extends android.app.Activity {
         }
     };
 
+    // If the sensor's "found" signal is missed, read the list anyway so Connect never stays disabled.
+    private final Runnable listFallback = new Runnable() {
+        @Override
+        public void run() {
+            if (gatt == null || bleListReady || credsSent || isFinishing()) return;
+            bleListReady = true;
+            BluetoothGattCharacteristic listChar = characteristic(LIST);
+            if (listChar != null && canBle()) gatt.readCharacteristic(listChar);
+        }
+    };
+
     private void showNetworks(String raw) {
         main.post(() -> {
             if (credsSent) return;
@@ -1158,8 +1170,19 @@ public class SensorSetupActivity extends android.app.Activity {
             form.setVisibility(View.VISIBLE);
             action.setVisibility(View.VISIBLE);
             headline.setText(german ? "Heim-WLAN" : "Home Wi-Fi");
-            detail.setText(german ? "Passwort und Name eingeben." : "Enter the password and a name.");
             networks.removeAllViews();
+            boolean listEmpty = raw == null || raw.trim().isEmpty();
+            if (gatt != null && !bleListReady && listEmpty) {
+                // The sensor scans Wi-Fi only after the phone connects; wait for its "found" signal.
+                detail.setText(german ? "WLAN-Netze werden gesucht…" : "Searching for Wi-Fi networks…");
+                action.setEnabled(false);
+                main.removeCallbacks(listFallback);
+                main.postDelayed(listFallback, 12000);
+                return;
+            }
+            main.removeCallbacks(listFallback);
+            action.setEnabled(true);
+            detail.setText(german ? "Passwort und Name eingeben." : "Enter the password and a name.");
             String current = ssidInput.getText().toString().trim();
             for (String part : raw.split("\n")) {
                 String ssid = part.trim();
@@ -1287,6 +1310,14 @@ public class SensorSetupActivity extends android.app.Activity {
                 }
                 stage = text.substring(space + 1).trim();
             }
+            if ("found".equals(stage)) {
+                bleListReady = true;
+                BluetoothGattCharacteristic listChar = characteristic(LIST);
+                if (gatt != null && listChar != null && canBle()) {
+                    gatt.readCharacteristic(listChar);
+                }
+                return;
+            }
             if ("badwifi".equals(stage)) {
                 credsSent = false;
                 shownPct = 0;
@@ -1395,6 +1426,7 @@ public class SensorSetupActivity extends android.app.Activity {
 
     private void onDisconnected() {
         main.removeCallbacks(connectWatchdog);
+        bleListReady = false;
         gatt = null;
         connecting = false;
         if (finishedOk || isFinishing()) return;

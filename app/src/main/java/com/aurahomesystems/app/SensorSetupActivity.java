@@ -689,6 +689,8 @@ public class SensorSetupActivity extends android.app.Activity {
                 body.put("pass", sendPass);
                 body.put("email", email);
                 body.put("name", sendName);
+                // SoftAP re-add must clear Remove tombstones or the dashboard hides the sensor.
+                body.put("clearRemoved", true);
                 byte[] bytes = body.toString().getBytes(StandardCharsets.UTF_8);
                 HttpURLConnection c = openOnSoftAp(SETUP_PROV_URL);
                 c.setConnectTimeout(15000);
@@ -1324,6 +1326,8 @@ public class SensorSetupActivity extends android.app.Activity {
             body.put("pass", pass);
             body.put("email", email);
             body.put("name", name);
+            // BLE re-add must clear Remove tombstones or the dashboard hides the sensor.
+            body.put("clearRemoved", true);
             byte[] bytes = body.toString().getBytes(StandardCharsets.UTF_8);
             int payload = Math.max(20, negotiatedMtu - 5);
             pendingWrites.clear();

@@ -1723,8 +1723,14 @@ void setup() {
     String deviceID = getDeviceIdFromName(device_name);
     String devicePath = userPath + "/devices/" + deviceID;
     // Only clear Remove tombstones when the app explicitly asked (clearRemoved).
-    if (emailFromPortal && portalClearRemoved) {
+    // Any successful SoftAP/BLE pairing is an intentional re-add. Always clear
+    // Remove tombstones — otherwise the dashboard deletes the new /devices node
+    // and the sensor never appears in the app (Android often omitted clearRemoved).
+    if (emailFromPortal) {
         clearDeviceRemovedInApp(userPath, deviceID);
+        if (!portalClearRemoved) {
+            Serial.println("Pairing clearRemoved implied (portal flag missing)");
+        }
     }
     if (emailFromPortal) {
         // Show live Open/Closed on the card right after pairing.

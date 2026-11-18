@@ -327,6 +327,10 @@
               window.alert(authT("dashboard.addSensorIos"));
               return;
             }
+            // Android setup is a separate activity — on return we must refresh and
+            // drop local Remove hides, or a re-added sensor never appears.
+            window.__auraAwaitingAndroidSetup = true;
+            waitingAfterPairUntil = Date.now() + 90000;
             window.location.href =
               "intent://sensor-setup?email=" +
               encodeURIComponent(accountEmail) +
@@ -1390,6 +1394,34 @@
         let recoveredDevicesFromHistory = false;
         var waitingAfterRestore = false;
         var waitingAfterPairUntil = 0;
+        function refreshDevicesAfterAndroidSetup() {
+          // Re-add from Android setup: local Remove flags would keep deleting the
+          // new Firebase node. Clear local hides; firmware clears remote tombstones.
+          localRemovedIds = {};
+          persistLocalRemoved();
+          waitingAfterPairUntil = Date.now() + 90000;
+          db.ref(userPath + "/removedDevices").once("value", function (snap) {
+            lastRemovedSnap = snap;
+            db.ref(userPath + "/devices").once("value", function (devSnap) {
+              lastDevicesSnap = devSnap;
+              // Do not enforceRemovedDevices here — that would wipe a just-paired sensor
+              // while remote tombstone delete is still in flight.
+              renderDevicesFromSnap(devSnap);
+            });
+          });
+        }
+        function onReturnFromAndroidSetup() {
+          if (!window.__auraAwaitingAndroidSetup) return;
+          window.__auraAwaitingAndroidSetup = false;
+          refreshDevicesAfterAndroidSetup();
+          [800, 2000, 4000, 8000, 12000, 20000, 40000, 70000].forEach(function (ms) {
+            setTimeout(refreshDevicesAfterAndroidSetup, ms);
+          });
+        }
+        document.addEventListener("visibilitychange", function () {
+          if (document.visibilityState === "visible") onReturnFromAndroidSetup();
+        });
+        window.addEventListener("focus", onReturnFromAndroidSetup);
         function devicesEmptyMessage() {
           // Just back from sensor setup: show a loading hint instead of an empty page.
           if (Date.now() < waitingAfterPairUntil) {

@@ -2152,4 +2152,4 @@ void loop() {
 #endif
 }
 
-
+// Aura build marker: lines=2155 updated=2026-11-18T19:40 clearRemoved+fastPoll

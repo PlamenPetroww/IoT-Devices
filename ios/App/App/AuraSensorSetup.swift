@@ -852,7 +852,9 @@ final class AuraSetupController: UIViewController, CBCentralManagerDelegate, CBP
     func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String: Any], rssi RSSI: NSNumber) {
         if softApMode || finishedOk { return }
         let name = advertisementData[CBAdvertisementDataLocalNameKey] as? String ?? peripheral.name
-        if name != "Aura Sensor" && name != "Aura" && advertisementData[CBAdvertisementDataServiceUUIDsKey] == nil {
+        // Accept "Aura", "Aura HomeSystems", … or any advert that carries our service UUID.
+        let auraName = name?.hasPrefix("Aura") == true
+        if !auraName && advertisementData[CBAdvertisementDataServiceUUIDsKey] == nil {
             return
         }
         softApFallbackWork?.cancel()

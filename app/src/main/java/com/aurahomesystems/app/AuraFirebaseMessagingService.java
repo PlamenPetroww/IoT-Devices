@@ -9,12 +9,14 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.media.AudioAttributes;
 import android.os.Build;
 import android.os.PowerManager;
 import android.service.notification.StatusBarNotification;
 
 import androidx.core.app.NotificationCompat;
+import androidx.core.content.ContextCompat;
 
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
@@ -24,7 +26,7 @@ import java.util.Locale;
 import java.util.Map;
 
 public class AuraFirebaseMessagingService extends FirebaseMessagingService {
-    public static final String CHANNEL_ID = "aura_alarm_alerts_v4";
+    public static final String CHANNEL_ID = "aura_alarm_alerts_v5";
     public static final String EXTRA_EVENT_TAG = "alarm_event_tag";
     public static final String EXTRA_USER_KEY = "alarm_user_key";
     public static final String EXTRA_ALERT_TITLE = "alarm_alert_title";
@@ -276,8 +278,11 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
         int notificationId = notificationIdForAlarm(dedupeTag, eventTag, eventCreatedAt, title, body);
         String notifyTag = notificationTagForAlarm(dedupeTag, eventTag, eventCreatedAt, title, body);
 
+        int accent = ContextCompat.getColor(context, R.color.notification_accent);
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_notification_icon)
+                .setColor(accent)
+                .setColorized(false)
                 .setContentTitle(title)
                 .setContentText(body)
                 .setAutoCancel(true)
@@ -287,7 +292,12 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
                 .setCategory(NotificationCompat.CATEGORY_ALARM)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .setVibrate(new long[]{0, 600, 200, 600, 200, 600});
+        // Full-color Aura mark (same as the launcher / extracted icon). Status open/closed
+        // icons stay preferred when we know the door state from the message text.
         Bitmap statusIcon = statusLargeIcon(context, title, body);
+        if (statusIcon == null) {
+            statusIcon = BitmapFactory.decodeResource(context.getResources(), R.drawable.aura_mark);
+        }
         if (statusIcon != null) {
             builder.setLargeIcon(statusIcon);
         }

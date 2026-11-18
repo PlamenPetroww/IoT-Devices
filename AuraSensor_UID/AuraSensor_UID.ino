@@ -1307,7 +1307,8 @@ static bool runBleSetup() {
     delay(150);
     String nets = "\n";
     if (!BLEDevice::getInitialized()) {
-        BLEDevice::init("Aura");
+        // Name shown on the phone's "Allow connection?" dialog. Keep it under ~20 chars.
+        BLEDevice::init("Aura HomeSystems");
     }
     BLEDevice::setMTU(247);
     BLEServer* server = BLEDevice::createServer();
@@ -1333,11 +1334,11 @@ static bool runBleSetup() {
     // Keep ADV simple — custom raw packets + stop/start every 5s broke discovery on some phones.
     advertising->addServiceUUID(PROV_SERVICE);
     advertising->setScanResponse(true);
-    advertising->setName("Aura");
+    advertising->setName("Aura HomeSystems");
     BLEDevice::startAdvertising();
     Serial.print("BLE MAC ");
     Serial.println(BLEDevice::getAddress().toString().c_str());
-    Serial.println("BLE advertising as Aura");
+    Serial.println("BLE advertising as Aura HomeSystems");
     Serial.println("BLE waiting for phone — watch for CONNECTED");
 
     bool announced = false;

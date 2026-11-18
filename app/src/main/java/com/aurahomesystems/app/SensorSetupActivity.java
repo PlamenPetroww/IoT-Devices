@@ -762,8 +762,8 @@ public class SensorSetupActivity extends android.app.Activity {
                 main.post(() -> {
                     if (gatt != null || connecting || isFinishing()) return;
                     detail.setText(german
-                            ? "Gerät gefunden — Aura in der Liste wählen."
-                            : "Device found — pick Aura in the list.");
+                            ? "Gerät gefunden — Aura HomeSystems in der Liste wählen."
+                            : "Device found — pick Aura HomeSystems in the list.");
                     try {
                         startIntentSenderForResult(chooser, REQ_CDM, null, 0, 0, 0);
                     } catch (IntentSender.SendIntentException e) {

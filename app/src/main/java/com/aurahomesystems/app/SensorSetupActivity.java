@@ -277,6 +277,20 @@ public class SensorSetupActivity extends android.app.Activity {
         form.addView(label(german ? "Sensorname" : "Sensor name", 12, "#94a3b8"));
         nameInput = field("Front Door");
         nameInput.setText("Front Door");
+        nameInput.addTextChangedListener(new android.text.TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            }
+
+            @Override
+            public void afterTextChanged(android.text.Editable s) {
+                updateNameBlock();
+            }
+        });
         form.addView(nameInput);
 
         TextView hint = label(german ? "Wähle das 2,4-GHz-Netz." : "Choose the 2.4 GHz network.", 13, "#94a3b8");
@@ -1206,6 +1220,28 @@ public class SensorSetupActivity extends android.app.Activity {
         });
     }
 
+    private boolean nameBlocked;
+
+    /** A name already used by another sensor would replace it: block Connect and say so. */
+    private void updateNameBlock() {
+        if (nameInput == null || action == null || credsSent || returnCountdownStarted) return;
+        String name = nameInput.getText().toString().trim();
+        if (name.isEmpty()) name = "Front Door";
+        boolean taken = existingSensorKeys.contains(sensorKey(name));
+        if (taken) {
+            nameBlocked = true;
+            action.setEnabled(false);
+            detail.setText(german
+                    ? "Du hast bereits einen Sensor mit dem Namen „" + name + "“. Bitte wähle einen anderen Namen."
+                    : "You already have a sensor named “" + name + "”. Please choose a different name.");
+        } else if (nameBlocked) {
+            nameBlocked = false;
+            boolean listReady = gatt == null || bleListReady;
+            action.setEnabled(listReady);
+            detail.setText(german ? "Passwort und Name eingeben." : "Enter the password and a name.");
+        }
+    }
+
     private void sendCredentials() {
         String ssid = ssidInput.getText().toString().trim();
         String pass = passInput.getText().toString();
@@ -1486,10 +1522,13 @@ public class SensorSetupActivity extends android.app.Activity {
     private void showDashboardReturn() {
         if (returnCountdownStarted) return;
         returnCountdownStarted = true;
+        // Lock the screen: no taps or Back while the sensor finishes and we return.
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+                WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
         action.setVisibility(View.GONE);
         form.setVisibility(View.GONE);
         main.postDelayed(new Runnable() {
-            int left = 3;
+            int left = 5;
             boolean counting;
 
             @Override
@@ -1522,6 +1561,12 @@ public class SensorSetupActivity extends android.app.Activity {
                         : "Your sensor is ready. Taking you to the dashboard in " + left + "…");
             }
         }, 100);
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (returnCountdownStarted) return;
+        super.onBackPressed();
     }
 
     private void restoreConnectAction() {

@@ -1217,6 +1217,7 @@ public class SensorSetupActivity extends android.app.Activity {
                 pick.setOnClickListener(v -> ssidInput.setText(ssid));
                 networks.addView(pick);
             }
+            updateNameBlock();
         });
     }
 
@@ -1574,6 +1575,7 @@ public class SensorSetupActivity extends android.app.Activity {
         action.setEnabled(true);
         action.setText(german ? "Verbinden" : "Connect");
         action.setOnClickListener(v -> sendCredentials());
+        updateNameBlock();
     }
 
     private void stopScanOnly() {

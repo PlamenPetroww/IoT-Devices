@@ -9,11 +9,12 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Color;
 import android.media.AudioAttributes;
 import android.os.Build;
 import android.os.PowerManager;
 import android.service.notification.StatusBarNotification;
+import android.view.View;
+import android.widget.RemoteViews;
 
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
@@ -26,7 +27,7 @@ import java.util.Locale;
 import java.util.Map;
 
 public class AuraFirebaseMessagingService extends FirebaseMessagingService {
-    public static final String CHANNEL_ID = "aura_alarm_alerts_v6";
+    public static final String CHANNEL_ID = "aura_alarm_alerts_v7";
     public static final String EXTRA_EVENT_TAG = "alarm_event_tag";
     public static final String EXTRA_USER_KEY = "alarm_user_key";
     public static final String EXTRA_ALERT_TITLE = "alarm_alert_title";
@@ -278,13 +279,27 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
         int notificationId = notificationIdForAlarm(dedupeTag, eventTag, eventCreatedAt, title, body);
         String notifyTag = notificationTagForAlarm(dedupeTag, eventTag, eventCreatedAt, title, body);
 
-        int accent = ContextCompat.getColor(context, R.color.notification_accent);
+        // Custom row: full-color Aura mark LEFT, open/closed magnets RIGHT.
+        // No DecoratedCustomViewStyle — that would put the tinted system circle on the left.
+        RemoteViews content = new RemoteViews(context.getPackageName(), R.layout.notification_alarm);
+        content.setImageViewResource(R.id.notif_brand, R.drawable.aura_mark);
+        content.setTextViewText(R.id.notif_title, title != null ? title : "");
+        content.setTextViewText(R.id.notif_body, body != null ? body : "");
+        int statusRes = statusIconRes(title, body);
+        if (statusRes != 0) {
+            content.setImageViewResource(R.id.notif_status, statusRes);
+            content.setViewVisibility(R.id.notif_status, View.VISIBLE);
+        } else {
+            content.setViewVisibility(R.id.notif_status, View.GONE);
+        }
+
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_notification_icon)
-                .setColor(accent)
-                .setColorized(false)
+                .setColor(ContextCompat.getColor(context, R.color.notification_accent))
                 .setContentTitle(title)
                 .setContentText(body)
+                .setCustomContentView(content)
+                .setCustomBigContentView(content)
                 .setAutoCancel(true)
                 .setContentIntent(pendingIntent)
                 .setDeleteIntent(deleteIntent)
@@ -292,12 +307,12 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
                 .setCategory(NotificationCompat.CATEGORY_ALARM)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .setVibrate(new long[]{0, 600, 200, 600, 200, 600});
-        // Always the full-color Aura mark (cyan→green neon on dark) — same asset as the
-        // launcher / extracted icon. Android cannot show that as the small status-bar icon
-        // (system forces a monochrome tint); the large icon is where the real logo appears.
-        Bitmap brandIcon = BitmapFactory.decodeResource(context.getResources(), R.drawable.aura_mark);
-        if (brandIcon != null) {
-            builder.setLargeIcon(brandIcon);
+        // Keep largeIcon as magnets too (some OEMs still show it when expanded oddly).
+        if (statusRes != 0) {
+            Bitmap statusIcon = BitmapFactory.decodeResource(context.getResources(), statusRes);
+            if (statusIcon != null) {
+                builder.setLargeIcon(statusIcon);
+            }
         }
 
         if (playSound) {
@@ -323,21 +338,21 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
         return true;
     }
 
-    private static Bitmap statusLargeIcon(Context context, String title, String body) {
+    /** Open/closed magnet art used on the right of the custom notification. */
+    private static int statusIconRes(String title, String body) {
         String text = ((title == null ? "" : title) + "\n" + (body == null ? "" : body))
                 .toLowerCase(Locale.ROOT);
-        int resId = 0;
-        if (text.contains("was closed") || text.contains("wurde geschlossen")) {
-            resId = R.drawable.ic_push_closed;
-        } else if (text.contains("was opened") || text.contains("wurde geöffnet")) {
-            resId = R.drawable.ic_push_open;
+        if (text.contains("was closed")
+                || text.contains("wurde geschlossen")
+                || text.contains("затвор")) {
+            return R.drawable.ic_push_closed;
         }
-        if (resId == 0) return null;
-        try {
-            return BitmapFactory.decodeResource(context.getResources(), resId);
-        } catch (Exception ignored) {
-            return null;
+        if (text.contains("was opened")
+                || text.contains("wurde geöffnet")
+                || text.contains("отвор")) {
+            return R.drawable.ic_push_open;
         }
+        return 0;
     }
 
     private static boolean isSamsung() {

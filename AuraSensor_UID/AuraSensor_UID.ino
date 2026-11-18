@@ -24,7 +24,9 @@
 // 1: The chip sleeps after every send ÔÇö it does NOT transmit continuously. A new record comes on a
 //    magnet change (GPIO wakeup) and/or on the heartbeat timer below (if > 0).
 // 0: Always awake ÔÇö sends on change + periodic battery updates (old mode, for testing).
-#define USE_DEEP_SLEEP 1
+// 0 = always awake (reliable open/close + push while debugging USB).
+// 1 = battery deep sleep. Re-enable after reed/GPIO is confirmed again.
+#define USE_DEEP_SLEEP 0
 // After reset, wait this many ms BEFORE Wi-Fi/sleep ÔÇö for sketch upload and Serial Monitor. Battery product: 0.
 #if USE_DEEP_SLEEP
 #define UPLOAD_GRACE_MS 0
@@ -37,7 +39,7 @@
 #define DEEP_SLEEP_HEARTBEAT_SEC 3600
 // Tools → USB CDC On Boot → Enabled (so Serial Monitor works over USB).
 // Tools → Partition Scheme → Minimal SPIFFS (1.9MB APP with OTA/190KB SPIFFS).
-#define FW_VERSION "1.1.35"
+#define FW_VERSION "1.1.36"
 #define SETUP_AP_SSID "AuraHomeSystems_Setup"
 // Setup alternates: Bluetooth window (iPhone, no Wi-Fi switching), then Wi-Fi window (Android).
 #define BLE_SETUP_WINDOW_MS 40000UL
@@ -2113,10 +2115,18 @@ void loop() {
     String devicePath = userPath + "/devices/" + deviceID;
     bool systemEnabled = true;
     static bool lastStatus = (bool)-1;
+    static unsigned long lastReedLog = 0;
     bool currentStatus = readSensorClosedDebounced();
     static int loopCount = 0;
     const bool statusChanged = (currentStatus != lastStatus);
     loopCount++;
+    if (millis() - lastReedLog >= 1000UL) {
+        lastReedLog = millis();
+        Serial.print("Reed live raw=");
+        Serial.print(digitalRead(sensorPin) == HIGH ? "HIGH" : "LOW");
+        Serial.print(" → ");
+        Serial.println(currentStatus ? "CLOSED" : "OPEN");
+    }
     bool shouldSend = statusChanged;
     if (!shouldSend && BATTERY_ADC_PIN >= 0 && loopCount >= 30) {
         shouldSend = true;
@@ -2187,4 +2197,4 @@ void loop() {
 #endif
 }
 
-// Aura build marker: lines=2190 updated=2026-11-18T19:48 restore-cwl0
+// Aura build marker: lines=2200 FW=1.1.36 USE_DEEP_SLEEP=0

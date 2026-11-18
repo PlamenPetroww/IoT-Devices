@@ -1,6 +1,6 @@
 const translations = {
     en: {
-        nav: { problem: "Problem", solution: "Solution", product: "Product", advantages: "Advantages", compatibility: "Compatibility", pricing: "Pricing", faq: "FAQ", stats: "Results", cta: "Get started", login: "Login", register: "Register", more: "More", language: "Language" },
+        nav: { problem: "Problem", solution: "Solution", product: "Product", advantages: "Advantages", compatibility: "Compatibility", pricing: "Pricing", faq: "FAQ", cta: "Get started", login: "Login", register: "Register", more: "More", language: "Language" },
         a11y: { skipToContent: "Skip to main content" },
         seo: {
             pageTitle: "WiFi Window & Door Sensors – Aura HomeSystems | No Subscription",
@@ -179,16 +179,6 @@ const translations = {
             a11: "No. Each device connects to WiFi (2.4 GHz) on its own and talks to Aura over the internet. Sensors and sirens on your account can use different networks — for example some at home and others at the office — as long as each network has internet and every device is set up on the same Aura account. Then they share one alarm: when any sensor opens, your phone and every siren on that account can react.",
             q12: "How is Aura different from DIY alarm kits with a siren box?",
             a12: "Many wireless kits use a mains-powered base unit with a built-in siren: door sensors run on replaceable batteries and send alerts to that box over radio — you need the base on each site. Aura sensors connect directly to your Wi‑Fi (2.4 GHz), recharge via USB‑C, and notify your phone with no hub. Add a Wi‑Fi siren for on-site sound and light — still no central alarm station and no monthly app subscription."
-        },
-        stats: {
-            title: "Dozens of households trust us",
-            subtitle: "Our solutions already run in real homes and sites. Slowly but surely we're expanding and protecting more people.",
-            cities: "cities",
-            citiesHelp: "Where customers have installed and set up their systems themselves",
-            projects: "successful projects",
-            projectsHelp: "Turnkey solutions completed",
-            clients: "happy clients",
-            clientsHelp: "With peace of mind and a protected home"
         },
         testimonials: {
             title: "What our clients say",
@@ -608,7 +598,7 @@ const translations = {
         }
     },
     de: {
-        nav: { problem: "Problem", solution: "Lösung", product: "Produkt", advantages: "Vorteile", compatibility: "Kompatibilität", pricing: "Preise", faq: "FAQ", stats: "Ergebnisse", cta: "Loslegen", login: "Anmelden", register: "Registrieren", more: "Mehr", language: "Sprache" },
+        nav: { problem: "Problem", solution: "Lösung", product: "Produkt", advantages: "Vorteile", compatibility: "Kompatibilität", pricing: "Preise", faq: "FAQ", cta: "Loslegen", login: "Anmelden", register: "Registrieren", more: "Mehr", language: "Sprache" },
         a11y: { skipToContent: "Zum Hauptinhalt springen" },
         seo: {
             pageTitle: "WLAN Fenstersensor & Türsensor – Aura HomeSystems | Kein Abo",
@@ -787,16 +777,6 @@ const translations = {
             a11: "Nein. Jedes Gerät verbindet sich selbst mit WLAN (2,4 GHz) und kommuniziert über das Internet mit Aura. Sensoren und Sirenen auf Ihrem Konto können unterschiedliche Netze nutzen — z. B. teils zu Hause, teils im Büro — solange jedes Netz Internet hat und alle Geräte auf demselben Aura-Konto eingerichtet sind. Dann teilen sie einen gemeinsamen Alarm: Öffnet sich ein Sensor, können Handy und alle Sirenen dieses Kontos reagieren.",
             q12: "Worin unterscheidet sich Aura von DIY-Alarmsets mit Sirenen-Box?",
             a12: "Viele Funk-Sets haben eine netzbetriebene Basis mit eingebauter Sirene: Türsensoren laufen mit Wechselbatterien und melden per Funk an diese Box — pro Standort brauchen Sie die Zentrale. Aura-Sensoren verbinden sich direkt mit WLAN (2,4 GHz), laden per USB‑C und melden ohne Hub ans Handy. Eine WLAN-Sirene für Ton und Licht vor Ort — weiterhin keine Alarm-Zentrale und kein monatliches App-Abo."
-        },
-        stats: {
-            title: "Dutzende Haushalte vertrauen uns",
-            subtitle: "Unsere Lösungen laufen bereits in echten Wohnungen und Objekten. Langsam aber sicher erweitern wir und schützen mehr Menschen.",
-            cities: "Städte",
-            citiesHelp: "Kunden haben ihre Anlagen selbst installiert und eingerichtet",
-            projects: "erfolgreiche Projekte",
-            projectsHelp: "Abgeschlossene Komplettlösungen",
-            clients: "zufriedene Kunden",
-            clientsHelp: "Mit ruhigerem Schlaf und geschütztem Zuhause"
         },
         testimonials: {
             title: "Was unsere Kunden sagen",

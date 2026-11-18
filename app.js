@@ -186,50 +186,6 @@ function initI18n() {
     });
 }
 
-function initStatsCounters() {
-    const counters = document.querySelectorAll(".stat-number");
-    if (!counters.length) return;
-
-    const animateCounter = (el) => {
-        const target = parseInt(el.getAttribute("data-target") || "0", 10);
-        if (!target || isNaN(target)) return;
-
-        const duration = 1500;
-        const startTime = performance.now();
-
-        const step = (now) => {
-            const progress = Math.min((now - startTime) / duration, 1);
-            const eased = 1 - Math.pow(1 - progress, 3);
-            const value = Math.round(target * eased);
-            el.textContent = value.toString();
-
-            if (progress < 1) {
-                requestAnimationFrame(step);
-            } else {
-                el.textContent = target.toString();
-            }
-        };
-
-        requestAnimationFrame(step);
-    };
-
-    const observer = new IntersectionObserver(
-        (entries, obs) => {
-            entries.forEach((entry) => {
-                if (entry.isIntersecting) {
-                    animateCounter(entry.target);
-                    obs.unobserve(entry.target);
-                }
-            });
-        },
-        {
-            threshold: 0.6,
-        }
-    );
-
-    counters.forEach((counter) => observer.observe(counter));
-}
-
 function initSmoothScroll() {
     const cta = document.querySelector(".primary-cta");
     const targetSection = document.getElementById("cta");
@@ -1982,7 +1938,6 @@ document.addEventListener("DOMContentLoaded", () => {
     initI18n();
     initHeroSceneRotation();
     initMobileMenu();
-    initStatsCounters();
     initSmoothScroll();
     initFooterYear();
     initContactForm();

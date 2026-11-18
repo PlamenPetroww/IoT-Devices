@@ -1933,9 +1933,72 @@ void setup() {
             liveStatus = rtcLastSentStatus == 1;
         }
     }
-    // Arm the opposite of the pin we actually see, so a close wakes the chip
-    // and an already-open door does not immediately send another Open.
-    nextWakeLevel = wakeLevelForClosed(liveStatus);
+    // Right after pairing, stay awake briefly so open/close is tested before deep sleep.
+    // Many "sensor does not react" reports are just deep sleep armed on the wrong level.
+    if (emailFromPortal) {
+        Serial.println("Post-setup: watching magnet 45s — open and close the door now");
+        const unsigned long watchUntil = millis() + 45000UL;
+        bool watchClosed = readSensorClosedStable();
+        while ((long)(millis() - watchUntil) < 0) {
+            delay(60);
+            bool nowClosed = readSensorClosedDebounced();
+            if (nowClosed == watchClosed) continue;
+            watchClosed = nowClosed;
+            liveStatus = nowClosed;
+            Serial.print("Post-setup magnet → ");
+            Serial.println(nowClosed ? "CLOSED" : "OPEN");
+            FirebaseJson liveJson;
+            liveJson.set("status", nowClosed);
+            liveJson.set("deviceName", String(device_name));
+#if RTDB_USE_SV_TIMESTAMP
+            liveJson.set("lastSeen/.sv", "timestamp");
+#else
+            liveJson.set("lastSeen", timestampMsNow());
+#endif
+            liveJson.set("battery", batteryPct);
+            liveJson.set("powerSource", powerSource);
+            liveJson.set("batteryStatus", battStatus);
+            liveJson.set("fwVersion", String(FW_VERSION));
+            if (Firebase.RTDB.setJSON(&fbdo, devicePath, &liveJson)) {
+                unsigned long histTs = timestampMsNow();
+                String historyKey = buildHistoryKey(deviceID, nowClosed, (unsigned long)histTs);
+                String historyPath = userPath + "/history/" + historyKey;
+                FirebaseJson jsonHist;
+                jsonHist.set("deviceId", deviceID);
+                jsonHist.set("deviceName", String(device_name));
+                jsonHist.set("status", nowClosed ? "closed" : "open");
+#if RTDB_USE_SV_TIMESTAMP
+                jsonHist.set("timestamp/.sv", "timestamp");
+#else
+                jsonHist.set("timestamp", histTs);
+#endif
+                if (Firebase.RTDB.setJSON(&fbdo, historyPath.c_str(), &jsonHist)) {
+                    rememberAcknowledged(nowClosed ? 1 : 0);
+                }
+            } else {
+                Serial.print("Post-setup Firebase FAIL: ");
+                Serial.println(fbdo.errorReason());
+            }
+        }
+        Serial.println("Post-setup watch done — entering deep sleep");
+    }
+    // Arm wake from the LIVE pin level (not a possibly stale closed flag).
+    // ESP32-C3 GPIO wake is level-based: wait for the opposite of what the pin is now.
+#if CONFIG_IDF_TARGET_ESP32C3
+    gpio_hold_dis((gpio_num_t)sensorPin);
+#endif
+    pinMode(sensorPin, INPUT_PULLUP);
+    delay(30);
+    const int pinNowHigh = (digitalRead(sensorPin) == HIGH) ? 1 : 0;
+    nextWakeLevel = pinNowHigh ? 0 : 1;
+    Serial.print("Reed pin=");
+    Serial.print(pinNowHigh ? "HIGH" : "LOW");
+    Serial.print(" closedWhenLow=");
+    Serial.print(closedWhenLow ? 1 : 0);
+    Serial.print(" live=");
+    Serial.print(liveStatus ? "CLOSED" : "OPEN");
+    Serial.print(" → wake on ");
+    Serial.println(nextWakeLevel ? "HIGH" : "LOW");
     rtcWakeCount++;
     delay(300);
     Serial.flush();

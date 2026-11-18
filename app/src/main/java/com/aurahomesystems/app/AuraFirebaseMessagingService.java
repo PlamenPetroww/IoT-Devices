@@ -26,7 +26,7 @@ import java.util.Locale;
 import java.util.Map;
 
 public class AuraFirebaseMessagingService extends FirebaseMessagingService {
-    public static final String CHANNEL_ID = "aura_alarm_alerts_v5";
+    public static final String CHANNEL_ID = "aura_alarm_alerts_v6";
     public static final String EXTRA_EVENT_TAG = "alarm_event_tag";
     public static final String EXTRA_USER_KEY = "alarm_user_key";
     public static final String EXTRA_ALERT_TITLE = "alarm_alert_title";
@@ -292,14 +292,12 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
                 .setCategory(NotificationCompat.CATEGORY_ALARM)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .setVibrate(new long[]{0, 600, 200, 600, 200, 600});
-        // Full-color Aura mark (same as the launcher / extracted icon). Status open/closed
-        // icons stay preferred when we know the door state from the message text.
-        Bitmap statusIcon = statusLargeIcon(context, title, body);
-        if (statusIcon == null) {
-            statusIcon = BitmapFactory.decodeResource(context.getResources(), R.drawable.aura_mark);
-        }
-        if (statusIcon != null) {
-            builder.setLargeIcon(statusIcon);
+        // Always the full-color Aura mark (cyan→green neon on dark) — same asset as the
+        // launcher / extracted icon. Android cannot show that as the small status-bar icon
+        // (system forces a monochrome tint); the large icon is where the real logo appears.
+        Bitmap brandIcon = BitmapFactory.decodeResource(context.getResources(), R.drawable.aura_mark);
+        if (brandIcon != null) {
+            builder.setLargeIcon(brandIcon);
         }
 
         if (playSound) {

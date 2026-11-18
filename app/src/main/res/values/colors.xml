@@ -16,6 +16,6 @@
 -->
 <resources>
     <color name="shortcut_background">#F5F5F5</color>
-    <!-- Same dark navy as the Aura mark background (not the Material purple default). -->
-    <color name="notification_accent">#0f172a</color>
+    <!-- Aura green (same as Connect / brand accent). Tints the small status-bar icon. -->
+    <color name="notification_accent">#16a34a</color>
 </resources>

@@ -374,7 +374,7 @@ public class AlarmMonitorService extends Service {
                         PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         return new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_notification_icon)
-                .setColor(0xFF0F172A)
+                .setColor(0xFF16A34A)
                 .setContentTitle("Aura monitoring active")
                 .setContentText("Fast alarm monitoring is active while your system is armed.")
                 .setOngoing(true)

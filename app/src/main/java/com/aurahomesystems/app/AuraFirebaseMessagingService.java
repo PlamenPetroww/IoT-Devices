@@ -17,7 +17,6 @@ import android.view.View;
 import android.widget.RemoteViews;
 
 import androidx.core.app.NotificationCompat;
-import androidx.core.content.ContextCompat;
 
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
@@ -27,7 +26,7 @@ import java.util.Locale;
 import java.util.Map;
 
 public class AuraFirebaseMessagingService extends FirebaseMessagingService {
-    public static final String CHANNEL_ID = "aura_alarm_alerts_v8";
+    public static final String CHANNEL_ID = "aura_alarm_alerts_v9";
     public static final String EXTRA_EVENT_TAG = "alarm_event_tag";
     public static final String EXTRA_USER_KEY = "alarm_user_key";
     public static final String EXTRA_ALERT_TITLE = "alarm_alert_title";
@@ -279,10 +278,11 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
         int notificationId = notificationIdForAlarm(dedupeTag, eventTag, eventCreatedAt, title, body);
         String notifyTag = notificationTagForAlarm(dedupeTag, eventTag, eventCreatedAt, title, body);
 
-        // Custom row: full-color Aura mark LEFT, open/closed magnets RIGHT.
-        // No DecoratedCustomViewStyle — that would put the tinted system circle on the left.
+        // Goal: ONLY Aura logo + text + magnet art. No OEM tinted circle (green/purple).
+        boolean xiaomi = isXiaomiFamily();
+        Bitmap brandBitmap =
+                BitmapFactory.decodeResource(context.getResources(), R.drawable.aura_mark);
         RemoteViews content = new RemoteViews(context.getPackageName(), R.layout.notification_alarm);
-        content.setImageViewResource(R.id.notif_brand, R.drawable.aura_mark);
         content.setTextViewText(R.id.notif_title, title != null ? title : "");
         content.setTextViewText(R.id.notif_body, body != null ? body : "");
         int statusRes = statusIconRes(title, body);
@@ -292,12 +292,20 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
         } else {
             content.setViewVisibility(R.id.notif_status, View.GONE);
         }
+        // On Xiaomi/HyperOS the system draws its own left circle from the app icon.
+        // Replace that circle with the real Aura mark via MIUI "customized icon" + largeIcon,
+        // and hide the duplicate brand ImageView inside the custom row.
+        if (xiaomi && brandBitmap != null) {
+            content.setViewVisibility(R.id.notif_brand, View.GONE);
+        } else {
+            content.setImageViewResource(R.id.notif_brand, R.drawable.aura_mark);
+            content.setViewVisibility(R.id.notif_brand, View.VISIBLE);
+        }
 
-        // Xiaomi heads-up draws smallIcon as a tinted circle BEFORE our custom row.
-        // Use a transparent small icon + no setColor + custom heads-up view so only
-        // Aura mark (left) and magnets (right) show, like the desired layout.
+        // Valid monochrome smallIcon (transparent made MIUI fall back to the launcher icon
+        // and wrap it in a purple circle). No setColor — that was the green circle.
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_notification_transparent)
+                .setSmallIcon(R.drawable.ic_notification_icon)
                 .setContentTitle(title)
                 .setContentText(body)
                 .setCustomContentView(content)
@@ -310,7 +318,9 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
                 .setCategory(NotificationCompat.CATEGORY_ALARM)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .setVibrate(new long[]{0, 600, 200, 600, 200, 600});
-        // Do not setLargeIcon — OEMs put it beside the small icon and squeeze the text.
+        if (xiaomi && brandBitmap != null) {
+            builder.setLargeIcon(brandBitmap);
+        }
 
         if (playSound) {
             builder.setDefaults(NotificationCompat.DEFAULT_ALL);
@@ -321,10 +331,14 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
             builder.setSilent(true);
         }
 
+        Notification notification = builder.build();
+        if (xiaomi) {
+            applyXiaomiCustomIcon(notification);
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            nm.notify(notifyTag, notificationId, builder.build());
+            nm.notify(notifyTag, notificationId, notification);
         } else {
-            nm.notify(notificationId, builder.build());
+            nm.notify(notificationId, notification);
         }
         if (!isNotificationActive(nm, notificationId)) {
             android.util.Log.w("AuraFCM", "notification not active after notify " + eventTag);
@@ -358,6 +372,47 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
                         ? Build.MANUFACTURER.toLowerCase(Locale.US)
                         : "";
         return m.contains("samsung");
+    }
+
+    private static boolean isXiaomiFamily() {
+        String m =
+                Build.MANUFACTURER != null
+                        ? Build.MANUFACTURER.toLowerCase(Locale.US)
+                        : "";
+        String b =
+                Build.BRAND != null ? Build.BRAND.toLowerCase(Locale.US) : "";
+        return m.contains("xiaomi")
+                || m.contains("redmi")
+                || m.contains("poco")
+                || b.contains("xiaomi")
+                || b.contains("redmi")
+                || b.contains("poco");
+    }
+
+    /**
+     * MIUI/HyperOS: replace the tinted launcher circle with largeIcon (Aura mark).
+     * Without this, Xiaomi keeps drawing a purple/green app-icon circle beside our layout.
+     */
+    private static void applyXiaomiCustomIcon(Notification notification) {
+        try {
+            java.lang.reflect.Field extraField =
+                    notification.getClass().getDeclaredField("extraNotification");
+            extraField.setAccessible(true);
+            Object extra = extraField.get(notification);
+            if (extra != null) {
+                java.lang.reflect.Method setCustomized =
+                        extra.getClass().getMethod("setCustomizedIcon", boolean.class);
+                setCustomized.invoke(extra, true);
+            }
+        } catch (Throwable ignored) {
+        }
+        try {
+            if (notification.extras != null) {
+                notification.extras.putBoolean("miui.customNotification", true);
+                notification.extras.putBoolean("miui.suspendAppIcon", true);
+            }
+        } catch (Throwable ignored) {
+        }
     }
 
     @SuppressWarnings("deprecation")

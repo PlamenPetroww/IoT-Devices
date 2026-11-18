@@ -320,6 +320,11 @@ RTC_DATA_ATTR int8_t rtcCapturedClosed = -1;  // sensor state captured immediate
 // accumulated WiFi/SSL/Firebase state that degrades over time.
 #define PERIODIC_RESTART_WAKES 50
 RTC_DATA_ATTR uint16_t rtcWakeCount = 0;
+// After pairing: short timer wakes so magnet moves still reach the app even if
+// GPIO wake fails (esp. ESP32-C3 hold/pull quirks).
+#define FAST_POLL_AFTER_SETUP 120
+#define FAST_POLL_SEC 5
+RTC_DATA_ATTR uint16_t rtcFastPollLeft = 0;
 
 #define EVENT_QUEUE_MAGIC 0x41555242UL
 #define EVENT_QUEUE_CAPACITY 32
@@ -856,12 +861,15 @@ static void armDeepSleepGpioWakeup(int wakeLevel) {
     gpio_reset_pin((gpio_num_t)sensorPin);
     pinMode(sensorPin, INPUT_PULLUP);
     gpio_set_pull_mode((gpio_num_t)sensorPin, GPIO_PULLUP_ONLY);
+    // Do NOT gpio_hold_en the reed pin. Hold freezes the input sample on C3, so
+    // magnet open/close never wakes the chip and the app stays on last status.
+    // Fast-poll timer after setup/reset covers pull-up drop in deep sleep.
+    gpio_deep_sleep_hold_dis();
+    gpio_hold_dis((gpio_num_t)sensorPin);
     delay(50);
     esp_deep_sleep_enable_gpio_wakeup(
         1ULL << sensorPin,
         wakeLevel ? ESP_GPIO_WAKEUP_GPIO_HIGH : ESP_GPIO_WAKEUP_GPIO_LOW);
-    // C3: without hold the internal pull-up drops in deep sleep ÔåÆ the pin floats and never wakes the chip.
-    gpio_hold_en((gpio_num_t)sensorPin);
 #else
     pinMode(sensorPin, INPUT_PULLUP);
     delay(200);
@@ -1523,6 +1531,11 @@ void setup() {
         rtcCapturedClosed = -1;
         rtcWakeCount = 0;
     }
+    // After USB upload / reset (not GPIO/timer wake): poll magnet often so the
+    // app sees open/close even when C3 GPIO wake is unreliable.
+    if (coldBoot) {
+        rtcFastPollLeft = FAST_POLL_AFTER_SETUP;
+    }
 #if UPLOAD_GRACE_MS > 0
     if (coldBoot) delay(UPLOAD_GRACE_MS);
 #endif
@@ -1716,6 +1729,12 @@ void setup() {
     if (emailFromPortal) {
         // Show live Open/Closed on the card right after pairing.
         rtcLastSentStatus = -1;
+        rtcFastPollLeft = FAST_POLL_AFTER_SETUP;
+        Serial.print("Fast poll after setup: ");
+        Serial.print(rtcFastPollLeft);
+        Serial.print(" x ");
+        Serial.print(FAST_POLL_SEC);
+        Serial.println("s");
     }
 #if USE_DEEP_SLEEP
     const esp_sleep_wakeup_cause_t wakeCause = esp_sleep_get_wakeup_cause();
@@ -2023,14 +2042,25 @@ void setup() {
         esp_sleep_enable_timer_wakeup(2ULL * 1000000ULL);
         Serial.print("Queued events remaining: ");
         Serial.println(eventQueue.count);
+    } else if (rtcFastPollLeft > 0) {
+        // GPIO wake can miss on C3; poll every few seconds after pairing.
+        rtcFastPollLeft--;
+        esp_sleep_enable_timer_wakeup((uint64_t)FAST_POLL_SEC * 1000000ULL);
+        Serial.print("Fast poll sleep ");
+        Serial.print(FAST_POLL_SEC);
+        Serial.print("s (left ");
+        Serial.print(rtcFastPollLeft);
+        Serial.println(")");
     }
     Serial.print("Deep sleep. Next wake: sensor change (waiting for ");
     Serial.print(nextWakeLevel ? "HIGH" : "LOW");
     Serial.print(")");
 #if DEEP_SLEEP_HEARTBEAT_SEC > 0
-    Serial.print(" or timer ");
-    Serial.print(DEEP_SLEEP_HEARTBEAT_SEC);
-    Serial.print("s");
+    if (rtcFastPollLeft == 0 && eventQueue.count == 0) {
+        Serial.print(" or timer ");
+        Serial.print(DEEP_SLEEP_HEARTBEAT_SEC);
+        Serial.print("s");
+    }
 #endif
     Serial.println();
     Serial.println("Sleeping...");

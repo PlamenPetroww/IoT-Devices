@@ -27,7 +27,7 @@ import java.util.Locale;
 import java.util.Map;
 
 public class AuraFirebaseMessagingService extends FirebaseMessagingService {
-    public static final String CHANNEL_ID = "aura_alarm_alerts_v7";
+    public static final String CHANNEL_ID = "aura_alarm_alerts_v8";
     public static final String EXTRA_EVENT_TAG = "alarm_event_tag";
     public static final String EXTRA_USER_KEY = "alarm_user_key";
     public static final String EXTRA_ALERT_TITLE = "alarm_alert_title";
@@ -293,13 +293,16 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
             content.setViewVisibility(R.id.notif_status, View.GONE);
         }
 
+        // Xiaomi heads-up draws smallIcon as a tinted circle BEFORE our custom row.
+        // Use a transparent small icon + no setColor + custom heads-up view so only
+        // Aura mark (left) and magnets (right) show, like the desired layout.
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_notification_icon)
-                .setColor(ContextCompat.getColor(context, R.color.notification_accent))
+                .setSmallIcon(R.drawable.ic_notification_transparent)
                 .setContentTitle(title)
                 .setContentText(body)
                 .setCustomContentView(content)
                 .setCustomBigContentView(content)
+                .setCustomHeadsUpContentView(content)
                 .setAutoCancel(true)
                 .setContentIntent(pendingIntent)
                 .setDeleteIntent(deleteIntent)
@@ -307,13 +310,7 @@ public class AuraFirebaseMessagingService extends FirebaseMessagingService {
                 .setCategory(NotificationCompat.CATEGORY_ALARM)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .setVibrate(new long[]{0, 600, 200, 600, 200, 600});
-        // Keep largeIcon as magnets too (some OEMs still show it when expanded oddly).
-        if (statusRes != 0) {
-            Bitmap statusIcon = BitmapFactory.decodeResource(context.getResources(), statusRes);
-            if (statusIcon != null) {
-                builder.setLargeIcon(statusIcon);
-            }
-        }
+        // Do not setLargeIcon — OEMs put it beside the small icon and squeeze the text.
 
         if (playSound) {
             builder.setDefaults(NotificationCompat.DEFAULT_ALL);

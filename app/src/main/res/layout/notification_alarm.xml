@@ -1,20 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Custom alarm row: full-color Aura mark on the left, open/closed magnets on the right.
-     Avoids the system small-icon circle (which Android always tints). -->
+<!-- Heads-up / shade row: Aura mark LEFT, magnets RIGHT. No room reserved for a
+     system-tinted circle — that comes from smallIcon+color on some OEMs. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:gravity="center_vertical"
     android:orientation="horizontal"
-    android:paddingStart="12dp"
-    android:paddingTop="10dp"
-    android:paddingEnd="12dp"
-    android:paddingBottom="10dp">
+    android:paddingStart="8dp"
+    android:paddingTop="8dp"
+    android:paddingEnd="8dp"
+    android:paddingBottom="8dp">
 
     <ImageView
         android:id="@+id/notif_brand"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
+        android:layout_width="44dp"
+        android:layout_height="44dp"
         android:contentDescription="@null"
         android:scaleType="fitCenter"
         android:src="@drawable/aura_mark" />
@@ -22,8 +22,8 @@
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="12dp"
-        android:layout_marginEnd="12dp"
+        android:layout_marginStart="10dp"
+        android:layout_marginEnd="8dp"
         android:layout_weight="1"
         android:orientation="vertical">
 
@@ -43,14 +43,14 @@
             android:layout_height="wrap_content"
             android:ellipsize="end"
             android:maxLines="2"
-            android:textColor="#475569"
+            android:textColor="#334155"
             android:textSize="13sp" />
     </LinearLayout>
 
     <ImageView
         android:id="@+id/notif_status"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
+        android:layout_width="44dp"
+        android:layout_height="44dp"
         android:contentDescription="@null"
         android:scaleType="fitCenter"
         android:visibility="gone" />

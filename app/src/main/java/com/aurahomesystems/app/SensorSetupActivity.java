@@ -347,12 +347,9 @@ public class SensorSetupActivity extends android.app.Activity {
         // Same as the build that worked: the system device picker finds the sensor (and on
         // Android 11 and older it is the only way without location permission). On Android 12+
         // a plain BLE scan runs in parallel as a second chance.
-        // Android 12+: plain BLE scan only (no extra system dialog for the customer).
-        // Android 11 and older: plain scans need location permission, so use the picker.
-        boolean cdm = Build.VERSION.SDK_INT <= 30
-                && getPackageManager().hasSystemFeature(PackageManager.FEATURE_COMPANION_DEVICE_SETUP);
+        boolean cdm = getPackageManager().hasSystemFeature(PackageManager.FEATURE_COMPANION_DEVICE_SETUP);
         if (cdm) startCompanionAssociate();
-        else startScan(false);
+        if (!cdm || Build.VERSION.SDK_INT >= 31) startScan(false);
         // SoftAP in-app path quickly (BLE alone is unreliable on many phones).
         main.removeCallbacks(softApFallback);
         // Board opens SoftAP after ~8s BLE; wait a bit longer so the AP exists.
@@ -773,32 +770,44 @@ public class SensorSetupActivity extends android.app.Activity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode != REQ_CDM || resultCode != RESULT_OK || data == null) return;
+        if (requestCode != REQ_CDM) return;
         if (gatt != null || connecting) return;
         BluetoothDevice device = null;
-        if (Build.VERSION.SDK_INT >= 33) {
-            android.companion.AssociationInfo info =
-                    data.getParcelableExtra(CompanionDeviceManager.EXTRA_ASSOCIATION, android.companion.AssociationInfo.class);
-            if (info != null) {
-                android.net.MacAddress mac = info.getDeviceMacAddress();
-                if (mac != null) {
-                    BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
-                    if (adapter != null) {
-                        device = adapter.getRemoteDevice(mac.toString());
+        try {
+            if (resultCode == RESULT_OK && data != null) {
+                if (Build.VERSION.SDK_INT >= 33) {
+                    android.companion.AssociationInfo info = data.getParcelableExtra(
+                            CompanionDeviceManager.EXTRA_ASSOCIATION,
+                            android.companion.AssociationInfo.class);
+                    if (info != null && info.getDeviceMacAddress() != null) {
+                        BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
+                        if (adapter != null) {
+                            device = adapter.getRemoteDevice(info.getDeviceMacAddress().toString());
+                        }
                     }
                 }
+                if (device == null) {
+                    android.os.Parcelable extra = Build.VERSION.SDK_INT >= 33
+                            ? data.getParcelableExtra(CompanionDeviceManager.EXTRA_DEVICE, ScanResult.class)
+                            : data.getParcelableExtra(CompanionDeviceManager.EXTRA_DEVICE);
+                    if (extra instanceof ScanResult) device = ((ScanResult) extra).getDevice();
+                    else if (extra instanceof BluetoothDevice) device = (BluetoothDevice) extra;
+                }
             }
-        }
-        if (device == null && Build.VERSION.SDK_INT < 33) {
-            // EXTRA_DEVICE removed from the CDM result path on API 33+.
-            android.os.Parcelable extra = data.getParcelableExtra(CompanionDeviceManager.EXTRA_DEVICE);
-            if (extra instanceof ScanResult) device = ((ScanResult) extra).getDevice();
-            else if (extra instanceof BluetoothDevice) device = (BluetoothDevice) extra;
+        } catch (Throwable e) {
+            Log.w(TAG, "CDM result parse failed", e);
         }
         if (device != null) {
             Log.i(TAG, "CDM picked " + device.getAddress());
-            connect(device);
+            try {
+                connect(device);
+                return;
+            } catch (Throwable e) {
+                Log.w(TAG, "CDM connect failed", e);
+            }
         }
+        // Picker cancelled or unusable: keep looking with a normal scan.
+        if (looking && gatt == null && !connecting && !isFinishing()) startScan(false);
     }
 
     private void startScan() {

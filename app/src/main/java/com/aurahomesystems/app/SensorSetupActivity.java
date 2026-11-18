@@ -264,6 +264,7 @@ public class SensorSetupActivity extends android.app.Activity {
 
         form.addView(label(german ? "Netzwerk" : "Network", 12, "#94a3b8"));
         ssidInput = field(german ? "WLAN-Name" : "Wi-Fi name");
+        ssidInput.addTextChangedListener(new SimpleWatcher());
         form.addView(ssidInput);
         networks = new LinearLayout(this);
         networks.setOrientation(LinearLayout.VERTICAL);
@@ -272,6 +273,7 @@ public class SensorSetupActivity extends android.app.Activity {
         form.addView(label(german ? "Passwort" : "Password", 12, "#94a3b8"));
         passInput = field("");
         passInput.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        passInput.addTextChangedListener(new SimpleWatcher());
         form.addView(passInput);
 
         form.addView(label(german ? "Sensorname" : "Sensor name", 12, "#94a3b8"));
@@ -305,6 +307,7 @@ public class SensorSetupActivity extends android.app.Activity {
         GradientDrawable bg = new GradientDrawable();
         bg.setColor(Color.parseColor("#16a34a"));
         bg.setCornerRadius(dp(12));
+        actionBg = bg;
         action.setBackground(bg);
         LinearLayout.LayoutParams btnLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(48));
@@ -442,6 +445,7 @@ public class SensorSetupActivity extends android.app.Activity {
                     action.setEnabled(true);
                     action.setOnClickListener(v -> sendCredentials());
                     action.setText(german ? "Verbinden" : "Connect");
+                    refreshConnect();
                     detail.setText(german
                             ? "Mit Sensor verbunden. WLAN-Liste wird geladen…"
                             : "Linked to the sensor. Loading Wi-Fi list…");
@@ -1190,7 +1194,7 @@ public class SensorSetupActivity extends android.app.Activity {
             if (gatt != null && !bleListReady && listEmpty) {
                 // The sensor scans Wi-Fi only after the phone connects; wait for its "found" signal.
                 detail.setText(german ? "WLAN-Netze werden gesucht…" : "Searching for Wi-Fi networks…");
-                action.setEnabled(false);
+                setConnectLook(false);
                 main.removeCallbacks(listFallback);
                 main.postDelayed(listFallback, 12000);
                 return;
@@ -1222,27 +1226,60 @@ public class SensorSetupActivity extends android.app.Activity {
     }
 
     private boolean nameBlocked;
+    private GradientDrawable actionBg;
 
-    /** A name already used by another sensor would replace it: block Connect and say so. */
+    private final class SimpleWatcher implements android.text.TextWatcher {
+        @Override
+        public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+        }
+
+        @Override
+        public void onTextChanged(CharSequence s, int start, int before, int count) {
+        }
+
+        @Override
+        public void afterTextChanged(android.text.Editable s) {
+            refreshConnect();
+        }
+    }
+
     private void updateNameBlock() {
-        if (nameInput == null || action == null || credsSent || returnCountdownStarted) return;
+        refreshConnect();
+    }
+
+    /**
+     * Connect is active only with a network, a password and a free sensor name, and not while
+     * the sensor is still searching for Wi-Fi. A name already used would replace that sensor.
+     */
+    private void refreshConnect() {
+        if (nameInput == null || action == null || form == null || credsSent || returnCountdownStarted) return;
+        if (form.getVisibility() != View.VISIBLE || action.getVisibility() != View.VISIBLE) return;
+        String label = String.valueOf(action.getText());
+        if (!label.equals("Connect") && !label.equals("Verbinden")) return;
         String name = nameInput.getText().toString().trim();
         if (name.isEmpty()) name = "Front Door";
         boolean taken = existingSensorKeys.contains(sensorKey(name));
+        boolean searching = gatt != null && !bleListReady;
+        boolean hasNetwork = ssidInput.getText().toString().trim().length() > 0;
+        boolean hasPassword = passInput.getText().toString().length() > 0;
+        setConnectLook(!taken && !searching && hasNetwork && hasPassword);
         if (taken) {
             nameBlocked = true;
-            action.setEnabled(false);
             detail.setText(german
                     ? "Du hast bereits einen Sensor mit dem Namen „" + name + "“. Bitte wähle einen anderen Namen."
                     : "You already have a sensor named “" + name + "”. Please choose a different name.");
         } else if (nameBlocked) {
             nameBlocked = false;
-            boolean listReady = gatt == null || bleListReady;
-            action.setEnabled(listReady);
             detail.setText(german ? "Passwort und Name eingeben." : "Enter the password and a name.");
         }
     }
 
+    /** Disabled looks clearly disabled: dark green, dim text. */
+    private void setConnectLook(boolean enabled) {
+        action.setEnabled(enabled);
+        if (actionBg != null) actionBg.setColor(Color.parseColor(enabled ? "#16a34a" : "#14532d"));
+        action.setTextColor(Color.parseColor(enabled ? "#f0fdf4" : "#6b8f78"));
+    }
     private void sendCredentials() {
         String ssid = ssidInput.getText().toString().trim();
         String pass = passInput.getText().toString();

@@ -111,6 +111,7 @@ public class SensorSetupActivity extends android.app.Activity {
     private int softApAttempts;
     private int scanSeen;
     private boolean bleListReady;
+    private String pendingErrorNote;
     private final java.util.concurrent.CopyOnWriteArrayList<String> scanNames = new java.util.concurrent.CopyOnWriteArrayList<>();
     private int negotiatedMtu = 23;
     private int scanPass;
@@ -887,6 +888,7 @@ public class SensorSetupActivity extends android.app.Activity {
                     ? " — Sensor daneben lassen"
                     : " — keep the sensor next to you";
         }
+        if (pendingErrorNote != null) base = pendingErrorNote + "\n\n" + base;
         detail.setText(base);
     }
 
@@ -1181,7 +1183,9 @@ public class SensorSetupActivity extends android.app.Activity {
             }
             main.removeCallbacks(listFallback);
             action.setEnabled(true);
-            detail.setText(german ? "Passwort und Name eingeben." : "Enter the password and a name.");
+            detail.setText(pendingErrorNote != null
+                    ? pendingErrorNote
+                    : (german ? "Passwort und Name eingeben." : "Enter the password and a name."));
             String current = ssidInput.getText().toString().trim();
             for (String part : raw.split("\n")) {
                 String ssid = part.trim();
@@ -1217,6 +1221,7 @@ public class SensorSetupActivity extends android.app.Activity {
                     : "You already have a sensor named “" + name + "”. Please choose a different name.");
             return;
         }
+        pendingErrorNote = null;
         // SoftAP path (primary): always try if BLE GATT is not up.
         if (softApMode || gatt == null) {
             softApMode = true;
@@ -1429,13 +1434,22 @@ public class SensorSetupActivity extends android.app.Activity {
         connecting = false;
         if (finishedOk || isFinishing()) return;
         if (credsSent) {
-            showMessage(german
-                    ? "Der Sensor hat die Verbindung verloren. Bleib daneben und versuch es nochmal."
-                    : "The sensor disconnected. Stay next to it and try again.");
+            pendingErrorNote = german
+                    ? "Verbindung mit dem WLAN fehlgeschlagen. Prüfe das Passwort (2,4-GHz-Netz) und versuche es nochmal."
+                    : "Could not connect to your Wi-Fi. Check the password (2.4 GHz network) and try again.";
             credsSent = false;
+            shownPct = 0;
+            targetPct = 0;
+            main.removeCallbacks(magnetTick);
+            percent.setVisibility(View.GONE);
+            magnets.setVisibility(View.GONE);
         }
         looking = true;
         startScan(true);
+        // This phone does not see the sensor with a plain scan; ask the system picker again.
+        if (getPackageManager().hasSystemFeature(PackageManager.FEATURE_COMPANION_DEVICE_SETUP)) {
+            startCompanionAssociate();
+        }
     }
 
     private void showMessage(String message) {

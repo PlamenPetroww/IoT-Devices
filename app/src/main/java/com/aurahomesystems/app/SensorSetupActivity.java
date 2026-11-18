@@ -128,6 +128,7 @@ public class SensorSetupActivity extends android.app.Activity {
     private MagnetView magnets;
     private int shownPct;
     private int targetPct;
+    private boolean returnCountdownStarted;
     private final Runnable magnetTick = new Runnable() {
         @Override
         public void run() {
@@ -690,9 +691,7 @@ public class SensorSetupActivity extends android.app.Activity {
                         showProgress(100, german ? "Fertig" : "Done");
                         finishedOk = true;
                         releaseSoftApNetwork();
-                        detail.setText(german
-                                ? "Sensor ist verbunden. Tippe unten, um zum Dashboard zurückzukehren."
-                                : "Sensor is connected. Tap below to return to the dashboard.");
+
                         showDashboardReturn();
                     } else {
                         credsSent = false;
@@ -1299,6 +1298,7 @@ public class SensorSetupActivity extends android.app.Activity {
     private void applyStatus(String raw) {
         String text = raw == null ? "" : raw.trim();
         main.post(() -> {
+            if (returnCountdownStarted) return;
             int pct = 0;
             String stage = text;
             int space = text.indexOf(' ');
@@ -1351,9 +1351,7 @@ public class SensorSetupActivity extends android.app.Activity {
             if ("ok".equals(stage) || pct >= 100) {
                 finishedOk = true;
                 showProgress(100, german ? "Verbunden" : "Connected");
-                detail.setText(german
-                        ? "Sensor ist verbunden. Tippe unten, um zum Dashboard zurückzukehren."
-                        : "Sensor is connected. Tap below to return to the dashboard.");
+
                 showDashboardReturn();
                 return;
             }
@@ -1470,11 +1468,46 @@ public class SensorSetupActivity extends android.app.Activity {
         return true;
     }
 
+    // No button: once the ring is full, count 3, 2, 1 and return to the dashboard.
     private void showDashboardReturn() {
-        action.setVisibility(View.VISIBLE);
-        action.setEnabled(true);
-        action.setText(german ? "Zum Dashboard" : "Back to dashboard");
-        action.setOnClickListener(v -> finish());
+        if (returnCountdownStarted) return;
+        returnCountdownStarted = true;
+        action.setVisibility(View.GONE);
+        form.setVisibility(View.GONE);
+        main.postDelayed(new Runnable() {
+            int left = 3;
+            boolean counting;
+
+            @Override
+            public void run() {
+                if (isFinishing()) return;
+                if (!counting) {
+                    if (shownPct < 100) {
+                        main.postDelayed(this, 100);
+                        return;
+                    }
+                    counting = true;
+                    headline.setText(german ? "Verbunden" : "Connected");
+                    show();
+                    main.postDelayed(this, 1000);
+                    return;
+                }
+                left--;
+                if (left <= 0) {
+                    finish();
+                    return;
+                }
+                show();
+                main.postDelayed(this, 1000);
+            }
+
+            private void show() {
+                percent.setText(String.valueOf(left));
+                detail.setText(german
+                        ? "Dein Sensor ist bereit. Zurück zum Dashboard in " + left + "…"
+                        : "Your sensor is ready. Taking you to the dashboard in " + left + "…");
+            }
+        }, 100);
     }
 
     private void restoreConnectAction() {

@@ -22,7 +22,8 @@
 #endif
 // ========== DEEP SLEEP ==========
 // 1: Sleep after each send. Wake on magnet (GPIO) and/or heartbeat timer.
-// 0: Always awake (USB debug only).
+// 0: Always awake — use for VIDEO/demo (near-instant signals). Tagged fw-1.1.37-no-deepsleep.
+// Production battery build stays at 1 (tagged fw-1.1.38-deepsleep).
 #define USE_DEEP_SLEEP 1
 // After reset, wait this many ms BEFORE Wi-Fi/sleep ÔÇö for sketch upload and Serial Monitor. Battery product: 0.
 #if USE_DEEP_SLEEP

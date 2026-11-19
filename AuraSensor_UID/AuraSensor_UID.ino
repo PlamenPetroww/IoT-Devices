@@ -39,7 +39,7 @@
 #define DEEP_SLEEP_HEARTBEAT_SEC 3600
 // Tools → USB CDC On Boot → Enabled (so Serial Monitor works over USB).
 // Tools → Partition Scheme → Minimal SPIFFS (1.9MB APP with OTA/190KB SPIFFS).
-#define FW_VERSION "1.1.36"
+#define FW_VERSION "1.1.37"
 #define SETUP_AP_SSID "AuraHomeSystems_Setup"
 // Setup alternates: Bluetooth window (iPhone, no Wi-Fi switching), then Wi-Fi window (Android).
 #define BLE_SETUP_WINDOW_MS 40000UL
@@ -1753,17 +1753,11 @@ void setup() {
     }
     Serial.print("Device path: ");
     Serial.println(devicePath);
-    // Only honor "removed in app" on normal wakes — never right after setup.
+    // If the app left a Remove tombstone, clear it and keep publishing. Skipping
+    // here made re-paired sensors stay silent while the dashboard healed the tombstone.
     if (!emailFromPortal && deviceRemovedInApp(userPath, deviceID)) {
-        Serial.println("Sensor removed in app — skip Firebase device/history write");
-        Serial.flush();
-        rtcCapturedClosed = -1;
-        armDeepSleepGpioWakeup(wakeLevelForClosed(readSensorClosedStable()));
-        esp_sleep_enable_timer_wakeup(DEEP_SLEEP_HEARTBEAT_SEC > 0
-            ? (uint64_t)DEEP_SLEEP_HEARTBEAT_SEC * 1000000ULL
-            : 3600ULL * 1000000ULL);
-        esp_deep_sleep_start();
-        return;
+        Serial.println("Remove tombstone on wake — clearing, still updating");
+        clearDeviceRemovedInApp(userPath, deviceID);
     }
     syncClosedWhenLowFromFirebase(userPath, deviceID);
     adoptHistStatusOnce(userPath, deviceID);
@@ -2132,10 +2126,12 @@ void loop() {
         shouldSend = true;
         loopCount = 0;
     }
+    // Never skip live updates because of a Remove tombstone. The dashboard used
+    // to re-heal tombstones after BLE pair (healedFromLocal) and the sensor then
+    // stayed silent forever. Clear and keep writing.
     if (shouldSend && deviceRemovedInApp(userPath, deviceID)) {
-        Serial.println("Sensor removed in app — skip update");
-        shouldSend = false;
-        if (statusChanged) lastStatus = currentStatus;
+        Serial.println("Remove tombstone seen — clearing, still updating");
+        clearDeviceRemovedInApp(userPath, deviceID);
     }
     if (shouldSend) {
         Serial.print("Sensor ");
@@ -2197,4 +2193,4 @@ void loop() {
 #endif
 }
 
-// Aura build marker: lines=2200 FW=1.1.36 USE_DEEP_SLEEP=0
+// Aura build marker: lines=2196 FW=1.1.37 no-skip-tombstone

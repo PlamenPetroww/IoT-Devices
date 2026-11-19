@@ -1106,20 +1106,16 @@
               Object.keys(remoteIds).forEach(function (id) {
                 localRemovedIds[id] = true;
               });
-              var liveDevices =
-                (lastDevicesSnap && lastDevicesSnap.val()) || {};
               Object.keys(localRemovedIds).forEach(function (id) {
                 if (remoteIds[id]) return;
-                // SoftAP re-setup: tombstone gone AND device card is back → allow show.
-                if (
-                  prevRemoteRemovedIds[id] &&
-                  liveDevices &&
-                  liveDevices[id]
-                ) {
+                // Firmware/BLE cleared the tombstone — STOP healing it back.
+                // Old logic required liveDevices[id] first; the race deleted the
+                // new card and wrote healedFromLocal, so the sensor skipped all updates.
+                if (prevRemoteRemovedIds[id]) {
                   delete localRemovedIds[id];
                   return;
                 }
-                // Tombstone missing but sensor not restored — keep hidden and heal.
+                // Local-only remove not yet on Firebase — sync tombstone once.
                 healRemovedTombstone(id);
               });
               persistLocalRemoved();

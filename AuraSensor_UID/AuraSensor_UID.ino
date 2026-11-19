@@ -37,7 +37,7 @@
 #define DEEP_SLEEP_HEARTBEAT_SEC 3600
 // Tools → USB CDC On Boot → Enabled (so Serial Monitor works over USB).
 // Tools → Partition Scheme → Minimal SPIFFS (1.9MB APP with OTA/190KB SPIFFS).
-#define FW_VERSION "1.1.41"
+#define FW_VERSION "1.1.42"
 #define SETUP_AP_SSID "AuraHomeSystems_Setup"
 // Setup alternates: Bluetooth window (iPhone, no Wi-Fi switching), then Wi-Fi window (Android).
 #define BLE_SETUP_WINDOW_MS 40000UL
@@ -328,6 +328,12 @@ RTC_DATA_ATTR uint16_t rtcWakeCount = 0;
 #define FAST_POLL_AFTER_SETUP 0
 #define FAST_POLL_SEC 5
 RTC_DATA_ATTR uint16_t rtcFastPollLeft = 0;
+// C3: wake-on-HIGH in deep sleep is unreliable. While OPEN (waiting for HIGH),
+// deep-sleep and wake every HIGH_POLL_SEC to read the pin — no WiFi until HIGH
+// or the hourly heartbeat. CLOSED still uses instant GPIO wake-on-LOW.
+#define HIGH_POLL_SEC 15
+RTC_DATA_ATTR uint8_t rtcMagnetHighPoll = 0;
+RTC_DATA_ATTR uint16_t rtcHighPollCount = 0;
 
 #define EVENT_QUEUE_MAGIC 0x41555242UL
 #define EVENT_QUEUE_CAPACITY 32
@@ -885,9 +891,37 @@ static void armDeepSleepGpioWakeup(int wakeLevel) {
 #endif
 }
 
-// Always deep sleep (OPEN and CLOSED) for battery. C3 pull-up is kept via
-// gpio_sleep_set_pull_mode in armDeepSleepGpioWakeup — not light sleep.
+// CLOSED→wait LOW: normal deep sleep + GPIO. OPEN→wait HIGH: deep-sleep poll
+// every HIGH_POLL_SEC (no WiFi) because C3 GPIO-HIGH wake is unreliable.
 static void sleepWaitingForMagnet(int wakeLevel) {
+#if CONFIG_IDF_TARGET_ESP32C3
+    if (wakeLevel != 0) {
+        rtcMagnetHighPoll = 1;
+        rtcHighPollCount = 0;
+        WiFi.disconnect(true);
+        delay(40);
+        WiFi.mode(WIFI_OFF);
+        pinMode(sensorPin, INPUT_PULLUP);
+        gpio_set_pull_mode((gpio_num_t)sensorPin, GPIO_PULLUP_ONLY);
+        gpio_sleep_set_direction((gpio_num_t)sensorPin, GPIO_MODE_INPUT);
+        gpio_sleep_set_pull_mode((gpio_num_t)sensorPin, GPIO_PULLUP_ONLY);
+        gpio_sleep_sel_en((gpio_num_t)sensorPin);
+        gpio_deep_sleep_hold_dis();
+        gpio_hold_dis((gpio_num_t)sensorPin);
+        esp_deep_sleep_enable_gpio_wakeup(
+            1ULL << sensorPin, ESP_GPIO_WAKEUP_GPIO_HIGH);
+        esp_sleep_enable_timer_wakeup((uint64_t)HIGH_POLL_SEC * 1000000ULL);
+        Serial.print("Deep sleep OPEN: wait HIGH (GPIO or poll ");
+        Serial.print(HIGH_POLL_SEC);
+        Serial.println("s, no WiFi until change)");
+        Serial.println("Sleeping...");
+        Serial.flush();
+        delay(100);
+        esp_deep_sleep_start();
+        return;
+    }
+    rtcMagnetHighPoll = 0;
+#endif
     armDeepSleepGpioWakeup(wakeLevel);
     Serial.print("Deep sleep. Next wake: sensor change (waiting for ");
     Serial.print(wakeLevel ? "HIGH" : "LOW");
@@ -1553,6 +1587,8 @@ void setup() {
         rtcLastSentStatus = -1;
         rtcCapturedClosed = -1;
         rtcWakeCount = 0;
+        rtcMagnetHighPoll = 0;
+        rtcHighPollCount = 0;
     }
     // Do not arm fast-poll on cold boot — that woke every few seconds and
     // drained battery. Magnet GPIO + hourly heartbeat are enough.
@@ -1590,6 +1626,43 @@ void setup() {
     if (BATTERY_ADC_PIN >= 0) pinMode(BATTERY_ADC_PIN, INPUT);
     if (USB_DETECT_PIN >= 0) pinMode(USB_DETECT_PIN, INPUT);
 #if USE_DEEP_SLEEP
+#if CONFIG_IDF_TARGET_ESP32C3
+    // Silent deep-poll while OPEN: no WiFi until pin goes HIGH (CLOSED) or hourly.
+    if (rtcMagnetHighPoll) {
+        const bool pinHigh = digitalRead(sensorPin) == HIGH;
+        const uint16_t maxPolls = (DEEP_SLEEP_HEARTBEAT_SEC > 0)
+            ? (uint16_t)((DEEP_SLEEP_HEARTBEAT_SEC + HIGH_POLL_SEC - 1) / HIGH_POLL_SEC)
+            : (uint16_t)240;
+        if (!pinHigh && rtcHighPollCount + 1 < maxPolls) {
+            rtcHighPollCount++;
+            Serial.print("OPEN deep-poll ");
+            Serial.print(rtcHighPollCount);
+            Serial.print("/");
+            Serial.print(maxPolls);
+            Serial.println(" still LOW — sleep, no WiFi");
+            Serial.flush();
+            WiFi.mode(WIFI_OFF);
+            pinMode(sensorPin, INPUT_PULLUP);
+            gpio_set_pull_mode((gpio_num_t)sensorPin, GPIO_PULLUP_ONLY);
+            gpio_sleep_set_direction((gpio_num_t)sensorPin, GPIO_MODE_INPUT);
+            gpio_sleep_set_pull_mode((gpio_num_t)sensorPin, GPIO_PULLUP_ONLY);
+            gpio_sleep_sel_en((gpio_num_t)sensorPin);
+            esp_deep_sleep_enable_gpio_wakeup(
+                1ULL << sensorPin, ESP_GPIO_WAKEUP_GPIO_HIGH);
+            esp_sleep_enable_timer_wakeup((uint64_t)HIGH_POLL_SEC * 1000000ULL);
+            delay(30);
+            esp_deep_sleep_start();
+            return;
+        }
+        if (pinHigh) {
+            Serial.println("OPEN deep-poll → HIGH (CLOSED), continue to send");
+        } else {
+            Serial.println("OPEN deep-poll → hourly heartbeat with WiFi");
+        }
+        rtcMagnetHighPoll = 0;
+        rtcHighPollCount = 0;
+    }
+#endif
     {
         const esp_sleep_wakeup_cause_t earlyWake = esp_sleep_get_wakeup_cause();
         const bool gpioWake = (earlyWake == ESP_SLEEP_WAKEUP_EXT0
@@ -2192,4 +2265,4 @@ void loop() {
 #endif
 }
 
-// Aura build marker: lines=2195 FW=1.1.41 deep-sleep-both-edges
+// Aura build marker: lines=2268 FW=1.1.42 OPEN-deep-poll-15s

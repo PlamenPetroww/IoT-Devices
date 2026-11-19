@@ -37,7 +37,7 @@
 #define DEEP_SLEEP_HEARTBEAT_SEC 3600
 // Tools → USB CDC On Boot → Enabled (so Serial Monitor works over USB).
 // Tools → Partition Scheme → Minimal SPIFFS (1.9MB APP with OTA/190KB SPIFFS).
-#define FW_VERSION "1.1.39"
+#define FW_VERSION "1.1.40"
 #define SETUP_AP_SSID "AuraHomeSystems_Setup"
 // Setup alternates: Bluetooth window (iPhone, no Wi-Fi switching), then Wi-Fi window (Android).
 #define BLE_SETUP_WINDOW_MS 40000UL
@@ -864,9 +864,7 @@ static void armDeepSleepGpioWakeup(int wakeLevel) {
     gpio_reset_pin((gpio_num_t)sensorPin);
     pinMode(sensorPin, INPUT_PULLUP);
     gpio_set_pull_mode((gpio_num_t)sensorPin, GPIO_PULLUP_ONLY);
-    // Do NOT gpio_hold_en the reed pin. Hold freezes the input sample on C3, so
-    // magnet open/close never wakes the chip and the app stays on last status.
-    // Fast-poll timer after setup/reset covers pull-up drop in deep sleep.
+    // Do NOT gpio_hold_en the reed pin. Hold freezes the input sample on C3.
     gpio_deep_sleep_hold_dis();
     gpio_hold_dis((gpio_num_t)sensorPin);
     delay(50);
@@ -882,6 +880,47 @@ static void armDeepSleepGpioWakeup(int wakeLevel) {
 #if DEEP_SLEEP_HEARTBEAT_SEC > 0
     esp_sleep_enable_timer_wakeup((uint64_t)DEEP_SLEEP_HEARTBEAT_SEC * 1000000ULL);
 #endif
+}
+
+// C3 deep sleep often drops the internal pull-up, so "wake on HIGH" never fires
+// (OPEN→LOW works; CLOSE→HIGH sticks asleep). Light sleep keeps INPUT_PULLUP.
+// Returns after wake; caller should ESP.restart() like a deep-sleep reset.
+static void sleepWaitingForMagnet(int wakeLevel) {
+    WiFi.disconnect(true);
+    delay(50);
+    WiFi.mode(WIFI_OFF);
+    delay(50);
+    pinMode(sensorPin, INPUT_PULLUP);
+    gpio_set_pull_mode((gpio_num_t)sensorPin, GPIO_PULLUP_ONLY);
+#if CONFIG_IDF_TARGET_ESP32C3
+    if (wakeLevel != 0) {
+        gpio_hold_dis((gpio_num_t)sensorPin);
+        gpio_wakeup_enable((gpio_num_t)sensorPin, GPIO_INTR_HIGH_LEVEL);
+        esp_sleep_enable_gpio_wakeup();
+#if DEEP_SLEEP_HEARTBEAT_SEC > 0
+        esp_sleep_enable_timer_wakeup((uint64_t)DEEP_SLEEP_HEARTBEAT_SEC * 1000000ULL);
+#endif
+        Serial.println("Light sleep (C3 keep pull-up, waiting for HIGH)");
+        Serial.flush();
+        delay(50);
+        esp_light_sleep_start();
+        return;
+    }
+#endif
+    armDeepSleepGpioWakeup(wakeLevel);
+    Serial.print("Deep sleep. Next wake: sensor change (waiting for ");
+    Serial.print(wakeLevel ? "HIGH" : "LOW");
+    Serial.print(")");
+#if DEEP_SLEEP_HEARTBEAT_SEC > 0
+    Serial.print(" or timer ");
+    Serial.print(DEEP_SLEEP_HEARTBEAT_SEC);
+    Serial.print("s");
+#endif
+    Serial.println();
+    Serial.println("Sleeping...");
+    Serial.flush();
+    delay(150);
+    esp_deep_sleep_start();
 }
 // First setup talks to the Aura app over Bluetooth. The phone sends Wi-Fi, email and name.
 // AuraHomeSystems_Setup stays only if Bluetooth itself fails to start.
@@ -2063,36 +2102,29 @@ void setup() {
         ESP.restart();
         return;
     }
-    // Before sleep: RTC pull (ESP32/S3) or gpio pull (C3) ÔÇö see armDeepSleepGpioWakeup().
-    armDeepSleepGpioWakeup(nextWakeLevel);
+    // Before sleep: C3 waiting-for-HIGH uses light sleep (pull-up stays);
+    // waiting-for-LOW uses deep sleep (works on your units).
     if (eventQueue.count > 0) {
+        armDeepSleepGpioWakeup(nextWakeLevel);
         esp_sleep_enable_timer_wakeup(2ULL * 1000000ULL);
         Serial.print("Queued events remaining: ");
         Serial.println(eventQueue.count);
-    } else if (rtcFastPollLeft > 0) {
-        // GPIO wake can miss on C3; poll every few seconds after pairing.
-        rtcFastPollLeft--;
-        esp_sleep_enable_timer_wakeup((uint64_t)FAST_POLL_SEC * 1000000ULL);
-        Serial.print("Fast poll sleep ");
-        Serial.print(FAST_POLL_SEC);
-        Serial.print("s (left ");
-        Serial.print(rtcFastPollLeft);
-        Serial.println(")");
+        Serial.println("Sleeping...");
+        Serial.flush();
+        delay(150);
+        esp_deep_sleep_start();
+        return;
     }
-    Serial.print("Deep sleep. Next wake: sensor change (waiting for ");
-    Serial.print(nextWakeLevel ? "HIGH" : "LOW");
-    Serial.print(")");
-#if DEEP_SLEEP_HEARTBEAT_SEC > 0
-    if (rtcFastPollLeft == 0 && eventQueue.count == 0) {
-        Serial.print(" or timer ");
-        Serial.print(DEEP_SLEEP_HEARTBEAT_SEC);
-        Serial.print("s");
+    sleepWaitingForMagnet(nextWakeLevel);
+#if CONFIG_IDF_TARGET_ESP32C3
+    // Light sleep returns here; mirror deep-sleep reboot into setup().
+    if (nextWakeLevel != 0) {
+        Serial.println("Light-sleep wake → restart");
+        Serial.flush();
+        delay(50);
+        ESP.restart();
     }
 #endif
-    Serial.println();
-    Serial.println("Sleeping...");
-    delay(150);
-    esp_deep_sleep_start();
     return;
 #endif
 
@@ -2190,4 +2222,4 @@ void loop() {
 #endif
 }
 
-// Aura build marker: lines=2193 FW=1.1.39 magnet-only-sleep
+// Aura build marker: lines=2225 FW=1.1.40 light-sleep-HIGH

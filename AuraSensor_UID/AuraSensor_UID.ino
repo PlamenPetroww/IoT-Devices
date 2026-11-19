@@ -21,12 +21,9 @@
 #include "driver/gpio.h"
 #endif
 // ========== DEEP SLEEP ==========
-// 1: The chip sleeps after every send ÔÇö it does NOT transmit continuously. A new record comes on a
-//    magnet change (GPIO wakeup) and/or on the heartbeat timer below (if > 0).
-// 0: Always awake ÔÇö sends on change + periodic battery updates (old mode, for testing).
-// 0 = always awake (reliable open/close + push while debugging USB).
-// 1 = battery deep sleep. Re-enable after reed/GPIO is confirmed again.
-#define USE_DEEP_SLEEP 0
+// 1: Sleep after each send. Wake on magnet (GPIO) and/or heartbeat timer.
+// 0: Always awake (USB debug only).
+#define USE_DEEP_SLEEP 1
 // After reset, wait this many ms BEFORE Wi-Fi/sleep ÔÇö for sketch upload and Serial Monitor. Battery product: 0.
 #if USE_DEEP_SLEEP
 #define UPLOAD_GRACE_MS 0
@@ -39,7 +36,7 @@
 #define DEEP_SLEEP_HEARTBEAT_SEC 3600
 // Tools → USB CDC On Boot → Enabled (so Serial Monitor works over USB).
 // Tools → Partition Scheme → Minimal SPIFFS (1.9MB APP with OTA/190KB SPIFFS).
-#define FW_VERSION "1.1.37"
+#define FW_VERSION "1.1.38"
 #define SETUP_AP_SSID "AuraHomeSystems_Setup"
 // Setup alternates: Bluetooth window (iPhone, no Wi-Fi switching), then Wi-Fi window (Android).
 #define BLE_SETUP_WINDOW_MS 40000UL
@@ -325,7 +322,8 @@ RTC_DATA_ATTR int8_t rtcCapturedClosed = -1;  // sensor state captured immediate
 RTC_DATA_ATTR uint16_t rtcWakeCount = 0;
 // After pairing: short timer wakes so magnet moves still reach the app even if
 // GPIO wake fails (esp. ESP32-C3 hold/pull quirks).
-#define FAST_POLL_AFTER_SETUP 120
+// Brief 5s polls after pair/reset so C3 still catches magnet if GPIO wake misses.
+#define FAST_POLL_AFTER_SETUP 36
 #define FAST_POLL_SEC 5
 RTC_DATA_ATTR uint16_t rtcFastPollLeft = 0;
 
@@ -1958,10 +1956,10 @@ void setup() {
     // Right after pairing, stay awake and print the raw reed level every second.
     // If GPIO4 never flips while you move the magnet, the wire/reed is wrong — not the app.
     if (emailFromPortal) {
-        Serial.println("Post-setup: watching magnet 60s — move magnet on GPIO4/D2 now");
+        Serial.println("Post-setup: watching magnet 20s before deep sleep");
         Serial.print("Polarity closedWhenLow=");
         Serial.println(closedWhenLow ? 1 : 0);
-        const unsigned long watchUntil = millis() + 60000UL;
+        const unsigned long watchUntil = millis() + 20000UL;
         bool watchClosed = readSensorClosedStable();
         int lastRaw = (digitalRead(sensorPin) == HIGH) ? 1 : 0;
         unsigned long lastBeat = 0;
@@ -2024,7 +2022,7 @@ void setup() {
             }
         }
         if (flips == 0) {
-            Serial.println("WARN: GPIO4 never changed in 60s — check reed on D2/GPIO4 to GND");
+            Serial.println("WARN: GPIO4 never changed in 20s — check reed on D2/GPIO4");
         } else {
             Serial.print("Reed flips during watch: ");
             Serial.println(flips);
@@ -2193,4 +2191,4 @@ void loop() {
 #endif
 }
 
-// Aura build marker: lines=2196 FW=1.1.37 no-skip-tombstone
+// Aura build marker: lines=2194 FW=1.1.38 USE_DEEP_SLEEP=1

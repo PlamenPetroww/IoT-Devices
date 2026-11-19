@@ -37,7 +37,7 @@
 #define DEEP_SLEEP_HEARTBEAT_SEC 3600
 // Tools → USB CDC On Boot → Enabled (so Serial Monitor works over USB).
 // Tools → Partition Scheme → Minimal SPIFFS (1.9MB APP with OTA/190KB SPIFFS).
-#define FW_VERSION "1.1.42"
+#define FW_VERSION "1.1.43"
 #define SETUP_AP_SSID "AuraHomeSystems_Setup"
 // Setup alternates: Bluetooth window (iPhone, no Wi-Fi switching), then Wi-Fi window (Android).
 #define BLE_SETUP_WINDOW_MS 40000UL
@@ -99,6 +99,7 @@ static void maybeApplyFirmwareUpdate(int batteryPct, const char* powerSource, bo
 static bool enqueueSensorEvent(bool closed, bool force);
 static bool removeQueuedSensorEvent(uint32_t sequence, int8_t acknowledgedStatus, bool updateAck);
 static bool readSensorClosedDebounced();
+static bool readSensorClosedQuick();
 static bool readSensorClosedStable();
 static int wakeLevelForClosed(bool closed);
 static void invertQueuedEventPolarity();
@@ -225,25 +226,27 @@ static void clearDeviceRemovedInApp(const String& userPath, const String& device
 }
 static bool connectWifiFast() {
     WiFi.disconnect(false);
-    delay(150);
+    delay(40);
     WiFi.mode(WIFI_STA);
     WiFi.setSleep(false);
     WiFi.begin();
-    for (int i = 0; i < 80; i++) {
+    // ~4s max. Typical home AP joins in well under a second.
+    for (int i = 0; i < 40; i++) {
         if (WiFi.status() == WL_CONNECTED) return true;
-        delay(250);
+        delay(100);
     }
     WiFi.disconnect(false);
-    delay(100);
+    delay(40);
     return false;
 }
 static void syncTimeQuick() {
     configTime(0, 0, "pool.ntp.org", "time.nist.gov");
-    for (int i = 0; i < 25; i++) {
+    // Do not block the push for a full NTP handshake. millis() is used if time is not ready.
+    for (int i = 0; i < 8; i++) {
         time_t nowSec = 0;
         time(&nowSec);
         if (nowSec > 1700000000L) return;
-        delay(200);
+        delay(100);
     }
 }
 static int64_t timestampMsNow() {
@@ -331,7 +334,8 @@ RTC_DATA_ATTR uint16_t rtcFastPollLeft = 0;
 // C3: wake-on-HIGH in deep sleep is unreliable. While OPEN (waiting for HIGH),
 // deep-sleep and wake every HIGH_POLL_SEC to read the pin — no WiFi until HIGH
 // or the hourly heartbeat. CLOSED still uses instant GPIO wake-on-LOW.
-#define HIGH_POLL_SEC 15
+// Deep-sleep poll while OPEN (no Wi-Fi, no light sleep). 3s worst-case until CLOSE is seen.
+#define HIGH_POLL_SEC 3
 RTC_DATA_ATTR uint8_t rtcMagnetHighPoll = 0;
 RTC_DATA_ATTR uint16_t rtcHighPollCount = 0;
 
@@ -462,6 +466,17 @@ static bool readSensorClosedDebounced() {
         }
     }
     const bool pinHigh = highCount * 2 >= SENSOR_DEBOUNCE_SAMPLES;
+    return closedWhenLow ? !pinHigh : pinHigh;
+}
+
+// Fast sample at wake — the long settle read delayed every push by ~1s.
+static bool readSensorClosedQuick() {
+    int highCount = 0;
+    for (int i = 0; i < 3; i++) {
+        if (digitalRead(sensorPin) == HIGH) highCount++;
+        delay(12);
+    }
+    const bool pinHigh = highCount >= 2;
     return closedWhenLow ? !pinHigh : pinHigh;
 }
 
@@ -1678,7 +1693,7 @@ void setup() {
         }
         // Read the reed after gpio hold is released. Inferring the state from the
         // armed wake level reported Open again and never woke on Close.
-        bool st = readSensorClosedStable();
+        bool st = readSensorClosedQuick();
         liveAtWakeClosed = st;
         recordedWakePin = true;
         nextWakeLevel = wakeLevelForClosed(st);
@@ -1853,7 +1868,7 @@ void setup() {
     adoptHistStatusOnce(userPath, deviceID);
     // After Wi-Fi + polarity sync the pin has had time to leave the held wake level.
     // Use this — not the 30 ms wake sample — to decide if a second event is real.
-    const bool pinAfterWifi = readSensorClosedStable();
+    const bool pinAfterWifi = readSensorClosedQuick();
     PendingSensorEvent pendingEvent;
     const bool hasPendingEvent = peekSensorEvent(pendingEvent);
     bool currentStatus = hasPendingEvent
@@ -2265,4 +2280,4 @@ void loop() {
 #endif
 }
 
-// Aura build marker: lines=2268 FW=1.1.42 OPEN-deep-poll-15s
+// Aura build marker: lines=2283 FW=1.1.43 deep-poll-3s no-light-sleep

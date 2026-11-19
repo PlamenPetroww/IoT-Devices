@@ -37,7 +37,7 @@
 #define DEEP_SLEEP_HEARTBEAT_SEC 3600
 // Tools → USB CDC On Boot → Enabled (so Serial Monitor works over USB).
 // Tools → Partition Scheme → Minimal SPIFFS (1.9MB APP with OTA/190KB SPIFFS).
-#define FW_VERSION "1.1.38"
+#define FW_VERSION "1.1.39"
 #define SETUP_AP_SSID "AuraHomeSystems_Setup"
 // Setup alternates: Bluetooth window (iPhone, no Wi-Fi switching), then Wi-Fi window (Android).
 #define BLE_SETUP_WINDOW_MS 40000UL
@@ -323,8 +323,9 @@ RTC_DATA_ATTR int8_t rtcCapturedClosed = -1;  // sensor state captured immediate
 RTC_DATA_ATTR uint16_t rtcWakeCount = 0;
 // After pairing: short timer wakes so magnet moves still reach the app even if
 // GPIO wake fails (esp. ESP32-C3 hold/pull quirks).
-// Brief 5s polls after pair/reset so C3 still catches magnet if GPIO wake misses.
-#define FAST_POLL_AFTER_SETUP 36
+// Was used as a C3 GPIO-wake safety net (5s timer polls). Keep at 0 for battery:
+// wake only on magnet + DEEP_SLEEP_HEARTBEAT_SEC.
+#define FAST_POLL_AFTER_SETUP 0
 #define FAST_POLL_SEC 5
 RTC_DATA_ATTR uint16_t rtcFastPollLeft = 0;
 
@@ -1533,11 +1534,8 @@ void setup() {
         rtcCapturedClosed = -1;
         rtcWakeCount = 0;
     }
-    // After USB upload / reset (not GPIO/timer wake): poll magnet often so the
-    // app sees open/close even when C3 GPIO wake is unreliable.
-    if (coldBoot) {
-        rtcFastPollLeft = FAST_POLL_AFTER_SETUP;
-    }
+    // Do not arm fast-poll on cold boot — that woke every few seconds and
+    // drained battery. Magnet GPIO + hourly heartbeat are enough.
 #if UPLOAD_GRACE_MS > 0
     if (coldBoot) delay(UPLOAD_GRACE_MS);
 #endif
@@ -2192,4 +2190,4 @@ void loop() {
 #endif
 }
 
-// Aura build marker: lines=2194 FW=1.1.38 USE_DEEP_SLEEP=1
+// Aura build marker: lines=2193 FW=1.1.39 magnet-only-sleep

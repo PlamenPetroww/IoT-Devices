@@ -1,5 +1,5 @@
 // Arduino project: AuraSensor_DeepSleep
-// STABLE battery firmware FW 1.1.43  |  USE_DEEP_SLEEP 1  |  tag fw-1.1.43-deepsleep-stable
+// STABLE battery firmware FW 1.1.44  |  USE_DEEP_SLEEP 1
 // Open this folder in Arduino IDE (File -> Open).
 #include <WiFi.h>
 #include <WebServer.h>
@@ -25,8 +25,8 @@
 #endif
 // ========== DEEP SLEEP ==========
 // 1: Sleep after each send. Wake on magnet (GPIO) and/or heartbeat timer.
-// 0: Always awake — use for VIDEO/demo (near-instant signals). Tagged fw-1.1.37-no-deepsleep.
-// Production battery build stays at 1 (tagged fw-1.1.38-deepsleep).
+// 0: Always awake — VIDEO/demo, near-instant signals. Tag fw-1.1.37-no-deepsleep (keep).
+// Stable battery build is FW 1.1.43, tag fw-1.1.43-deepsleep-stable.
 #define USE_DEEP_SLEEP 1
 // After reset, wait this many ms BEFORE Wi-Fi/sleep ÔÇö for sketch upload and Serial Monitor. Battery product: 0.
 #if USE_DEEP_SLEEP
@@ -40,7 +40,7 @@
 #define DEEP_SLEEP_HEARTBEAT_SEC 3600
 // Tools → USB CDC On Boot → Enabled (so Serial Monitor works over USB).
 // Tools → Partition Scheme → Minimal SPIFFS (1.9MB APP with OTA/190KB SPIFFS).
-#define FW_VERSION "1.1.43"
+#define FW_VERSION "1.1.44"
 #define SETUP_AP_SSID "AuraHomeSystems_Setup"
 // Setup alternates: Bluetooth window (iPhone, no Wi-Fi switching), then Wi-Fi window (Android).
 #define BLE_SETUP_WINDOW_MS 40000UL
@@ -325,8 +325,11 @@ RTC_DATA_ATTR int8_t rtcLastSentStatus = -1;  // -1 = nothing sent yet; 0/1 = la
 RTC_DATA_ATTR int8_t rtcCapturedClosed = -1;  // sensor state captured immediately after GPIO wake
 // Periodic full restart: every PERIODIC_RESTART_WAKES wakeups do ESP.restart() to clear any
 // accumulated WiFi/SSL/Firebase state that degrades over time.
-#define PERIODIC_RESTART_WAKES 50
+// C3 Wi-Fi/SSL dies after several hours of deep-sleep wakes. Restart often enough
+// to stay under that, without waiting for 50 wakes.
+#define PERIODIC_RESTART_WAKES 4
 RTC_DATA_ATTR uint16_t rtcWakeCount = 0;
+RTC_DATA_ATTR uint8_t rtcWifiFails = 0;
 // After pairing: short timer wakes so magnet moves still reach the app even if
 // GPIO wake fails (esp. ESP32-C3 hold/pull quirks).
 // Was used as a C3 GPIO-wake safety net (5s timer polls). Keep at 0 for battery:
@@ -932,7 +935,7 @@ static void sleepWaitingForMagnet(int wakeLevel) {
         Serial.print("Deep sleep OPEN: wait HIGH (GPIO or poll ");
         Serial.print(HIGH_POLL_SEC);
         Serial.println("s, no WiFi until change)");
-        Serial.println("Sleeping...");
+        Serial.println("Sleeping... USB Serial shows Not connected while asleep. That is normal.");
         Serial.flush();
         delay(100);
         esp_deep_sleep_start();
@@ -950,7 +953,7 @@ static void sleepWaitingForMagnet(int wakeLevel) {
     Serial.print("s");
 #endif
     Serial.println();
-    Serial.println("Sleeping...");
+    Serial.println("Sleeping... USB Serial shows Not connected while asleep. That is normal.");
     Serial.flush();
     delay(150);
     esp_deep_sleep_start();
@@ -1605,6 +1608,7 @@ void setup() {
         rtcLastSentStatus = -1;
         rtcCapturedClosed = -1;
         rtcWakeCount = 0;
+        rtcWifiFails = 0;
         rtcMagnetHighPoll = 0;
         rtcHighPollCount = 0;
     }
@@ -1737,6 +1741,7 @@ void setup() {
         Serial.println("Fast WiFi connect...");
         wifiConnected = connectWifiFast();
         if (wifiConnected) {
+            rtcWifiFails = 0;
             Serial.print("WiFi OK: ");
             Serial.println(WiFi.localIP());
         }
@@ -1745,6 +1750,15 @@ void setup() {
 #if USE_DEEP_SLEEP
         if (emailLooksValid(user_email)) {
             // Already configured: do not open the setup AP on a temporary Wi-Fi failure.
+            rtcWifiFails++;
+            if (rtcWifiFails >= 2) {
+                rtcWifiFails = 0;
+                Serial.println("WiFi failed twice — full restart to clear the stack");
+                Serial.flush();
+                delay(100);
+                ESP.restart();
+                return;
+            }
             Serial.println("No WiFi - deep sleep 5 min, then retry.");
             Serial.flush();
             rtcCapturedClosed = -1;
@@ -1951,6 +1965,11 @@ void setup() {
     } else {
         Serial.print("Firebase FAIL: ");
         Serial.println(fbdo.errorReason());
+        Serial.println("Restart to clear SSL, then retry");
+        Serial.flush();
+        delay(100);
+        ESP.restart();
+        return;
     }
     bool liveStatus = currentStatus;
     bool sampledLive = false;
@@ -2179,7 +2198,7 @@ void setup() {
         esp_sleep_enable_timer_wakeup(2ULL * 1000000ULL);
         Serial.print("Queued events remaining: ");
         Serial.println(eventQueue.count);
-        Serial.println("Sleeping...");
+        Serial.println("Sleeping... USB Serial shows Not connected while asleep. That is normal.");
         Serial.flush();
         delay(150);
         esp_deep_sleep_start();
@@ -2283,4 +2302,4 @@ void loop() {
 #endif
 }
 
-// Aura build marker: lines=2283 FW=1.1.43 deep-poll-3s no-light-sleep
+// Aura build marker: FW=1.1.44 restart WiFi/SSL every 4 wakes

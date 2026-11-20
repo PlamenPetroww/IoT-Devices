@@ -37,7 +37,7 @@
 #define DEEP_SLEEP_HEARTBEAT_SEC 3600
 // Tools → USB CDC On Boot → Enabled (so Serial Monitor works over USB).
 // Tools → Partition Scheme → Minimal SPIFFS (1.9MB APP with OTA/190KB SPIFFS).
-#define FW_VERSION "1.1.46"
+#define FW_VERSION "1.1.47"
 #define SETUP_AP_SSID "AuraHomeSystems_Setup"
 // Setup alternates: Bluetooth window (iPhone, no Wi-Fi switching), then Wi-Fi window (Android).
 #define BLE_SETUP_WINDOW_MS 40000UL
@@ -1629,7 +1629,22 @@ void setup() {
         }
         // Read the reed after gpio hold is released. Inferring the state from the
         // armed wake level reported Open again and never woke on Close.
+#if CONFIG_IDF_TARGET_ESP32C3
+        gpio_deep_sleep_hold_dis();
+        gpio_hold_dis((gpio_num_t)sensorPin);
+        pinMode(sensorPin, INPUT_PULLUP);
+        delay(80);
+#endif
         bool st = readSensorClosedQuick();
+        // C3 keeps the old level for a moment after hold is released. A real GPIO
+        // wake means the pin reached the level we armed, even if the first read
+        // still shows the previous state. Otherwise the app only updates on the
+        // next magnet move.
+        if (gpioWake && rtcLastSentStatus >= 0 && ((st ? 1 : 0) == rtcLastSentStatus)) {
+            const bool pinHigh = nextWakeLevel != 0;
+            st = closedWhenLow ? !pinHigh : pinHigh;
+            Serial.println("GPIO wake: using armed level (pin read was still the old state)");
+        }
         liveAtWakeClosed = st;
         recordedWakePin = true;
         nextWakeLevel = wakeLevelForClosed(st);
@@ -1717,6 +1732,11 @@ void setup() {
         }
         if (bleReady) {
             emailFromPortal = true;
+            // The boot sample is from before the phone setup. Read the magnet now.
+            pinMode(sensorPin, INPUT_PULLUP);
+            delay(30);
+            liveAtWakeClosed = readSensorClosedQuick();
+            recordedWakePin = true;
         } else if (!emailLooksValid(user_email)) {
             {
                 Serial.println("Setup still incomplete — deep sleep 2 min, then retry SoftAP");
@@ -2210,4 +2230,4 @@ void loop() {
 #endif
 }
 
-// Aura build marker: FW=1.1.46 publish live magnet immediately
+// Aura build marker: FW=1.1.47 GPIO wake uses armed level when pin read is stale

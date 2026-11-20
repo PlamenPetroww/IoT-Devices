@@ -1,5 +1,5 @@
 // Arduino project: AuraSensor_DeepSleep
-// STABLE battery firmware FW 1.1.45  |  USE_DEEP_SLEEP 1  |  sleep matches 1.1.24
+// Battery firmware FW 1.1.46  |  USE_DEEP_SLEEP 1
 // Open this folder in Arduino IDE (File -> Open).
 #include <WiFi.h>
 #include <WebServer.h>
@@ -40,7 +40,7 @@
 #define DEEP_SLEEP_HEARTBEAT_SEC 3600
 // Tools → USB CDC On Boot → Enabled (so Serial Monitor works over USB).
 // Tools → Partition Scheme → Minimal SPIFFS (1.9MB APP with OTA/190KB SPIFFS).
-#define FW_VERSION "1.1.45"
+#define FW_VERSION "1.1.46"
 #define SETUP_AP_SSID "AuraHomeSystems_Setup"
 // Setup alternates: Bluetooth window (iPhone, no Wi-Fi switching), then Wi-Fi window (Android).
 #define BLE_SETUP_WINDOW_MS 40000UL
@@ -1820,9 +1820,9 @@ void setup() {
     const bool pinAfterWifi = readSensorClosedQuick();
     PendingSensorEvent pendingEvent;
     const bool hasPendingEvent = peekSensorEvent(pendingEvent);
-    bool currentStatus = hasPendingEvent
-        ? (pendingEvent.closed == 1)
-        : pinAfterWifi;
+    // The pin captured at wake is what the app must show. The queue head can be
+    // an older event, which made an Open look like Closed until the next move.
+    bool currentStatus = recordedWakePin ? liveAtWakeClosed : pinAfterWifi;
     rtcCapturedClosed = -1;
     Serial.print("Sensor ");
     Serial.print(device_name);
@@ -1850,9 +1850,7 @@ void setup() {
     // After SoftAP/BLE setup always publish the live magnet so the app shows
     // Open/Closed immediately. Otherwise keep last history-acked status on the
     // card until a real event is written (avoids card/history mismatch).
-    const bool statusForDevice = emailFromPortal
-        ? currentStatus
-        : ((rtcLastSentStatus >= 0) ? (rtcLastSentStatus == 1) : currentStatus);
+    const bool statusForDevice = currentStatus;
     json.set("status", statusForDevice);
     json.set("deviceName", String(device_name));
 #if RTDB_USE_SV_TIMESTAMP
@@ -1967,26 +1965,17 @@ void setup() {
                 (userPath + "/deviceSettings/" + deviceID + "/histStatus").c_str(),
                 closed ? "closed" : "open");
             Serial.println(closed ? "Sent CLOSED" : "Sent OPEN");
-
-            liveStatus = readSensorClosedStable();
+            liveStatus = currentStatus;
             sampledLive = true;
-            currentStatus = liveStatus;
-            // One extra transition per wake, and only if a second stable read
-            // agrees. A single glitch after Open was written as Closed, pushed
-            // again, and left the card on Closed.
-            if (sentCount == 0 && (liveStatus ? 1 : 0) != rtcLastSentStatus) {
-                const bool confirm = readSensorClosedStable();
-                if (confirm == liveStatus) {
-                    enqueueSensorEvent(liveStatus);
-                    continue;
-                }
-                liveStatus = rtcLastSentStatus == 1;
+            // Keep draining older queued events until this wake's pin is sent.
+            if ((currentStatus ? 1 : 0) != closedSt && peekSensorEvent(ev)) {
+                continue;
             }
             break;
         }
-        if (sentHistory && rtcLastSentStatus >= 0) {
+        if (sentHistory) {
             FirebaseJson liveJson;
-            liveJson.set("status", rtcLastSentStatus == 1);
+            liveJson.set("status", currentStatus);
             liveJson.set("deviceName", String(device_name));
 #if RTDB_USE_SV_TIMESTAMP
             liveJson.set("lastSeen/.sv", "timestamp");
@@ -2002,17 +1991,7 @@ void setup() {
         }
     }
     if (!sampledLive) {
-        liveStatus = readSensorClosedStable();
-    }
-    if (rtcLastSentStatus < 0) {
-        enqueueSensorEvent(liveStatus);
-    } else if ((liveStatus ? 1 : 0) != rtcLastSentStatus) {
-        const bool confirm = readSensorClosedStable();
-        if (confirm == liveStatus) {
-            enqueueSensorEvent(liveStatus);
-        } else {
-            liveStatus = rtcLastSentStatus == 1;
-        }
+        liveStatus = currentStatus;
     }
     // Right after pairing, stay awake and print the raw reed level every second.
     // If GPIO4 never flips while you move the magnet, the wire/reed is wrong — not the app.
@@ -2234,4 +2213,4 @@ void loop() {
 #endif
 }
 
-// Aura build marker: FW=1.1.45 stable C3 gpio_hold sleep like 1.1.24
+// Aura build marker: FW=1.1.46 publish live magnet immediately

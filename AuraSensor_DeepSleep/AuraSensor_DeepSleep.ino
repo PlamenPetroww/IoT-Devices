@@ -1,5 +1,5 @@
 // Arduino project: AuraSensor_DeepSleep
-// STABLE battery firmware FW 1.1.44  |  USE_DEEP_SLEEP 1
+// STABLE battery firmware FW 1.1.45  |  USE_DEEP_SLEEP 1  |  sleep matches 1.1.24
 // Open this folder in Arduino IDE (File -> Open).
 #include <WiFi.h>
 #include <WebServer.h>
@@ -40,7 +40,7 @@
 #define DEEP_SLEEP_HEARTBEAT_SEC 3600
 // Tools → USB CDC On Boot → Enabled (so Serial Monitor works over USB).
 // Tools → Partition Scheme → Minimal SPIFFS (1.9MB APP with OTA/190KB SPIFFS).
-#define FW_VERSION "1.1.44"
+#define FW_VERSION "1.1.45"
 #define SETUP_AP_SSID "AuraHomeSystems_Setup"
 // Setup alternates: Bluetooth window (iPhone, no Wi-Fi switching), then Wi-Fi window (Android).
 #define BLE_SETUP_WINDOW_MS 40000UL
@@ -327,7 +327,7 @@ RTC_DATA_ATTR int8_t rtcCapturedClosed = -1;  // sensor state captured immediate
 // accumulated WiFi/SSL/Firebase state that degrades over time.
 // C3 Wi-Fi/SSL dies after several hours of deep-sleep wakes. Restart often enough
 // to stay under that, without waiting for 50 wakes.
-#define PERIODIC_RESTART_WAKES 4
+#define PERIODIC_RESTART_WAKES 50
 RTC_DATA_ATTR uint16_t rtcWakeCount = 0;
 RTC_DATA_ATTR uint8_t rtcWifiFails = 0;
 // After pairing: short timer wakes so magnet moves still reach the app even if
@@ -888,19 +888,17 @@ static void armDeepSleepGpioWakeup(int wakeLevel) {
     esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_EXT0);
     esp_sleep_enable_ext0_wakeup((gpio_num_t)sensorPin, wakeLevel);
 #elif CONFIG_IDF_TARGET_ESP32C3
-    // Keep sleep pull-up so wake-on-HIGH works (OPEN→wait HIGH). Do not
-    // gpio_reset_pin / gpio_hold_en — reset drops pulls; hold freezes the level.
+    // Same deep-sleep wake as the sensors that have run for months (1.1.24):
+    // hold the pull-up, wake on the opposite reed level. Both OPEN and CLOSED.
+    gpio_reset_pin((gpio_num_t)sensorPin);
     pinMode(sensorPin, INPUT_PULLUP);
     gpio_set_pull_mode((gpio_num_t)sensorPin, GPIO_PULLUP_ONLY);
-    gpio_sleep_set_direction((gpio_num_t)sensorPin, GPIO_MODE_INPUT);
-    gpio_sleep_set_pull_mode((gpio_num_t)sensorPin, GPIO_PULLUP_ONLY);
-    gpio_sleep_sel_en((gpio_num_t)sensorPin);
-    gpio_deep_sleep_hold_dis();
-    gpio_hold_dis((gpio_num_t)sensorPin);
     delay(50);
     esp_deep_sleep_enable_gpio_wakeup(
         1ULL << sensorPin,
         wakeLevel ? ESP_GPIO_WAKEUP_GPIO_HIGH : ESP_GPIO_WAKEUP_GPIO_LOW);
+    gpio_hold_en((gpio_num_t)sensorPin);
+    gpio_deep_sleep_hold_en();
 #else
     pinMode(sensorPin, INPUT_PULLUP);
     delay(200);
@@ -912,37 +910,8 @@ static void armDeepSleepGpioWakeup(int wakeLevel) {
 #endif
 }
 
-// CLOSED→wait LOW: normal deep sleep + GPIO. OPEN→wait HIGH: deep-sleep poll
-// every HIGH_POLL_SEC (no WiFi) because C3 GPIO-HIGH wake is unreliable.
+// Same sleep for OPEN and CLOSED, matching the long-running sensors.
 static void sleepWaitingForMagnet(int wakeLevel) {
-#if CONFIG_IDF_TARGET_ESP32C3
-    if (wakeLevel != 0) {
-        rtcMagnetHighPoll = 1;
-        rtcHighPollCount = 0;
-        WiFi.disconnect(true);
-        delay(40);
-        WiFi.mode(WIFI_OFF);
-        pinMode(sensorPin, INPUT_PULLUP);
-        gpio_set_pull_mode((gpio_num_t)sensorPin, GPIO_PULLUP_ONLY);
-        gpio_sleep_set_direction((gpio_num_t)sensorPin, GPIO_MODE_INPUT);
-        gpio_sleep_set_pull_mode((gpio_num_t)sensorPin, GPIO_PULLUP_ONLY);
-        gpio_sleep_sel_en((gpio_num_t)sensorPin);
-        gpio_deep_sleep_hold_dis();
-        gpio_hold_dis((gpio_num_t)sensorPin);
-        esp_deep_sleep_enable_gpio_wakeup(
-            1ULL << sensorPin, ESP_GPIO_WAKEUP_GPIO_HIGH);
-        esp_sleep_enable_timer_wakeup((uint64_t)HIGH_POLL_SEC * 1000000ULL);
-        Serial.print("Deep sleep OPEN: wait HIGH (GPIO or poll ");
-        Serial.print(HIGH_POLL_SEC);
-        Serial.println("s, no WiFi until change)");
-        Serial.println("Sleeping... USB Serial shows Not connected while asleep. That is normal.");
-        Serial.flush();
-        delay(100);
-        esp_deep_sleep_start();
-        return;
-    }
-    rtcMagnetHighPoll = 0;
-#endif
     armDeepSleepGpioWakeup(wakeLevel);
     Serial.print("Deep sleep. Next wake: sensor change (waiting for ");
     Serial.print(wakeLevel ? "HIGH" : "LOW");
@@ -1648,43 +1617,6 @@ void setup() {
     if (BATTERY_ADC_PIN >= 0) pinMode(BATTERY_ADC_PIN, INPUT);
     if (USB_DETECT_PIN >= 0) pinMode(USB_DETECT_PIN, INPUT);
 #if USE_DEEP_SLEEP
-#if CONFIG_IDF_TARGET_ESP32C3
-    // Silent deep-poll while OPEN: no WiFi until pin goes HIGH (CLOSED) or hourly.
-    if (rtcMagnetHighPoll) {
-        const bool pinHigh = digitalRead(sensorPin) == HIGH;
-        const uint16_t maxPolls = (DEEP_SLEEP_HEARTBEAT_SEC > 0)
-            ? (uint16_t)((DEEP_SLEEP_HEARTBEAT_SEC + HIGH_POLL_SEC - 1) / HIGH_POLL_SEC)
-            : (uint16_t)240;
-        if (!pinHigh && rtcHighPollCount + 1 < maxPolls) {
-            rtcHighPollCount++;
-            Serial.print("OPEN deep-poll ");
-            Serial.print(rtcHighPollCount);
-            Serial.print("/");
-            Serial.print(maxPolls);
-            Serial.println(" still LOW — sleep, no WiFi");
-            Serial.flush();
-            WiFi.mode(WIFI_OFF);
-            pinMode(sensorPin, INPUT_PULLUP);
-            gpio_set_pull_mode((gpio_num_t)sensorPin, GPIO_PULLUP_ONLY);
-            gpio_sleep_set_direction((gpio_num_t)sensorPin, GPIO_MODE_INPUT);
-            gpio_sleep_set_pull_mode((gpio_num_t)sensorPin, GPIO_PULLUP_ONLY);
-            gpio_sleep_sel_en((gpio_num_t)sensorPin);
-            esp_deep_sleep_enable_gpio_wakeup(
-                1ULL << sensorPin, ESP_GPIO_WAKEUP_GPIO_HIGH);
-            esp_sleep_enable_timer_wakeup((uint64_t)HIGH_POLL_SEC * 1000000ULL);
-            delay(30);
-            esp_deep_sleep_start();
-            return;
-        }
-        if (pinHigh) {
-            Serial.println("OPEN deep-poll → HIGH (CLOSED), continue to send");
-        } else {
-            Serial.println("OPEN deep-poll → hourly heartbeat with WiFi");
-        }
-        rtcMagnetHighPoll = 0;
-        rtcHighPollCount = 0;
-    }
-#endif
     {
         const esp_sleep_wakeup_cause_t earlyWake = esp_sleep_get_wakeup_cause();
         const bool gpioWake = (earlyWake == ESP_SLEEP_WAKEUP_EXT0
@@ -2166,7 +2098,7 @@ void setup() {
     pinMode(sensorPin, INPUT_PULLUP);
     delay(30);
     const int pinNowHigh = (digitalRead(sensorPin) == HIGH) ? 1 : 0;
-    nextWakeLevel = pinNowHigh ? 0 : 1;
+    nextWakeLevel = wakeLevelForClosed(liveStatus);
     Serial.print("Reed pin=");
     Serial.print(pinNowHigh ? "HIGH" : "LOW");
     Serial.print(" closedWhenLow=");
@@ -2302,4 +2234,4 @@ void loop() {
 #endif
 }
 
-// Aura build marker: FW=1.1.44 restart WiFi/SSL every 4 wakes
+// Aura build marker: FW=1.1.45 stable C3 gpio_hold sleep like 1.1.24

@@ -2183,6 +2183,17 @@ main {
     text-align: center;
 }
 
+body.orders-closed .pricing-card-price,
+body.orders-closed #openBuyPanelBtn,
+body.orders-closed .cta-actions-sep {
+  display: none !important;
+}
+
+body.orders-closed .pricing-card-btn {
+  pointer-events: none;
+  cursor: default;
+}
+
 .pricing-card-price {
     width: 100%;
     margin: 0 0 12px;

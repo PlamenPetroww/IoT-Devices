@@ -3,6 +3,7 @@
     var TEST = false;
 
     global.AURA_PRICING = {
+        ordersOpen: false,
         testMode: TEST,
         unitPriceEur: TEST ? 0.01 : 59,
         bundles: TEST ? { 1: 0.01, 3: 0.03, 5: 0.05 } : { 1: 59, 3: 159, 5: 249 },

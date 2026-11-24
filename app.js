@@ -1716,6 +1716,7 @@ function initBuyPanel() {
         if (panel.classList.contains("visible")) panel.classList.add("is-settled");
     }
     function openPanel() {
+        if (window.AURA_PRICING && window.AURA_PRICING.ordersOpen === false) return;
         revolutConfigCache = undefined;
         panel.classList.remove("is-settled");
         overlay.classList.add("visible");
@@ -1810,6 +1811,7 @@ function initBuyPanel() {
 
     buyForm.addEventListener("submit", async (e) => {
         e.preventDefault();
+        if (window.AURA_PRICING && window.AURA_PRICING.ordersOpen === false) return;
         const paymentMethod = (buyForm.querySelector('select[name="paymentMethod"]') && buyForm.querySelector('select[name="paymentMethod"]').value) || "";
         if (paymentMethod === "revolut" && revolutPayModeActive) {
             return;

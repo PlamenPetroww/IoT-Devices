@@ -68,9 +68,7 @@
             "category": "Smart Home Security Sensor",
             "offers": {
               "@type": "Offer",
-              "price": "59.00",
-              "priceCurrency": "EUR",
-              "availability": "https://schema.org/InStock",
+              "availability": "https://schema.org/OutOfStock",
               "url": "https://aurahomesystems.eu/",
               "shippingDetails": {
                 "@type": "OfferShippingDetails",
@@ -123,7 +121,7 @@
     <link rel="apple-touch-icon" href="/icons/icon-192.png" />
     <link rel="stylesheet" href="style.css" />
   </head>
-  <body>
+  <body class="orders-closed">
     <a href="#main-content" class="skip-link" data-i18n="a11y.skipToContent"
       >Skip to main content</a
     >
@@ -480,6 +478,7 @@
           <div class="section-content">
             <h2 data-i18n="pricing.title">Choose your security pack</h2>
             <p class="section-subtitle" data-i18n="pricing.subtitle">No subscription. No hub. Instant alerts.</p>
+            <p class="section-subtitle" data-i18n="pricing.closedNote">Ordering is closed for now.</p>
             <div class="pricing-grid">
               <article class="pricing-card">
                 <span class="pricing-card-name" data-i18n="pricing.pack1Name"
@@ -492,8 +491,9 @@
                   type="button"
                   class="pricing-card-btn cta-primary-link"
                   data-pack="1"
-                  data-i18n="pricing.choose"
-                >Choose</button>
+                  data-i18n="pricing.closed"
+                  disabled
+                >Not available yet</button>
               </article>
               <article class="pricing-card pricing-card-popular">
                 <span class="pricing-badge" data-i18n="pricing.mostPopular"
@@ -509,8 +509,9 @@
                   type="button"
                   class="pricing-card-btn cta-primary-link"
                   data-pack="3"
-                  data-i18n="pricing.choose"
-                >Choose</button>
+                  data-i18n="pricing.closed"
+                  disabled
+                >Not available yet</button>
               </article>
               <article class="pricing-card pricing-card-value">
                 <span
@@ -528,8 +529,9 @@
                   type="button"
                   class="pricing-card-btn cta-primary-link"
                   data-pack="5"
-                  data-i18n="pricing.choose"
-                >Choose</button>
+                  data-i18n="pricing.closed"
+                  disabled
+                >Not available yet</button>
               </article>
             </div>
             <p class="pricing-note" data-i18n="pricing.deviceNote">* Each account can be used on up to 3 devices at the same time (e.g. phone, tablet and laptop).</p>
@@ -548,8 +550,9 @@
                   type="button"
                   class="pricing-card-btn cta-primary-link"
                   data-sku="siren-1"
-                  data-i18n="pricing.choose"
-                >Choose</button>
+                  data-i18n="pricing.closed"
+                  disabled
+                >Not available yet</button>
               </article>
               <article class="pricing-card pricing-card-popular">
                 <span class="pricing-badge" data-i18n="pricing.kitSaveBadge">Bundle</span>
@@ -561,8 +564,9 @@
                   type="button"
                   class="pricing-card-btn cta-primary-link"
                   data-sku="kit-3-1"
-                  data-i18n="pricing.choose"
-                >Choose</button>
+                  data-i18n="pricing.closed"
+                  disabled
+                >Not available yet</button>
               </article>
               <article class="pricing-card pricing-card-value">
                 <span class="pricing-badge pricing-badge-value" data-i18n="pricing.kitSaveBadge">Bundle</span>
@@ -574,8 +578,9 @@
                   type="button"
                   class="pricing-card-btn cta-primary-link"
                   data-sku="kit-5-1"
-                  data-i18n="pricing.choose"
-                >Choose</button>
+                  data-i18n="pricing.closed"
+                  disabled
+                >Not available yet</button>
               </article>
             </div>
             </div>
@@ -644,8 +649,9 @@
                 class="cta-primary-link cta-buy-btn"
                 id="openBuyPanelBtn"
                 data-i18n="cta.buyDirect"
+                hidden
               >Buy directly</button>
-              <span class="cta-actions-sep" data-i18n="cta.or">or</span>
+              <span class="cta-actions-sep" data-i18n="cta.or" hidden>or</span>
             </div>
             <p class="cta-inquiry-label" data-i18n="cta.inquiryLabel">Send an inquiry</p>
             <form

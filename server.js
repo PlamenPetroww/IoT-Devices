@@ -115,6 +115,7 @@ function loadPricingConfig() {
         ? j.kitRules
         : production.kitRules;
     return {
+      ordersOpen: j.ordersOpen !== false,
       testMode,
       unitPriceEur: Number.isFinite(unitPriceEur) ? unitPriceEur : production.unitPriceEur,
       bundles: Object.keys(bundles).length ? bundles : production.bundles,
@@ -1693,6 +1694,11 @@ const server = http.createServer((req, res) => {
 
   if (requestPath === "/api/revolut-order" && req.method === "POST") {
     setCors(res, req);
+    if (pricingConfig.ordersOpen === false) {
+      res.writeHead(403, { "Content-Type": "application/json; charset=utf-8" });
+      res.end(JSON.stringify({ error: "Orders are closed" }));
+      return;
+    }
     let body = "";
     req.on("data", (chunk) => {
       body += chunk;

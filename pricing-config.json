@@ -1,4 +1,5 @@
 {
+  "ordersOpen": false,
   "testMode": false,
   "unitPriceEur": 59,
   "bundles": { "1": 59, "3": 159, "5": 249 },
